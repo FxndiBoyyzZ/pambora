@@ -1,3 +1,4 @@
+
 'use client';
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,11 +38,17 @@ export default function CardapioPage() {
     const [favorites, setFavorites] = React.useState<Record<string, boolean>>({});
 
     React.useEffect(() => {
-        // We need goal, diet, and allergies to generate a plan
-        if (!answers.goal || !answers.diet) {
+        // We need goal and diet to generate a plan.
+        if ((!answers.goal || !answers.diet)) {
             // If essential answers are missing, maybe they skipped the quiz.
-            // Redirect them back, but only if they are a signed-in user, not anonymous.
-            if(user && !user.isAnonymous) router.push('/quiz');
+            // Redirect them back, but only if they are a signed-in (non-anonymous) user.
+            if (user && !user.isAnonymous) {
+                router.push('/quiz');
+            } else {
+                // For anonymous users or users without answers, we can't generate a plan.
+                // We'll just show a loading/empty state.
+                setLoading(false);
+            }
         } else {
             const getPlan = async () => {
                 setLoading(true);
@@ -60,7 +67,7 @@ export default function CardapioPage() {
             };
             getPlan();
         }
-    }, [answers, router, user]);
+    }, [answers.goal, answers.diet, answers.allergies, router, user]);
 
     const handleResetQuiz = async () => {
         await resetQuiz();
@@ -81,7 +88,7 @@ export default function CardapioPage() {
                 </Button>
             </header>
             <div className="flex-grow p-4 md:p-6 lg:p-8">
-                {loading || !mealPlan ? (
+                {loading ? (
                      <Card>
                         <CardHeader>
                             <CardTitle className='flex items-center gap-2'>
@@ -93,6 +100,20 @@ export default function CardapioPage() {
                             <MealPlanSkeleton />
                         </CardContent>
                      </Card>
+                ) : !mealPlan ? (
+                    <Card className="text-center">
+                        <CardHeader>
+                            <CardTitle>Complete seu Quiz!</CardTitle>
+                            <CardDescription>
+                                Precisamos das suas respostas do quiz para gerar um plano alimentar personalizado.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Button onClick={() => router.push('/quiz')}>
+                                Ir para o Quiz
+                            </Button>
+                        </CardContent>
+                    </Card>
                 ) : (
                     <Tabs defaultValue="Seg" className="w-full">
                         <TabsList className="grid w-full grid-cols-4 md:grid-cols-7">
