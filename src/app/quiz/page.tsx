@@ -55,11 +55,12 @@ export default function QuizPage() {
   }, []);
 
   useEffect(() => {
-    // If user is logged in and somehow lands on quiz, push to app
-    if (user && !authLoading && currentStepIndex < 2) {
-       router.push('/treinos');
+    // If a permanent user lands on the quiz, push them to the app.
+    // Anonymous users should proceed with the quiz.
+    if (user && !user.isAnonymous && !authLoading) {
+      router.push('/treinos');
     }
-  }, [user, authLoading, router, currentStepIndex]);
+  }, [user, authLoading, router]);
   
   const handleNext = async () => {
     if (configLoading || quizSteps.length === 0) return;
