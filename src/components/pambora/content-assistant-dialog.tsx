@@ -31,9 +31,9 @@ export function ContentAssistantDialog() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Gerar Post
+                <Button variant="ghost" className="flex-1">
+                    <Sparkles className="mr-2 text-purple-500" />
+                    Gerar Ideia
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
