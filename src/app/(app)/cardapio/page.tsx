@@ -27,10 +27,30 @@ const mealPlan = {
         "Lanche": ["Mix de castanhas"],
         "Jantar": ["Omelete com queijo e tomate"]
     },
-    "Qui": { "Café da Manhã": [], "Almoço": [], "Lanche": [], "Jantar": [] },
-    "Sex": { "Café da Manhã": [], "Almoço": [], "Lanche": [], "Jantar": [] },
-    "Sáb": { "Café da Manhã": [], "Almoço": [], "Lanche": [], "Jantar": [] },
-    "Dom": { "Café da Manhã": [], "Almoço": [], "Lanche": [], "Jantar": [] },
+    "Qui": {
+        "Café da Manhã": ["Iogurte natural com granola e frutas"],
+        "Almoço": ["Frango grelhado com salada de lentilha"],
+        "Lanche": ["Banana com canela"],
+        "Jantar": ["Tilápia assada com legumes"]
+    },
+    "Sex": {
+        "Café da Manhã": ["Crepioca com queijo minas"],
+        "Almoço": ["Macarrão integral com almôndegas de frango"],
+        "Lanche": ["Vitamina de abacate"],
+        "Jantar": ["Pizza fit de frigideira"]
+    },
+    "Sáb": {
+        "Café da Manhã": ["Pão de queijo fit com café"],
+        "Almoço": ["Feijoada leve com couve refogada"],
+        "Lanche": ["Bolo de cenoura fit"],
+        "Jantar": ["Sanduíche natural no pão integral"]
+    },
+    "Dom": {
+        "Café da Manhã": ["Bruschetta com tomate e manjericão"],
+        "Almoço": ["Lasanha de abobrinha à bolonhesa"],
+        "Lanche": ["Salada de frutas"],
+        "Jantar": ["Caldo verde fit"]
+    },
 };
 
 type MealName = keyof typeof mealPlan.Seg;
