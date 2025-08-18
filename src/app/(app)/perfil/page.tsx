@@ -74,6 +74,12 @@ function EditProfileDialog({ children }: { children: React.ReactNode }) {
 
 export default function PerfilPage() {
   const { answers, setAnswer } = useQuiz();
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+  
   const userHandle = answers.name ? `@${answers.name.split(' ')[0].toLowerCase()}` : '@usuario';
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -91,6 +97,10 @@ export default function PerfilPage() {
       reader.readAsDataURL(file);
     }
   };
+
+  if (!isClient) {
+    return null; // Or a loading skeleton
+  }
 
   return (
     <div className="flex flex-col h-full">
