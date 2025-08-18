@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { auth, db } from '@/services/firebase';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, signInAnonymously } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 interface QuizAnswers {
   name?: string;
@@ -83,14 +83,10 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     if (!uid) return;
     try {
       const userDocRef = doc(db, 'users', uid);
-      await updateDoc(userDocRef, data);
+      // Use setDoc with merge:true to create or update the document.
+      await setDoc(userDocRef, data, { merge: true });
     } catch (error) {
-       // If the document does not exist, it will create it.
-      if ((error as any).code === 'not-found') {
-          await setDoc(doc(db, 'users', uid), data, { merge: true });
-      } else {
-          console.error("Failed to update user data in Firestore", error);
-      }
+        console.error("Failed to update user data in Firestore", error);
     }
   };
 
@@ -137,7 +133,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
         const newUser = userCredential.user;
         setUser(newUser);
-        const initialData = { ...newUserData, completedWorkouts: [], weight: 60, height: 160 };
+        const initialData = { ...answers, ...newUserData };
         await setDoc(doc(db, 'users', newUser.uid), initialData);
         setAnswers(initialData);
     } catch (error: any) {
@@ -147,7 +143,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
                 const existingUser = userCredential.user;
                 setUser(existingUser);
                 // Update user data in firestore with the new info from the form
-                await updateFirestore(existingUser.uid, newUserData);
+                await updateFirestore(existingUser.uid, { ...answers, ...newUserData });
                 // Fetch all user data to update the state
                 await fetchUserData(existingUser);
             } catch (signInError) {
