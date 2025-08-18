@@ -65,26 +65,25 @@ export default function QuizPage() {
   const handleNext = useCallback(async () => {
     if (configLoading || quizSteps.length === 0) return;
 
-    const currentStep = quizSteps[currentStepIndex];
-    if (currentStep.type === 'form') {
+    // Check if we are on the last step
+    if (currentStepIndex >= quizSteps.length - 1) {
         setIsSubmitting(true);
         try {
+            // Sign up the user with all the collected answers
             await signUp(answers.email || '', answers.name || '', answers.whatsapp || '');
+            // Then redirect
+            router.push('/treinos');
         } catch (error) {
-            console.error("Sign up failed", error);
-            // Optionally, show an error message to the user
+            console.error("Sign up failed on the final step", error);
             setIsSubmitting(false);
-            return;
+            // Optionally show an error to the user
         }
-        setIsSubmitting(false);
-    }
-    
-    if (currentStepIndex < quizSteps.length - 1) {
-      setCurrentStepIndex(prevIndex => prevIndex + 1);
     } else {
-      router.push('/treinos');
+      // Just move to the next step
+      setCurrentStepIndex(prevIndex => prevIndex + 1);
     }
-  }, [configLoading, quizSteps, currentStepIndex, signUp, answers.email, answers.name, answers.whatsapp, router]);
+  }, [configLoading, quizSteps, currentStepIndex, signUp, answers, router]);
+
 
   const currentStep = quizSteps[currentStepIndex];
 
@@ -158,8 +157,7 @@ export default function QuizPage() {
                 ))}
               </CardContent>
               <CardFooter>
-                <Button onClick={handleNext} className="w-full" disabled={!isFormValid || isSubmitting}>
-                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button onClick={handleNext} className="w-full" disabled={!isFormValid}>
                   Continuar
                 </Button>
               </CardFooter>
