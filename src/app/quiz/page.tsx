@@ -1,3 +1,4 @@
+
 'use client';
 import { useQuiz } from '@/services/quiz-service';
 import { useRouter } from 'next/navigation';
@@ -15,6 +16,77 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 // Helper to determine if a step is a video step
 const isVideoStep = (step: QuizStep) => step.type === 'video';
+
+const ChatStep = ({ step, onComplete }: { step: QuizStep, onComplete: () => void }) => {
+    const [chatMessages, setChatMessages] = useState([step.content.messages[0]]);
+    const [canReply, setCanReply] = useState(false);
+    
+    useEffect(() => {
+        let messageIndex = 1;
+        const showMessages = () => {
+            if(messageIndex < step.content.messages.length) {
+               const nextMessage = step.content.messages[messageIndex];
+               if(nextMessage.author === 'ByPamela') {
+                 setTimeout(() => {
+                     setChatMessages(prev => [...prev, nextMessage]);
+                     messageIndex++;
+                     showMessages();
+                 }, 1500);
+               } else {
+                 setCanReply(true);
+               }
+            } else {
+                setTimeout(onComplete, 1500);
+            }
+        }
+        showMessages();
+    }, [step.content.messages, onComplete]);
+
+    const handleOptionClick = (optionText: string) => {
+        const userMessage = { author: 'user', text: optionText };
+        setChatMessages(prev => [...prev, userMessage]);
+        setCanReply(false);
+
+        // Logic to show Pamela's next 3 messages
+        let pamelaMessageIndex = chatMessages.filter(m => m.author === 'ByPamela').length;
+        const remainingPamelaMessages = step.content.messages.filter((m:any) => m.author === 'ByPamela').slice(pamelaMessageIndex);
+        
+        let delay = 1000;
+        remainingPamelaMessages.forEach((msg, i) => {
+            setTimeout(() => {
+                setChatMessages(prev => [...prev, msg]);
+                if (i === remainingPamelaMessages.length - 1) {
+                     setTimeout(onComplete, 1500);
+                }
+            }, delay);
+            delay += 1500;
+        });
+    };
+    
+    return (
+         <div className="w-full h-full flex flex-col justify-end p-4 bg-zinc-800 text-white" style={{backgroundImage: `url('${step.content.backgroundUrl}')`, backgroundSize: 'cover', backgroundPosition: 'center'}}>
+            <div className="flex-grow flex flex-col justify-end space-y-3 pb-4">
+                {chatMessages.map((msg, index) => (
+                     <div key={index} className={`flex items-end gap-2 ${msg.author === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        {msg.author === 'ByPamela' && <Avatar className="h-8 w-8"><AvatarImage src={step.content.avatarUrl} /></Avatar>}
+                        <div className={`rounded-2xl px-4 py-2 max-w-xs lg:max-w-md ${msg.author === 'user' ? 'bg-blue-500 text-white rounded-br-none' : 'bg-zinc-700 text-white rounded-bl-none'}`}>
+                            <p className="text-sm">{msg.text}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+             {canReply && step.content.replyOptions && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                    {step.content.replyOptions.map((option: any, i: number) => (
+                       <Button key={i} variant="outline" size="sm" onClick={() => handleOptionClick(option.text)} className="bg-white/20 border-white/30 text-white backdrop-blur-sm">
+                           {option.text}
+                       </Button>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
 
 export default function QuizPage() {
   const router = useRouter();
@@ -69,7 +141,7 @@ export default function QuizPage() {
           </div>
         );
       case 'form':
-        const isFormValid = step.content.fields.every(field => !!answers[field as keyof typeof answers]);
+        const isFormValid = step.content.fields.every((field: string | number) => !!answers[field as keyof typeof answers]);
         return (
           <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={{ backgroundImage: `url('${step.content.backgroundUrl}')` }}>
             <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm text-foreground">
@@ -78,7 +150,7 @@ export default function QuizPage() {
                 <CardDescription>{step.content.description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {step.content.fields.map(field => (
+                {step.content.fields.map((field: any) => (
                   <div className="space-y-2" key={field}>
                     <Label htmlFor={field}>{field.charAt(0).toUpperCase() + field.slice(1)}</Label>
                     <Input id={field} placeholder={step.content.placeholders[field]} value={(answers as any)[field] || ''} onChange={(e) => setAnswer(field as any, e.target.value)} type={field === 'email' ? 'email' : 'text'} />
@@ -109,7 +181,7 @@ export default function QuizPage() {
                     }}
                     className="space-y-3"
                   >
-                    {step.content.options.map((item) => (
+                    {step.content.options.map((item: any) => (
                       <Label
                         key={item.id}
                         htmlFor={item.id}
@@ -165,90 +237,8 @@ export default function QuizPage() {
             </div>
          );
     case 'chat':
-        const [chatMessages, setChatMessages] = useState([step.content.messages[0]]);
-        const [chatInput, setChatInput] = useState('');
-        const [canReply, setCanReply] = useState(false);
-        
-        useEffect(() => {
-            let messageIndex = 1;
-            const showMessages = () => {
-                if(messageIndex < step.content.messages.length) {
-                   const nextMessage = step.content.messages[messageIndex];
-                   if(nextMessage.author === 'ByPamela') {
-                     setTimeout(() => {
-                         setChatMessages(prev => [...prev, nextMessage]);
-                         messageIndex++;
-                         showMessages();
-                     }, 1500);
-                   } else {
-                     setCanReply(true);
-                   }
-                } else {
-                    setTimeout(handleNext, 1500);
-                }
-            }
-            showMessages();
-        }, [step.content.messages]);
-
-        const handleSend = () => {
-             const userMessage = { author: 'user', text: chatInput };
-             const pamelaMessage = step.content.messages.find(m => m.author === 'ByPamela' && !chatMessages.includes(m));
-             setChatMessages(prev => [...prev, userMessage]);
-             setChatInput('');
-             setCanReply(false);
-             setTimeout(() => {
-                if(pamelaMessage) {
-                    setChatMessages(prev => [...prev, pamelaMessage]);
-                }
-                setTimeout(handleNext, 1500);
-             }, 1500)
-        }
-
-        const handleOptionClick = (optionText: string) => {
-            const userMessage = { author: 'user', text: optionText };
-            setChatMessages(prev => [...prev, userMessage]);
-            setCanReply(false);
-
-            // Logic to show Pamela's next 3 messages
-            let pamelaMessageIndex = chatMessages.filter(m => m.author === 'ByPamela').length;
-            const remainingPamelaMessages = step.content.messages.filter(m => m.author === 'ByPamela').slice(pamelaMessageIndex);
-            
-            let delay = 1000;
-            remainingPamelaMessages.forEach((msg, i) => {
-                setTimeout(() => {
-                    setChatMessages(prev => [...prev, msg]);
-                    if (i === remainingPamelaMessages.length - 1) {
-                         setTimeout(handleNext, 1500);
-                    }
-                }, delay);
-                delay += 1500;
-            });
-        };
-        
-        return (
-             <div className="w-full h-full flex flex-col justify-end p-4 bg-zinc-800 text-white" style={{backgroundImage: `url('${step.content.backgroundUrl}')`, backgroundSize: 'cover', backgroundPosition: 'center'}}>
-                <div className="flex-grow flex flex-col justify-end space-y-3 pb-4">
-                    {chatMessages.map((msg, index) => (
-                         <div key={index} className={`flex items-end gap-2 ${msg.author === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            {msg.author === 'ByPamela' && <Avatar className="h-8 w-8"><AvatarImage src={step.content.avatarUrl} /></Avatar>}
-                            <div className={`rounded-2xl px-4 py-2 max-w-xs lg:max-w-md ${msg.author === 'user' ? 'bg-blue-500 text-white rounded-br-none' : 'bg-zinc-700 text-white rounded-bl-none'}`}>
-                                <p className="text-sm">{msg.text}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                 {canReply && step.content.replyOptions && (
-                    <div className="flex flex-wrap gap-2 mb-2">
-                        {step.content.replyOptions.map((option, i) => (
-                           <Button key={i} variant="outline" size="sm" onClick={() => handleOptionClick(option.text)} className="bg-white/20 border-white/30 text-white backdrop-blur-sm">
-                               {option.text}
-                           </Button>
-                        ))}
-                    </div>
-                )}
-            </div>
-        )
-      default:
+        return <ChatStep step={step} onComplete={handleNext} />;
+    default:
         return (
             <div className="p-8 text-center">
                 <h2 className="text-2xl font-bold mb-4">Fim do Quiz!</h2>
@@ -266,3 +256,5 @@ export default function QuizPage() {
     </StoryLayout>
   );
 }
+
+    
