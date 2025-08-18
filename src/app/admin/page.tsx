@@ -3,12 +3,13 @@
 'use client';
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { quizSteps } from "@/app/quiz/quiz-config";
-import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, Zap, GripVertical, UploadCloud } from 'lucide-react';
+import { quizSteps as initialQuizSteps, type QuizStep } from "@/app/quiz/quiz-config";
+import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, Zap, GripVertical, UploadCloud, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { uploadVideo } from './actions';
 
 const getIcon = (type: string) => {
     switch (type) {
@@ -21,14 +22,38 @@ const getIcon = (type: string) => {
     }
 }
 
-const StepContentEditor = ({ step, index }: { step: any, index: number }) => {
-    // Note: State changes here are local and won't be saved.
-    // This is a UI-only implementation for now.
+const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: number, onStepChange: (index: number, newContent: any) => void }) => {
     const [stepData, setStepData] = React.useState(step.content);
+    const [isUploading, setIsUploading] = React.useState(false);
 
     const handleChange = (field: string, value: any) => {
-        setStepData((prev: any) => ({ ...prev, [field]: value }));
+        const newStepData = { ...stepData, [field]: value };
+        setStepData(newStepData);
+        onStepChange(index, { ...step, content: newStepData });
     }
+
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('video', file);
+            const result = await uploadVideo(formData);
+            if (result.success && result.dataUrl) {
+                handleChange('videoUrl', result.dataUrl);
+            } else {
+                 alert('Falha no upload do vídeo: ' + result.error);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Ocorreu um erro durante o upload.');
+        } finally {
+            setIsUploading(false);
+        }
+    }
+
 
     switch (step.type) {
         case 'video':
@@ -42,8 +67,15 @@ const StepContentEditor = ({ step, index }: { step: any, index: number }) => {
                     <div>
                          <Label htmlFor={`videoUpload-${index}`}>Fazer Upload</Label>
                          <div className="flex items-center gap-2 rounded-md border border-dashed p-2">
-                             <UploadCloud className="h-5 w-5 text-muted-foreground" />
-                            <Input id={`videoUpload-${index}`} type="file" accept="video/*" className="border-none text-xs h-auto p-0 file:mr-2 file:text-primary file:font-semibold" />
+                             {isUploading ? <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" /> : <UploadCloud className="h-5 w-5 text-muted-foreground" />}
+                            <Input 
+                                id={`videoUpload-${index}`} 
+                                type="file" 
+                                accept="video/*" 
+                                className="border-none text-xs h-auto p-0 file:mr-2 file:text-primary file:font-semibold"
+                                onChange={handleFileChange}
+                                disabled={isUploading}
+                             />
                          </div>
                     </div>
                 </div>
@@ -141,6 +173,14 @@ const StepContentEditor = ({ step, index }: { step: any, index: number }) => {
 }
 
 export default function AdminDashboard() {
+  const [quizSteps, setQuizSteps] = React.useState<QuizStep[]>(initialQuizSteps);
+
+  const handleStepChange = (index: number, newStep: QuizStep) => {
+    const newQuizSteps = [...quizSteps];
+    newQuizSteps[index] = newStep;
+    setQuizSteps(newQuizSteps);
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="flex justify-between items-center p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
@@ -150,7 +190,7 @@ export default function AdminDashboard() {
             </h1>
             <p className="text-muted-foreground">Arraste e solte para reordenar as etapas (funcionalidade em breve).</p>
         </div>
-        <Button onClick={() => alert('Funcionalidade de salvar ainda não implementada.')}>
+        <Button onClick={() => alert('Funcionalidade de salvar ainda não implementada. As alterações são apenas visuais.')}>
             Salvar Alterações
         </Button>
       </header>
@@ -169,7 +209,7 @@ export default function AdminDashboard() {
                         </div>
                     </CardHeader>
                     <CardContent className="flex-grow">
-                        <StepContentEditor step={step} index={index} />
+                        <StepContentEditor step={step} index={index} onStepChange={handleStepChange} />
                     </CardContent>
                     <CardFooter>
                         <Button variant="destructive" size="sm" className="w-full" onClick={() => alert('Funcionalidade de remover ainda não implementada.')}>
