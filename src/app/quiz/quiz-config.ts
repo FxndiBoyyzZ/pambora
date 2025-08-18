@@ -1,7 +1,7 @@
 // src/app/quiz/quiz-config.ts
 
 export interface QuizStep {
-    type: 'video' | 'form' | 'question' | 'wheel' | 'chat';
+    type: 'video' | 'form' | 'question' | 'wheel' | 'chat' | 'vitals';
     content: any;
 }
 
@@ -23,6 +23,14 @@ export const quizSteps: QuizStep[] = [
                 whatsapp: '(00) 00000-0000',
                 email: 'seu@email.com',
             },
+            backgroundUrl: 'https://placehold.co/420x850.png',
+        }
+    },
+    {
+        type: 'vitals',
+        content: {
+            title: 'Detalhes Corporais',
+            description: 'Essas informações nos ajudam a criar um plano ainda mais personalizado para você.',
             backgroundUrl: 'https://placehold.co/420x850.png',
         }
     },

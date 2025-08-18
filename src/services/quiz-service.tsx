@@ -14,6 +14,9 @@ interface QuizAnswers {
   profilePictureUrl?: string;
   completedWorkouts?: number[];
   workoutFrequency?: string;
+  weight?: number;
+  height?: number;
+  gender?: 'male' | 'female';
 }
 
 interface QuizContextType {
@@ -31,7 +34,7 @@ const LOCAL_STORAGE_KEY = 'pamfit_quizAnswers';
 export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const [answers, setAnswers] = useState<QuizAnswers>(() => {
     if (typeof window === 'undefined') {
-      return { completedWorkouts: [] };
+      return { completedWorkouts: [], weight: 60, height: 160 };
     }
     try {
       const savedAnswers = window.localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -39,10 +42,16 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       if (!parsedAnswers.completedWorkouts) {
         parsedAnswers.completedWorkouts = [];
       }
+      if (!parsedAnswers.weight) {
+        parsedAnswers.weight = 60;
+      }
+      if (!parsedAnswers.height) {
+        parsedAnswers.height = 160;
+      }
       return parsedAnswers;
     } catch (error) {
       console.error("Failed to parse quiz answers from localStorage", error);
-      return { completedWorkouts: [] };
+      return { completedWorkouts: [], weight: 60, height: 160 };
     }
   });
 

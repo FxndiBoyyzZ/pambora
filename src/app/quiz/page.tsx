@@ -12,81 +12,11 @@ import { Play, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { quizSteps, type QuizStep } from './quiz-config';
 import Image from 'next/image';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ChatStep } from '@/components/quiz/chat-step';
+import { VitalsStep } from '@/components/quiz/vitals-step';
 
 // Helper to determine if a step is a video step
 const isVideoStep = (step: QuizStep) => step.type === 'video';
-
-const ChatStep = ({ step, onComplete }: { step: QuizStep, onComplete: () => void }) => {
-    const [chatMessages, setChatMessages] = useState([step.content.messages[0]]);
-    const [canReply, setCanReply] = useState(false);
-    
-    useEffect(() => {
-        let messageIndex = 1;
-        const showMessages = () => {
-            if(messageIndex < step.content.messages.length) {
-               const nextMessage = step.content.messages[messageIndex];
-               if(nextMessage.author === 'ByPamela') {
-                 setTimeout(() => {
-                     setChatMessages(prev => [...prev, nextMessage]);
-                     messageIndex++;
-                     showMessages();
-                 }, 1500);
-               } else {
-                 setCanReply(true);
-               }
-            } else {
-                setTimeout(onComplete, 1500);
-            }
-        }
-        showMessages();
-    }, [step.content.messages, onComplete]);
-
-    const handleOptionClick = (optionText: string) => {
-        const userMessage = { author: 'user', text: optionText };
-        setChatMessages(prev => [...prev, userMessage]);
-        setCanReply(false);
-
-        // Logic to show Pamela's next 3 messages
-        let pamelaMessageIndex = chatMessages.filter(m => m.author === 'ByPamela').length;
-        const remainingPamelaMessages = step.content.messages.filter((m:any) => m.author === 'ByPamela').slice(pamelaMessageIndex);
-        
-        let delay = 1000;
-        remainingPamelaMessages.forEach((msg, i) => {
-            setTimeout(() => {
-                setChatMessages(prev => [...prev, msg]);
-                if (i === remainingPamelaMessages.length - 1) {
-                     setTimeout(onComplete, 1500);
-                }
-            }, delay);
-            delay += 1500;
-        });
-    };
-    
-    return (
-         <div className="w-full h-full flex flex-col justify-end p-4 bg-zinc-800 text-white" style={{backgroundImage: `url('${step.content.backgroundUrl}')`, backgroundSize: 'cover', backgroundPosition: 'center'}}>
-            <div className="flex-grow flex flex-col justify-end space-y-3 pb-4">
-                {chatMessages.map((msg, index) => (
-                     <div key={index} className={`flex items-end gap-2 ${msg.author === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        {msg.author === 'ByPamela' && <Avatar className="h-8 w-8"><AvatarImage src={step.content.avatarUrl} /></Avatar>}
-                        <div className={`rounded-2xl px-4 py-2 max-w-xs lg:max-w-md ${msg.author === 'user' ? 'bg-blue-500 text-white rounded-br-none' : 'bg-zinc-700 text-white rounded-bl-none'}`}>
-                            <p className="text-sm">{msg.text}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-             {canReply && step.content.replyOptions && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                    {step.content.replyOptions.map((option: any, i: number) => (
-                       <Button key={i} variant="outline" size="sm" onClick={() => handleOptionClick(option.text)} className="bg-white/20 border-white/30 text-white backdrop-blur-sm">
-                           {option.text}
-                       </Button>
-                    ))}
-                </div>
-            )}
-        </div>
-    )
-}
 
 export default function QuizPage() {
   const router = useRouter();
@@ -238,6 +168,8 @@ export default function QuizPage() {
          );
     case 'chat':
         return <ChatStep step={step} onComplete={handleNext} />;
+    case 'vitals':
+        return <VitalsStep step={step} onComplete={handleNext} />;
     default:
         return (
             <div className="p-8 text-center">
@@ -256,5 +188,3 @@ export default function QuizPage() {
     </StoryLayout>
   );
 }
-
-    
