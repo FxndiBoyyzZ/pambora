@@ -4,12 +4,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Bell, Shield, LogOut, ChevronRight, Camera } from "lucide-react";
+import { Bell, Shield, LogOut, ChevronRight, Camera, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useQuiz } from "@/services/quiz-service";
 import * as React from 'react';
+import { useRouter } from "next/navigation";
 
 const stats = [
   { name: "Dias de Foco", value: "0" },
@@ -73,12 +74,18 @@ function EditProfileDialog({ children }: { children: React.ReactNode }) {
 }
 
 export default function PerfilPage() {
-  const { answers, setAnswer } = useQuiz();
+  const { answers, setAnswer, resetQuiz } = useQuiz();
   const [isClient, setIsClient] = React.useState(false);
+  const router = useRouter();
 
   React.useEffect(() => {
     setIsClient(true);
   }, []);
+
+  const handleReset = () => {
+    resetQuiz();
+    router.push('/quiz/1');
+  };
   
   const userHandle = answers.name ? `@${answers.name.split(' ')[0].toLowerCase()}` : '@usuario';
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -181,8 +188,12 @@ export default function PerfilPage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-center">
-            <Button variant="destructive" className="w-full max-w-sm">
+        <div className="flex flex-col items-center gap-4 w-full max-w-sm mx-auto">
+            <Button variant="outline" className="w-full" onClick={handleReset}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Resetar App (Limpar dados)
+            </Button>
+            <Button variant="destructive" className="w-full">
                 <LogOut className="mr-2 h-4 w-4" />
                 Sair
             </Button>
