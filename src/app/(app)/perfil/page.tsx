@@ -12,12 +12,6 @@ import { useQuiz } from "@/services/quiz-service";
 import * as React from 'react';
 import { useRouter } from "next/navigation";
 
-const stats = [
-  { name: "Dias de Foco", value: "0" },
-  { name: "Treinos Concluídos", value: "0" },
-  { name: "Refeições no Plano", value: "0" },
-];
-
 const settings = [
   { name: "Notificações", icon: Bell },
   { name: "Privacidade", icon: Shield },
@@ -26,11 +20,30 @@ const settings = [
 function EditProfileDialog({ children }: { children: React.ReactNode }) {
   const { answers, setAnswer } = useQuiz();
   const [open, setOpen] = React.useState(false);
+  
+  // Create local state to manage form changes without affecting global state until save
+  const [localAnswers, setLocalAnswers] = React.useState(answers);
+
+  React.useEffect(() => {
+    setLocalAnswers(answers);
+  }, [answers, open]);
+
 
   const handleSave = () => {
-    // Here you would typically save the data to a backend
-    console.log("Saving data:", answers);
+    // Update global state with all local changes at once
+    Object.keys(localAnswers).forEach(key => {
+        const value = localAnswers[key as keyof typeof localAnswers];
+        // Ensure we only set defined values, otherwise we might overwrite with undefined
+        if(value !== undefined) {
+             setAnswer(key as keyof typeof localAnswers, value);
+        }
+    });
+    console.log("Saving data:", localAnswers);
     setOpen(false);
+  }
+
+  const handleChange = (field: keyof typeof localAnswers, value: string) => {
+    setLocalAnswers(prev => ({...prev, [field]: value}));
   }
 
   return (
@@ -50,19 +63,19 @@ function EditProfileDialog({ children }: { children: React.ReactNode }) {
             <Label htmlFor="name" className="text-right">
               Nome
             </Label>
-            <Input id="name" value={answers.name || ''} onChange={(e) => setAnswer('name', e.target.value)} className="col-span-3" />
+            <Input id="name" value={localAnswers.name || ''} onChange={(e) => handleChange('name', e.target.value)} className="col-span-3" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="whatsapp" className="text-right">
               Whatsapp
             </Label>
-            <Input id="whatsapp" value={answers.whatsapp || ''} onChange={(e) => setAnswer('whatsapp', e.target.value)} className="col-span-3" />
+            <Input id="whatsapp" value={localAnswers.whatsapp || ''} onChange={(e) => handleChange('whatsapp', e.target.value)} className="col-span-3" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="email" className="text-right">
               Email
             </Label>
-            <Input id="email" type="email" value={answers.email || ''} onChange={(e) => setAnswer('email', e.target.value)} className="col-span-3" />
+            <Input id="email" type="email" value={localAnswers.email || ''} onChange={(e) => handleChange('email', e.target.value)} className="col-span-3" />
           </div>
         </div>
         <DialogFooter>
@@ -75,16 +88,20 @@ function EditProfileDialog({ children }: { children: React.ReactNode }) {
 
 export default function PerfilPage() {
   const { answers, setAnswer, resetQuiz } = useQuiz();
-  const [isClient, setIsClient] = React.useState(false);
   const router = useRouter();
 
-  React.useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const focusDays = answers.completedWorkouts?.length ?? 0;
+  const mealsOnPlan = focusDays * 4; // Assuming 4 meals a day
+
+  const stats = [
+    { name: "Dias de Foco", value: focusDays },
+    { name: "Treinos Concluídos", value: focusDays },
+    { name: "Refeições no Plano", value: mealsOnPlan },
+  ];
 
   const handleReset = () => {
     resetQuiz();
-    router.push('/quiz/1');
+    router.push('/quiz');
   };
   
   const userHandle = answers.name ? `@${answers.name.split(' ')[0].toLowerCase()}` : '@usuario';
@@ -104,10 +121,6 @@ export default function PerfilPage() {
       reader.readAsDataURL(file);
     }
   };
-
-  if (!isClient) {
-    return null; // Or a loading skeleton
-  }
 
   return (
     <div className="flex flex-col h-full">

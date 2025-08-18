@@ -1,6 +1,11 @@
+
+'use client';
+import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { CheckCircle, Clock, Dumbbell, PlayCircle } from "lucide-react";
+import { CheckCircle, Circle, Clock, Dumbbell, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useQuiz } from '@/services/quiz-service';
+import { useToast } from '@/hooks/use-toast';
 
 const workouts = Array.from({ length: 21 }, (_, i) => ({
   id: i + 1,
@@ -19,14 +24,28 @@ const workouts = Array.from({ length: 21 }, (_, i) => ({
   ]
 }));
 
-export async function generateStaticParams() {
-    return workouts.map((workout) => ({
-      id: workout.id.toString(),
-    }))
-}
+// This can be removed if we have a better way to generate static params
+// But for now, we keep it to pre-render the pages
+// export async function generateStaticParams() {
+//     return workouts.map((workout) => ({
+//       id: workout.id.toString(),
+//     }))
+// }
 
 export default function TreinoDetailPage({ params }: { params: { id: string } }) {
-  const workout = workouts.find(w => w.id.toString() === params.id);
+  const { toast } = useToast();
+  const workoutId = parseInt(params.id, 10);
+  const workout = workouts.find(w => w.id === workoutId);
+  const { toggleWorkoutCompleted, isWorkoutCompleted } = useQuiz();
+  const isCompleted = isWorkoutCompleted(workoutId);
+
+  const handleToggleComplete = () => {
+    toggleWorkoutCompleted(workoutId);
+    toast({
+        title: isCompleted ? "Treino desmarcado!" : "Parabéns!",
+        description: isCompleted ? "O treino não está mais marcado como concluído." : `Você concluiu o Treino do Dia ${workout?.day}!`,
+    })
+  }
 
   if (!workout) {
     return (
@@ -100,9 +119,19 @@ export default function TreinoDetailPage({ params }: { params: { id: string } })
                             <span className="text-muted-foreground">Tipo</span>
                             <span className="font-bold">{workout.description}</span>
                         </div>
-                        <Button className="w-full mt-4">
-                            <CheckCircle className="mr-2 h-5 w-5" />
-                            Marcar como Concluído
+                        <Button className="w-full mt-4" onClick={handleToggleComplete}>
+                            {isCompleted ? (
+                                <>
+                                 <CheckCircle className="mr-2 h-5 w-5" />
+                                 Treino Concluído
+                                </>
+                            ) : (
+                                <>
+                                 <Circle className="mr-2 h-5 w-5" />
+                                 Marcar como Concluído
+                                </>
+                            )}
+                           
                         </Button>
                      </CardContent>
                 </Card>

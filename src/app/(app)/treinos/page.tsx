@@ -1,8 +1,10 @@
+
 'use client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dumbbell, Flame, Lock, PlayCircle } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useQuiz } from "@/services/quiz-service";
 
 const workouts = Array.from({ length: 21 }, (_, i) => ({
   id: i + 1,
@@ -13,6 +15,9 @@ const workouts = Array.from({ length: 21 }, (_, i) => ({
 }));
 
 export default function TreinosPage() {
+  const { answers } = useQuiz();
+  const focusDays = answers.completedWorkouts?.length ?? 0;
+
   return (
     <div className="flex flex-col h-full">
       <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
@@ -21,7 +26,7 @@ export default function TreinosPage() {
         </h1>
         <div className="flex items-center gap-2 text-primary font-bold text-lg">
           <Flame className="h-7 w-7" />
-          <span>2</span>
+          <span>{focusDays}</span>
           <span className="text-sm font-normal text-muted-foreground">dias de Foco!</span>
         </div>
       </header>

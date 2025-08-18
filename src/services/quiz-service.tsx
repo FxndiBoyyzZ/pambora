@@ -12,12 +12,16 @@ interface QuizAnswers {
   allergies?: string;
   bonusPlan?: string;
   profilePictureUrl?: string;
+  completedWorkouts?: number[];
+  workoutFrequency?: string;
 }
 
 interface QuizContextType {
   answers: QuizAnswers;
-  setAnswer: (step: keyof QuizAnswers, answer: string) => void;
+  setAnswer: (step: keyof QuizAnswers, answer: any) => void;
   resetQuiz: () => void;
+  toggleWorkoutCompleted: (workoutId: number) => void;
+  isWorkoutCompleted: (workoutId: number) => boolean;
 }
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined);
@@ -27,14 +31,18 @@ const LOCAL_STORAGE_KEY = 'pamfit_quizAnswers';
 export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const [answers, setAnswers] = useState<QuizAnswers>(() => {
     if (typeof window === 'undefined') {
-      return {};
+      return { completedWorkouts: [] };
     }
     try {
       const savedAnswers = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-      return savedAnswers ? JSON.parse(savedAnswers) : {};
+      const parsedAnswers = savedAnswers ? JSON.parse(savedAnswers) : {};
+      if (!parsedAnswers.completedWorkouts) {
+        parsedAnswers.completedWorkouts = [];
+      }
+      return parsedAnswers;
     } catch (error) {
       console.error("Failed to parse quiz answers from localStorage", error);
-      return {};
+      return { completedWorkouts: [] };
     }
   });
 
@@ -46,7 +54,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [answers]);
 
-  const setAnswer = (step: keyof QuizAnswers, answer: string) => {
+  const setAnswer = (step: keyof QuizAnswers, answer: any) => {
     setAnswers((prevAnswers) => ({
       ...prevAnswers,
       [step]: answer,
@@ -54,7 +62,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetQuiz = () => {
-    setAnswers({});
+    setAnswers({ completedWorkouts: [] });
     try {
        window.localStorage.removeItem(LOCAL_STORAGE_KEY);
     } catch (error) {
@@ -62,8 +70,23 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  const toggleWorkoutCompleted = (workoutId: number) => {
+    setAnswers(prev => {
+        const completed = prev.completedWorkouts || [];
+        const isCompleted = completed.includes(workoutId);
+        const newCompleted = isCompleted 
+            ? completed.filter(id => id !== workoutId)
+            : [...completed, workoutId];
+        return { ...prev, completedWorkouts: newCompleted };
+    });
+  };
+
+  const isWorkoutCompleted = (workoutId: number) => {
+      return answers.completedWorkouts?.includes(workoutId) ?? false;
+  }
+
   return (
-    <QuizContext.Provider value={{ answers, setAnswer, resetQuiz }}>
+    <QuizContext.Provider value={{ answers, setAnswer, resetQuiz, toggleWorkoutCompleted, isWorkoutCompleted }}>
       {children}
     </QuizContext.Provider>
   );
