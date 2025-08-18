@@ -65,7 +65,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
             await signInAnonymously(auth);
         } catch (error: any) {
             if (error.code === 'auth/operation-not-allowed' || error.code === 'auth/configuration-not-found') {
-                console.error("Anonymous sign-in is not enabled in the Firebase console. Please enable it to continue.");
+                console.error("Firebase Anonymous Sign-in is not enabled. Please enable it in the Firebase console for the app to work correctly.");
             } else {
                  console.error("Firebase anonymous sign-in error:", error);
             }
@@ -131,18 +131,34 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const signUp = async (email: string, name: string, whatsapp: string) => {
     // Note: In a real app, use a more secure temporary password method.
     const tempPassword = "temporaryPassword123";
+    const newUserData = { name, email, whatsapp };
+
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
         const newUser = userCredential.user;
         setUser(newUser);
-        const initialData = { name, email, whatsapp, completedWorkouts: [], weight: 60, height: 160 };
+        const initialData = { ...newUserData, completedWorkouts: [], weight: 60, height: 160 };
         await setDoc(doc(db, 'users', newUser.uid), initialData);
         setAnswers(initialData);
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
-            const userCredential = await signInWithEmailAndPassword(auth, email, tempPassword);
-            setUser(userCredential.user);
-            await fetchUserData(userCredential.user);
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, tempPassword);
+                const existingUser = userCredential.user;
+                setUser(existingUser);
+                // Update user data in firestore with the new info from the form
+                await updateFirestore(existingUser.uid, newUserData);
+                // Fetch all user data to update the state
+                await fetchUserData(existingUser);
+            } catch (signInError) {
+                 console.error("Error signing in existing user:", signInError);
+                 throw signInError;
+            }
+        } else if (error.code === 'auth/operation-not-allowed') {
+            console.error("Sign-up with Email/Password is not enabled in Firebase. Please enable it in the console.");
+            // We can alert the user here or handle it gracefully.
+            alert("O serviço de cadastro está temporariamente indisponível. Por favor, tente mais tarde.");
+            throw error;
         } else {
             console.error("Error signing up:", error);
             throw error;
