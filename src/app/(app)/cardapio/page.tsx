@@ -5,59 +5,63 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { UtensilsCrossed, Heart, RefreshCw } from 'lucide-react';
+import { UtensilsCrossed, Heart, RefreshCw, Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { useQuiz } from '@/services/quiz-service';
+import { generateMealPlan, MealPlanOutput } from '@/ai/flows/meal-plan-generator';
+import { useRouter } from 'next/navigation';
 
-const mealPlan = {
-    "Seg": {
-        "Café da Manhã": ["Ovos mexidos com espinafre", "1 fatia de pão integral", "1/2 abacate"],
-        "Almoço": ["Salmão grelhado", "Quinoa", "Brócolis no vapor"],
-        "Lanche": ["Iogurte grego com frutas vermelhas"],
-        "Jantar": ["Sopa de legumes com frango desfiado"]
-    },
-    "Ter": {
-        "Café da Manhã": ["Smoothie de proteína com banana e aveia"],
-        "Almoço": ["Salada de frango com mix de folhas e nozes"],
-        "Lanche": ["Maçã com pasta de amendoim"],
-        "Jantar": ["Carne moída com purê de batata doce"]
-    },
-    "Qua": {
-        "Café da Manhã": ["Panquecas de aveia com mel"],
-        "Almoço": ["Bife de patinho com arroz integral e feijão"],
-        "Lanche": ["Mix de castanhas"],
-        "Jantar": ["Omelete com queijo e tomate"]
-    },
-    "Qui": {
-        "Café da Manhã": ["Iogurte natural com granola e frutas"],
-        "Almoço": ["Frango grelhado com salada de lentilha"],
-        "Lanche": ["Banana com canela"],
-        "Jantar": ["Tilápia assada com legumes"]
-    },
-    "Sex": {
-        "Café da Manhã": ["Crepioca com queijo minas"],
-        "Almoço": ["Macarrão integral com almôndegas de frango"],
-        "Lanche": ["Vitamina de abacate"],
-        "Jantar": ["Pizza fit de frigideira"]
-    },
-    "Sáb": {
-        "Café da Manhã": ["Pão de queijo fit com café"],
-        "Almoço": ["Feijoada leve com couve refogada"],
-        "Lanche": ["Bolo de cenoura fit"],
-        "Jantar": ["Sanduíche natural no pão integral"]
-    },
-    "Dom": {
-        "Café da Manhã": ["Bruschetta com tomate e manjericão"],
-        "Almoço": ["Lasanha de abobrinha à bolonhesa"],
-        "Lanche": ["Salada de frutas"],
-        "Jantar": ["Caldo verde fit"]
-    },
-};
-
-type MealName = keyof typeof mealPlan.Seg;
+type MealName = "Café da Manhã" | "Almoço" | "Lanche" | "Jantar";
 const mealNames: MealName[] = ["Café da Manhã", "Almoço", "Lanche", "Jantar"];
 
+function MealPlanSkeleton() {
+    return (
+        <div className="space-y-4">
+            {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="space-y-2">
+                    <div className="w-1/3 h-6 rounded-md bg-muted animate-pulse" />
+                    <div className="w-full h-10 rounded-md bg-muted animate-pulse" />
+                </div>
+            ))}
+        </div>
+    )
+}
+
 export default function CardapioPage() {
+    const router = useRouter();
+    const { answers, resetQuiz } = useQuiz();
+    const [loading, setLoading] = React.useState(true);
+    const [mealPlan, setMealPlan] = React.useState<MealPlanOutput['mealPlan'] | null>(null);
     const [favorites, setFavorites] = React.useState<Record<string, boolean>>({});
+
+    React.useEffect(() => {
+        if (Object.keys(answers).length < 3) {
+            router.push('/quiz/passo-1');
+        } else {
+            const getPlan = async () => {
+                setLoading(true);
+                try {
+                    const result = await generateMealPlan({
+                        goal: answers.goal || '',
+                        diet: answers.diet || '',
+                        allergies: answers.allergies || '',
+                    });
+                    setMealPlan(result.mealPlan);
+                } catch (error) {
+                    console.error("Failed to generate meal plan:", error);
+                    // Handle error state in UI
+                } finally {
+                    setLoading(false);
+                }
+            };
+            getPlan();
+        }
+    }, [answers, router]);
+
+    const handleResetQuiz = () => {
+        resetQuiz();
+        router.push('/quiz/passo-1');
+    };
 
     const toggleFavorite = (meal: string) => {
         setFavorites(prev => ({...prev, [meal]: !prev[meal]}));
@@ -67,54 +71,68 @@ export default function CardapioPage() {
         <div className="flex flex-col h-full">
             <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
                 <h1 className="text-2xl font-bold font-headline text-foreground">Cardápio</h1>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={handleResetQuiz}>
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Refazer Quiz
                 </Button>
             </header>
             <div className="flex-grow p-4 md:p-6 lg:p-8">
-                <Tabs defaultValue="Seg" className="w-full">
-                    <TabsList className="grid w-full grid-cols-4 md:grid-cols-7">
-                        {Object.keys(mealPlan).map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
-                    </TabsList>
-                    {Object.entries(mealPlan).map(([day, meals]) => (
-                        <TabsContent key={day} value={day}>
-                            <Card>
-                                <CardContent className="p-4 md:p-6">
-                                    <Accordion type="single" collapsible defaultValue="Café da Manhã" className="w-full">
-                                        {mealNames.map((mealName) => (
-                                            <AccordionItem value={mealName} key={mealName}>
-                                                <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-                                                    <div className="flex items-center gap-3">
-                                                        <UtensilsCrossed className="h-5 w-5 text-primary" />
-                                                        {mealName}
-                                                    </div>
-                                                </AccordionTrigger>
-                                                <AccordionContent className="pt-2 pl-4">
-                                                    <div className="space-y-4">
-                                                        {(meals[mealName] && meals[mealName].length > 0) ? meals[mealName].map((item, index) => (
-                                                            <div key={index} className="flex items-center space-x-3">
-                                                                <Checkbox id={`${day}-${mealName}-${index}`} />
-                                                                <Label htmlFor={`${day}-${mealName}-${index}`} className="text-base font-normal text-foreground/80 leading-snug">
-                                                                    {item}
-                                                                </Label>
-                                                            </div>
-                                                        )) : <p className="text-muted-foreground">Nenhuma refeição planejada.</p>}
-                                                        <div className="flex justify-end pt-2">
-                                                            <Button variant="ghost" size="icon" onClick={() => toggleFavorite(`${day}-${mealName}`)}>
-                                                                <Heart className={cn("h-5 w-5", favorites[`${day}-${mealName}`] ? 'text-red-500 fill-current' : 'text-muted-foreground')} />
-                                                            </Button>
+                {loading || !mealPlan ? (
+                     <Card>
+                        <CardHeader>
+                            <CardTitle className='flex items-center gap-2'>
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                                Gerando seu cardápio personalizado...
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <MealPlanSkeleton />
+                        </CardContent>
+                     </Card>
+                ) : (
+                    <Tabs defaultValue="Seg" className="w-full">
+                        <TabsList className="grid w-full grid-cols-4 md:grid-cols-7">
+                            {Object.keys(mealPlan).map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
+                        </TabsList>
+                        {Object.entries(mealPlan).map(([day, meals]) => (
+                            <TabsContent key={day} value={day}>
+                                <Card>
+                                    <CardContent className="p-4 md:p-6">
+                                        <Accordion type="single" collapsible defaultValue="Café da Manhã" className="w-full">
+                                            {mealNames.map((mealName) => (
+                                                <AccordionItem value={mealName} key={mealName}>
+                                                    <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                                                        <div className="flex items-center gap-3">
+                                                            <UtensilsCrossed className="h-5 w-5 text-primary" />
+                                                            {mealName}
                                                         </div>
-                                                    </div>
-                                                </AccordionContent>
-                                            </AccordionItem>
-                                        ))}
-                                    </Accordion>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    ))}
-                </Tabs>
+                                                    </AccordionTrigger>
+                                                    <AccordionContent className="pt-2 pl-4">
+                                                        <div className="space-y-4">
+                                                            {(meals[mealName] && meals[mealName].length > 0) ? meals[mealName].map((item, index) => (
+                                                                <div key={index} className="flex items-center space-x-3">
+                                                                    <Checkbox id={`${day}-${mealName}-${index}`} />
+                                                                    <Label htmlFor={`${day}-${mealName}-${index}`} className="text-base font-normal text-foreground/80 leading-snug">
+                                                                        {item}
+                                                                    </Label>
+                                                                </div>
+                                                            )) : <p className="text-muted-foreground">Nenhuma refeição planejada.</p>}
+                                                            <div className="flex justify-end pt-2">
+                                                                <Button variant="ghost" size="icon" onClick={() => toggleFavorite(`${day}-${mealName}`)}>
+                                                                    <Heart className={cn("h-5 w-5", favorites[`${day}-${mealName}`] ? 'text-red-500 fill-current' : 'text-muted-foreground')} />
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </AccordionContent>
+                                                </AccordionItem>
+                                            ))}
+                                        </Accordion>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        ))}
+                    </Tabs>
+                )}
             </div>
         </div>
     );

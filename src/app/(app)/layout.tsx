@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Dumbbell, UtensilsCrossed, Users, User, Flame } from 'lucide-react';
+import { Dumbbell, UtensilsCrossed, Users, User, Flame, Gift } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,6 +12,7 @@ const navItems = [
   { href: '/treinos', label: 'Treinos', icon: Dumbbell },
   { href: '/cardapio', label: 'Cardápio', icon: UtensilsCrossed },
   { href: '/pambora', label: '#PAMBORA', icon: Users },
+  { href: '/bonus', label: 'Bônus', icon: Gift },
   { href: '/perfil', label: 'Perfil', icon: User },
 ];
 
