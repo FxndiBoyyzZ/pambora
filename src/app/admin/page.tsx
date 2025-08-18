@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { quizSteps } from "@/app/quiz/quiz-config";
-import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, Zap, GripVertical } from 'lucide-react';
+import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, Zap, GripVertical, UploadCloud } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -32,9 +32,19 @@ const StepContentEditor = ({ step, index }: { step: any, index: number }) => {
     switch (step.type) {
         case 'video':
             return (
-                <div className="space-y-2">
-                    <Label htmlFor={`videoUrl-${index}`}>URL do Vídeo</Label>
-                    <Input id={`videoUrl-${index}`} value={stepData.videoUrl} onChange={(e) => handleChange('videoUrl', e.target.value)} />
+                <div className="space-y-4">
+                    <div>
+                        <Label htmlFor={`videoUrl-${index}`}>URL do Vídeo</Label>
+                        <Input id={`videoUrl-${index}`} value={stepData.videoUrl} onChange={(e) => handleChange('videoUrl', e.target.value)} placeholder="https://..." />
+                    </div>
+                    <div className="text-center text-xs text-muted-foreground">OU</div>
+                    <div>
+                         <Label htmlFor={`videoUpload-${index}`}>Fazer Upload</Label>
+                         <div className="flex items-center gap-2 rounded-md border border-dashed p-2">
+                             <UploadCloud className="h-5 w-5 text-muted-foreground" />
+                            <Input id={`videoUpload-${index}`} type="file" accept="video/*" className="border-none text-xs h-auto p-0 file:mr-2 file:text-primary file:font-semibold" />
+                         </div>
+                    </div>
                 </div>
             )
         case 'form':
