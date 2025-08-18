@@ -1,3 +1,4 @@
+
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
@@ -25,7 +26,7 @@ const StepContentEditor = ({ step, index }: { step: any, index: number }) => {
     // This is a UI-only implementation for now.
     const [stepData, setStepData] = React.useState(step.content);
 
-    const handleChange = (field: string, value: string | string[]) => {
+    const handleChange = (field: string, value: any) => {
         setStepData((prev: any) => ({ ...prev, [field]: value }));
     }
 
@@ -119,7 +120,18 @@ const StepContentEditor = ({ step, index }: { step: any, index: number }) => {
                 <div className="space-y-4">
                     <Label>Mensagens</Label>
                      {stepData.messages.map((msg: any, msgIndex: number) => (
-                         msg.author === 'ByPamela' && <Textarea key={msgIndex} value={msg.text} className="bg-muted" />
+                         msg.author === 'ByPamela' && (
+                           <Textarea 
+                              key={msgIndex} 
+                              value={msg.text} 
+                              className="bg-muted" 
+                              onChange={(e) => {
+                                const newMessages = [...stepData.messages];
+                                newMessages[msgIndex].text = e.target.value;
+                                handleChange('messages', newMessages);
+                              }}
+                           />
+                         )
                      ))}
                 </div>
              )
