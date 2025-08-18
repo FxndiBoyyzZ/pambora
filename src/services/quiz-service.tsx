@@ -2,7 +2,7 @@
 'use client';
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { auth, db } from '@/services/firebase';
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, signInAnonymously } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 
 interface QuizAnswers {
@@ -61,6 +61,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         setUser(user);
         await fetchUserData(user);
       } else {
+        await signInAnonymously(auth);
         setUser(null);
         setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
         setLoading(false);
