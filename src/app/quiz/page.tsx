@@ -1,3 +1,4 @@
+
 // src/app/quiz/page.tsx
 'use client';
 import { useRouter } from 'next/navigation';
@@ -7,31 +8,62 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ChatStep } from '@/components/quiz/chat-step';
 import { StoryLayout } from '@/components/quiz/story-layout';
-import { VitalsStep } from '@/components/quiz/vitals-step';
 import { useQuiz } from '@/services/quiz-service';
 import { Play, Loader2 } from 'lucide-react';
 import Image from 'next/image';
-import { quizSteps, type QuizStep } from './quiz-config';
+import { type QuizStep } from './quiz-config';
+import { ChatStep } from '@/components/quiz/chat-step';
+import { VitalsStep } from '@/components/quiz/vitals-step';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/services/firebase';
 
 const isVideoStep = (step: QuizStep) => step.type === 'video';
 
 export default function QuizPage() {
   const router = useRouter();
+  const [quizSteps, setQuizSteps] = useState<QuizStep[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const { answers, setAnswer, signUp, user, loading } = useQuiz();
+  const { answers, setAnswer, signUp, user, loading: authLoading } = useQuiz();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [configLoading, setConfigLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchQuizConfig = async () => {
+        setConfigLoading(true);
+        try {
+            const configDocRef = doc(db, 'config', 'quiz');
+            const configDoc = await getDoc(configDocRef);
+            if (configDoc.exists()) {
+                setQuizSteps(configDoc.data().steps);
+            } else {
+                // Fallback to local config if not found in Firestore
+                const { quizSteps: localQuizSteps } = await import('./quiz-config');
+                setQuizSteps(localQuizSteps);
+                console.warn("Configuração do quiz não encontrada no Firestore. Usando configuração local.");
+            }
+        } catch (error) {
+            console.error("Erro ao buscar configuração do quiz:", error);
+            // Fallback to local config on error
+            const { quizSteps: localQuizSteps } = await import('./quiz-config');
+            setQuizSteps(localQuizSteps);
+        } finally {
+            setConfigLoading(false);
+        }
+    };
+    fetchQuizConfig();
+  }, []);
 
   useEffect(() => {
     // If user is logged in and somehow lands on quiz, push to app
-    if (user && !loading && currentStepIndex < 2) {
+    if (user && !authLoading && currentStepIndex < 2) {
        router.push('/treinos');
     }
-  }, [user, loading, router, currentStepIndex]);
+  }, [user, authLoading, router, currentStepIndex]);
   
-
   const handleNext = async () => {
+    if (configLoading || quizSteps.length === 0) return;
+
     const currentStep = quizSteps[currentStepIndex];
     if (currentStep.type === 'form') {
         setIsSubmitting(true);
@@ -56,6 +88,7 @@ export default function QuizPage() {
   const currentStep = quizSteps[currentStepIndex];
 
   useEffect(() => {
+    if (!currentStep) return;
     let timer: NodeJS.Timeout;
     if (isVideoStep(currentStep)) {
       timer = setTimeout(() => {
@@ -71,21 +104,37 @@ export default function QuizPage() {
   }, [currentStepIndex, currentStep]);
 
   const renderStepContent = () => {
+    if (!currentStep) return null;
     const step = currentStep;
+
     switch (step.type) {
       case 'video':
+        const isYoutube = step.content.videoUrl && (step.content.videoUrl.includes('youtube.com') || step.content.videoUrl.includes('youtu.be'));
+        const videoId = isYoutube ? new URL(step.content.videoUrl).searchParams.get('v') || step.content.videoUrl.split('/').pop() : null;
+        const embedUrl = isYoutube ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0` : step.content.videoUrl;
+        
         return (
-          <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-8">
-            <div className="relative w-full aspect-9/16 max-h-full">
-              <video
-                src={step.content.videoUrl}
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="w-full h-full object-cover"
-              ></video>
-              <div className="absolute inset-0 bg-black/30 flex justify-center items-center">
+          <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-0">
+            <div className="relative w-full aspect-[9/16] max-h-full">
+               {isYoutube ? (
+                 <iframe
+                    src={embedUrl}
+                    className="w-full h-full object-cover"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title="Quiz Video"
+                 ></iframe>
+               ) : (
+                 <video
+                   src={step.content.videoUrl}
+                   autoPlay
+                   muted
+                   loop
+                   playsInline
+                   className="w-full h-full object-cover"
+                 ></video>
+               )}
+              <div className="absolute inset-0 bg-black/30 flex justify-center items-center pointer-events-none">
                 <Play className="text-white/70 h-16 w-16" />
               </div>
             </div>
@@ -202,6 +251,8 @@ export default function QuizPage() {
         );
     }
   };
+
+  const loading = authLoading || configLoading;
 
   if (loading) {
     return (

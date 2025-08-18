@@ -2,14 +2,17 @@
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { quizSteps as initialQuizSteps, type QuizStep } from "@/app/quiz/quiz-config";
-import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, Zap, GripVertical, UploadCloud, Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { type QuizStep } from "@/app/quiz/quiz-config";
+import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadVideo } from './actions';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/services/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 const getIcon = (type: string) => {
     switch (type) {
@@ -41,8 +44,8 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
             const formData = new FormData();
             formData.append('video', file);
             const result = await uploadVideo(formData);
-            if (result.success && result.dataUrl) {
-                handleChange('videoUrl', result.dataUrl);
+            if (result.success && result.url) {
+                handleChange('videoUrl', result.url);
             } else {
                  alert('Falha no upload do vídeo: ' + result.error);
             }
@@ -173,12 +176,67 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
 }
 
 export default function AdminDashboard() {
-  const [quizSteps, setQuizSteps] = React.useState<QuizStep[]>(initialQuizSteps);
+  const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const { toast } = useToast();
+
+  React.useEffect(() => {
+    const fetchQuizConfig = async () => {
+        setIsLoading(true);
+        try {
+            const configDocRef = doc(db, 'config', 'quiz');
+            const configDoc = await getDoc(configDocRef);
+            if(configDoc.exists()) {
+                setQuizSteps(configDoc.data().steps);
+            } else {
+                // Se não existir, importa do arquivo local e salva no Firestore
+                const { quizSteps: initialQuizSteps } = await import('@/app/quiz/quiz-config');
+                await setDoc(configDocRef, { steps: initialQuizSteps });
+                setQuizSteps(initialQuizSteps);
+            }
+        } catch (error) {
+            console.error("Erro ao buscar configuração do quiz:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Erro!',
+                description: 'Não foi possível carregar a configuração do quiz.'
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchQuizConfig();
+  }, [toast]);
+
 
   const handleStepChange = (index: number, newStep: QuizStep) => {
+    if (!quizSteps) return;
     const newQuizSteps = [...quizSteps];
     newQuizSteps[index] = newStep;
     setQuizSteps(newQuizSteps);
+  }
+
+  const handleSaveChanges = async () => {
+    if (!quizSteps) return;
+    setIsSaving(true);
+    try {
+        const configDocRef = doc(db, 'config', 'quiz');
+        await setDoc(configDocRef, { steps: quizSteps });
+        toast({
+            title: 'Sucesso!',
+            description: 'Configuração do quiz salva com sucesso.'
+        });
+    } catch (error) {
+        console.error("Erro ao salvar configuração do quiz:", error);
+         toast({
+            variant: 'destructive',
+            title: 'Erro!',
+            description: 'Não foi possível salvar a configuração do quiz.'
+        });
+    } finally {
+        setIsSaving(false);
+    }
   }
 
   return (
@@ -190,35 +248,46 @@ export default function AdminDashboard() {
             </h1>
             <p className="text-muted-foreground">Arraste e solte para reordenar as etapas (funcionalidade em breve).</p>
         </div>
-        <Button onClick={() => alert('Funcionalidade de salvar ainda não implementada. As alterações são apenas visuais.')}>
+        <Button onClick={handleSaveChanges} disabled={isSaving || isLoading}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Salvar Alterações
         </Button>
       </header>
 
       <main className="flex-grow p-4 md:p-6 lg:p-8">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {quizSteps.map((step, index) => (
-                <Card key={index} className="flex flex-col">
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
-                                <CardTitle className="text-lg">Etapa {index + 1}: {step.type.charAt(0).toUpperCase() + step.type.slice(1)}</CardTitle>
+        {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        ) : quizSteps && quizSteps.length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {quizSteps.map((step, index) => (
+                    <Card key={index} className="flex flex-col">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+                                    <CardTitle className="text-lg">Etapa {index + 1}: {step.type.charAt(0).toUpperCase() + step.type.slice(1)}</CardTitle>
+                                </div>
+                                {getIcon(step.type)}
                             </div>
-                            {getIcon(step.type)}
-                        </div>
-                    </CardHeader>
-                    <CardContent className="flex-grow">
-                        <StepContentEditor step={step} index={index} onStepChange={handleStepChange} />
-                    </CardContent>
-                    <CardFooter>
-                        <Button variant="destructive" size="sm" className="w-full" onClick={() => alert('Funcionalidade de remover ainda não implementada.')}>
-                            Remover Etapa
-                        </Button>
-                    </CardFooter>
-                </Card>
-            ))}
-        </div>
+                        </CardHeader>
+                        <CardContent className="flex-grow">
+                            <StepContentEditor step={step} index={index} onStepChange={handleStepChange} />
+                        </CardContent>
+                        <CardFooter>
+                            <Button variant="destructive" size="sm" className="w-full" onClick={() => alert('Funcionalidade de remover ainda não implementada.')}>
+                                Remover Etapa
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                ))}
+            </div>
+        ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <p className="text-lg font-semibold">Nenhuma configuração de quiz encontrada.</p>
+            </div>
+        )}
       </main>
     </div>
   );

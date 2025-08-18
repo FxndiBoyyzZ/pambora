@@ -1,14 +1,16 @@
 
 'use server';
 
-export async function uploadVideo(formData: FormData): Promise<{ success: boolean; dataUrl?: string; error?: string }> {
+import { storage } from '@/services/firebase';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+
+export async function uploadVideo(formData: FormData): Promise<{ success: boolean; url?: string; error?: string }> {
   const file = formData.get('video') as File;
 
   if (!file) {
     return { success: false, error: 'Nenhum arquivo enviado.' };
   }
 
-  // Basic validation (optional)
   if (!file.type.startsWith('video/')) {
       return { success: false, error: 'Tipo de arquivo inválido. Por favor, envie um vídeo.' };
   }
@@ -16,15 +18,22 @@ export async function uploadVideo(formData: FormData): Promise<{ success: boolea
   try {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const dataUrl = `data:${file.type};base64,${buffer.toString('base64')}`;
     
-    // In a real application, you would upload the buffer to a cloud storage (like Firebase Storage)
-    // and return the public URL. Here, we return the Data URL for local-only preview.
+    // Create a unique filename
+    const storageRef = ref(storage, `quiz-videos/${Date.now()}-${file.name}`);
+
+    // Upload the file to Firebase Storage
+    const snapshot = await uploadBytes(storageRef, buffer, {
+        contentType: file.type
+    });
+
+    // Get the public download URL
+    const downloadURL = await getDownloadURL(snapshot.ref);
     
-    return { success: true, dataUrl: dataUrl };
+    return { success: true, url: downloadURL };
 
   } catch (error) {
-    console.error('Error converting file to Data URL:', error);
-    return { success: false, error: 'Falha ao processar o arquivo.' };
+    console.error('Error uploading video to Firebase Storage:', error);
+    return { success: false, error: 'Falha ao processar e enviar o arquivo.' };
   }
 }
