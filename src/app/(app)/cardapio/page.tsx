@@ -41,7 +41,7 @@ export default function CardapioPage() {
         if (!answers.goal || !answers.diet) {
             // If essential answers are missing, maybe they skipped the quiz.
             // Redirect them back. Check for user to avoid redirect loop on logout.
-            if(auth.currentUser) router.push('/quiz/passo-1');
+            if(auth.currentUser) router.push('/quiz');
         } else {
             const getPlan = async () => {
                 setLoading(true);
@@ -63,7 +63,7 @@ export default function CardapioPage() {
     }, [answers, router]);
 
     const handleResetQuiz = async () => {
-        await signOut(auth);
+        await resetQuiz();
         router.push('/quiz');
     };
 
@@ -77,7 +77,7 @@ export default function CardapioPage() {
                 <h1 className="text-2xl font-bold font-headline text-foreground">Cardápio</h1>
                 <Button variant="outline" size="sm" onClick={handleResetQuiz}>
                     <RefreshCw className="mr-2 h-4 w-4" />
-                    Sair e refazer
+                    Refazer o Quiz
                 </Button>
             </header>
             <div className="flex-grow p-4 md:p-6 lg:p-8">

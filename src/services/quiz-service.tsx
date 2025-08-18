@@ -61,7 +61,15 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         setUser(user);
         await fetchUserData(user);
       } else {
-        await signInAnonymously(auth);
+        try {
+            await signInAnonymously(auth);
+        } catch (error: any) {
+            if (error.code === 'auth/operation-not-allowed' || error.code === 'auth/configuration-not-found') {
+                console.error("Anonymous sign-in is not enabled in the Firebase console. Please enable it to continue.");
+            } else {
+                 console.error("Firebase anonymous sign-in error:", error);
+            }
+        }
         setUser(null);
         setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
         setLoading(false);
