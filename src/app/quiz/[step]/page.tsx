@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Play } from 'lucide-react';
+import { useEffect } from 'react';
 
 // Mock data, replace with real data as needed
 const goals = [
@@ -238,4 +239,3 @@ export default function QuizStepPage() {
     </StoryLayout>
   );
 }
-
