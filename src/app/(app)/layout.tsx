@@ -1,13 +1,14 @@
 'use client';
 import type { ReactNode } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Dumbbell, UtensilsCrossed, Users, User, Flame, Gift } from 'lucide-react';
+import { Dumbbell, UtensilsCrossed, Users, User, Flame, Gift, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { QuizProvider } from '@/services/quiz-service';
+import { QuizProvider, useQuiz } from '@/services/quiz-service';
+import { useEffect } from 'react';
 
 const navItems = [
   { href: '/treinos', label: 'Treinos', icon: Dumbbell },
@@ -19,6 +20,9 @@ const navItems = [
 
 function DesktopSidebar() {
   const pathname = usePathname();
+  const { answers } = useQuiz();
+  const userHandle = answers.name ? `@${answers.name.split(' ')[0].toLowerCase()}` : '@usuario';
+
   return (
     <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-background p-4">
       <div className="p-4 mb-4">
@@ -41,12 +45,12 @@ function DesktopSidebar() {
       </nav>
       <div className="mt-auto flex items-center gap-3 p-4">
         <Avatar>
-          <AvatarImage src="https://placehold.co/40x40.png" alt="ByPamela" />
-          <AvatarFallback>BP</AvatarFallback>
+          <AvatarImage src={answers.profilePictureUrl} alt={answers.name} />
+          <AvatarFallback>{answers.name ? answers.name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
         </Avatar>
         <div>
-          <p className="font-semibold">ByPamela</p>
-          <p className="text-sm text-muted-foreground">@bypamela</p>
+          <p className="font-semibold">{answers.name || 'Usuário'}</p>
+          <p className="text-sm text-muted-foreground">{userHandle}</p>
         </div>
       </div>
     </aside>
@@ -76,14 +80,38 @@ function MobileBottomNav() {
   );
 }
 
+function AppLayoutContent({ children }: { children: ReactNode }) {
+  const { user, loading } = useQuiz();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/quiz');
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      <DesktopSidebar />
+      <main className="flex-1 pb-20 lg:pb-0">{children}</main>
+      <MobileBottomNav />
+    </div>
+  );
+}
+
+
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <QuizProvider>
-      <div className="flex min-h-screen bg-background">
-        <DesktopSidebar />
-        <main className="flex-1 pb-20 lg:pb-0">{children}</main>
-        <MobileBottomNav />
-      </div>
+      <AppLayoutContent>{children}</AppLayoutContent>
     </QuizProvider>
   );
 }

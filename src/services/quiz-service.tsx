@@ -1,7 +1,9 @@
-
 // src/services/quiz-service.tsx
 'use client';
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { auth, db } from '@/services/firebase';
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 
 interface QuizAnswers {
   name?: string;
@@ -20,64 +22,87 @@ interface QuizAnswers {
 }
 
 interface QuizContextType {
+  user: User | null;
   answers: QuizAnswers;
+  loading: boolean;
   setAnswer: (step: keyof QuizAnswers, answer: any) => void;
   resetQuiz: () => void;
   toggleWorkoutCompleted: (workoutId: number) => void;
   isWorkoutCompleted: (workoutId: number) => boolean;
+  signUp: (email: string, name: string, whatsapp: string) => Promise<void>;
 }
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY = 'pamfit_quizAnswers';
-
 export const QuizProvider = ({ children }: { children: ReactNode }) => {
-  const [answers, setAnswers] = useState<QuizAnswers>(() => {
-    if (typeof window === 'undefined') {
-      return { completedWorkouts: [], weight: 60, height: 160 };
-    }
+  const [user, setUser] = useState<User | null>(null);
+  const [answers, setAnswers] = useState<QuizAnswers>({ completedWorkouts: [], weight: 60, height: 160 });
+  const [loading, setLoading] = useState(true);
+
+  const fetchUserData = useCallback(async (user: User) => {
+    setLoading(true);
     try {
-      const savedAnswers = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-      const parsedAnswers = savedAnswers ? JSON.parse(savedAnswers) : {};
-      if (!parsedAnswers.completedWorkouts) {
-        parsedAnswers.completedWorkouts = [];
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        const data = userDoc.data() as QuizAnswers;
+        setAnswers(prev => ({ ...prev, ...data }));
       }
-      if (!parsedAnswers.weight) {
-        parsedAnswers.weight = 60;
-      }
-      if (!parsedAnswers.height) {
-        parsedAnswers.height = 160;
-      }
-      return parsedAnswers;
     } catch (error) {
-      console.error("Failed to parse quiz answers from localStorage", error);
-      return { completedWorkouts: [], weight: 60, height: 160 };
+      console.error("Failed to fetch user data from Firestore", error);
+    } finally {
+        setLoading(false);
     }
-  });
+  }, []);
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(answers));
-    } catch (error) {
-        console.error("Failed to save quiz answers to localStorage", error);
-    }
-  }, [answers]);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setUser(user);
+        await fetchUserData(user);
+      } else {
+        setUser(null);
+        setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
+        setLoading(false);
+      }
+    });
 
-  const setAnswer = (step: keyof QuizAnswers, answer: any) => {
-    setAnswers((prevAnswers) => ({
-      ...prevAnswers,
-      [step]: answer,
-    }));
+    return () => unsubscribe();
+  }, [fetchUserData]);
+
+  const updateFirestore = async (uid: string, data: Partial<QuizAnswers>) => {
+    if (!uid) return;
+    try {
+      const userDocRef = doc(db, 'users', uid);
+      await updateDoc(userDocRef, data);
+    } catch (error) {
+       // If the document does not exist, it will create it.
+      if ((error as any).code === 'not-found') {
+          await setDoc(doc(db, 'users', uid), data, { merge: true });
+      } else {
+          console.error("Failed to update user data in Firestore", error);
+      }
+    }
   };
 
-  const resetQuiz = () => {
-    setAnswers({ completedWorkouts: [] });
-    try {
-       window.localStorage.removeItem(LOCAL_STORAGE_KEY);
-    } catch (error) {
-        console.error("Failed to remove quiz answers from localStorage", error);
+  const setAnswer = (step: keyof QuizAnswers, answer: any) => {
+    setAnswers((prevAnswers) => {
+      const newAnswers = { ...prevAnswers, [step]: answer };
+      if (user) {
+        updateFirestore(user.uid, { [step]: answer });
+      }
+      return newAnswers;
+    });
+  };
+
+  const resetQuiz = async () => {
+    const defaultState = { completedWorkouts: [], weight: 60, height: 160 };
+    setAnswers(defaultState);
+    if (user) {
+      // Clear the document in Firestore
+      await setDoc(doc(db, 'users', user.uid), defaultState);
     }
-  }
+  };
 
   const toggleWorkoutCompleted = (workoutId: number) => {
     setAnswers(prev => {
@@ -86,8 +111,34 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         const newCompleted = isCompleted 
             ? completed.filter(id => id !== workoutId)
             : [...completed, workoutId];
-        return { ...prev, completedWorkouts: newCompleted };
+        const newAnswers = { ...prev, completedWorkouts: newCompleted };
+        if (user) {
+            updateFirestore(user.uid, { completedWorkouts: newCompleted });
+        }
+        return newAnswers;
     });
+  };
+  
+  const signUp = async (email: string, name: string, whatsapp: string) => {
+    // Note: In a real app, use a more secure temporary password method.
+    const tempPassword = "temporaryPassword123";
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
+        const newUser = userCredential.user;
+        setUser(newUser);
+        const initialData = { name, email, whatsapp, completedWorkouts: [], weight: 60, height: 160 };
+        await setDoc(doc(db, 'users', newUser.uid), initialData);
+        setAnswers(initialData);
+    } catch (error: any) {
+        if (error.code === 'auth/email-already-in-use') {
+            const userCredential = await signInWithEmailAndPassword(auth, email, tempPassword);
+            setUser(userCredential.user);
+            await fetchUserData(userCredential.user);
+        } else {
+            console.error("Error signing up:", error);
+            throw error;
+        }
+    }
   };
 
   const isWorkoutCompleted = (workoutId: number) => {
@@ -95,7 +146,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <QuizContext.Provider value={{ answers, setAnswer, resetQuiz, toggleWorkoutCompleted, isWorkoutCompleted }}>
+    <QuizContext.Provider value={{ user, answers, loading, setAnswer, resetQuiz, toggleWorkoutCompleted, isWorkoutCompleted, signUp }}>
       {children}
     </QuizContext.Provider>
   );

@@ -11,6 +11,9 @@ import { Label } from "@/components/ui/label";
 import { useQuiz } from "@/services/quiz-service";
 import * as React from 'react';
 import { useRouter } from "next/navigation";
+import { storage, auth } from "@/services/firebase";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { signOut } from "firebase/auth";
 
 const settings = [
   { name: "Notificações", icon: Bell },
@@ -20,8 +23,6 @@ const settings = [
 function EditProfileDialog({ children }: { children: React.ReactNode }) {
   const { answers, setAnswer } = useQuiz();
   const [open, setOpen] = React.useState(false);
-  
-  // Create local state to manage form changes without affecting global state until save
   const [localAnswers, setLocalAnswers] = React.useState(answers);
 
   React.useEffect(() => {
@@ -30,15 +31,12 @@ function EditProfileDialog({ children }: { children: React.ReactNode }) {
 
 
   const handleSave = () => {
-    // Update global state with all local changes at once
     Object.keys(localAnswers).forEach(key => {
         const value = localAnswers[key as keyof typeof localAnswers];
-        // Ensure we only set defined values, otherwise we might overwrite with undefined
-        if(value !== undefined) {
+        if(value !== undefined && value !== answers[key as keyof typeof answers]) {
              setAnswer(key as keyof typeof localAnswers, value);
         }
     });
-    console.log("Saving data:", localAnswers);
     setOpen(false);
   }
 
@@ -75,7 +73,7 @@ function EditProfileDialog({ children }: { children: React.ReactNode }) {
             <Label htmlFor="email" className="text-right">
               Email
             </Label>
-            <Input id="email" type="email" value={localAnswers.email || ''} onChange={(e) => handleChange('email', e.target.value)} className="col-span-3" />
+            <Input id="email" type="email" value={localAnswers.email || ''} onChange={(e) => handleChange('email', e.target.value)} className="col-span-3" disabled />
           </div>
         </div>
         <DialogFooter>
@@ -87,11 +85,11 @@ function EditProfileDialog({ children }: { children: React.ReactNode }) {
 }
 
 export default function PerfilPage() {
-  const { answers, setAnswer, resetQuiz } = useQuiz();
+  const { user, answers, setAnswer, resetQuiz } = useQuiz();
   const router = useRouter();
 
   const focusDays = answers.completedWorkouts?.length ?? 0;
-  const mealsOnPlan = focusDays * 4; // Assuming 4 meals a day
+  const mealsOnPlan = focusDays * 4;
 
   const stats = [
     { name: "Dias de Foco", value: focusDays },
@@ -99,10 +97,15 @@ export default function PerfilPage() {
     { name: "Refeições no Plano", value: mealsOnPlan },
   ];
 
-  const handleReset = () => {
-    resetQuiz();
-    router.push('/quiz');
+  const handleResetData = async () => {
+    await resetQuiz();
+    alert('Seus dados foram resetados!');
   };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/quiz');
+  }
   
   const userHandle = answers.name ? `@${answers.name.split(' ')[0].toLowerCase()}` : '@usuario';
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -111,12 +114,26 @@ export default function PerfilPage() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (file && user) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setAnswer('profilePictureUrl', reader.result as string);
+      reader.onloadend = async () => {
+        const dataUrl = reader.result as string;
+        // Show local preview immediately
+        setAnswer('profilePictureUrl', dataUrl); 
+
+        // Upload to Firebase Storage
+        const storageRef = ref(storage, `profilePictures/${user.uid}`);
+        try {
+            await uploadString(storageRef, dataUrl, 'data_url');
+            const downloadUrl = await getDownloadURL(storageRef);
+            // Update Firestore with the final URL
+            setAnswer('profilePictureUrl', downloadUrl);
+        } catch (error) {
+            console.error("Error uploading profile picture:", error);
+            // Optionally revert the optimistic UI update
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -136,7 +153,7 @@ export default function PerfilPage() {
             <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
               <AvatarImage src={answers.profilePictureUrl} alt={answers.name || "Usuário"} />
               <AvatarFallback className="text-4xl">
-                <span>💪</span>
+                <span>{answers.name ? answers.name.charAt(0).toUpperCase() : '💪'}</span>
               </AvatarFallback>
             </Avatar>
             <div 
@@ -202,11 +219,11 @@ export default function PerfilPage() {
         </Card>
 
         <div className="flex flex-col items-center gap-4 w-full max-w-sm mx-auto">
-            <Button variant="outline" className="w-full" onClick={handleReset}>
+            <Button variant="outline" className="w-full" onClick={handleResetData}>
                 <Trash2 className="mr-2 h-4 w-4" />
-                Resetar App (Limpar dados)
+                Resetar Dados
             </Button>
-            <Button variant="destructive" className="w-full">
+            <Button variant="destructive" className="w-full" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Sair
             </Button>

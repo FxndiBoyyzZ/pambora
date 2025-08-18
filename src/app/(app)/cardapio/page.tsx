@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { useQuiz } from '@/services/quiz-service';
 import { generateMealPlan, MealPlanOutput } from '@/ai/flows/meal-plan-generator';
 import { useRouter } from 'next/navigation';
+import { auth } from '@/services/firebase';
+import { signOut } from 'firebase/auth';
 
 type MealName = "Café da Manhã" | "Almoço" | "Lanche" | "Jantar";
 const mealNames: MealName[] = ["Café da Manhã", "Almoço", "Lanche", "Jantar"];
@@ -35,8 +37,11 @@ export default function CardapioPage() {
     const [favorites, setFavorites] = React.useState<Record<string, boolean>>({});
 
     React.useEffect(() => {
-        if (Object.keys(answers).length < 3) {
-            router.push('/quiz/passo-1');
+        // We need goal, diet, and allergies to generate a plan
+        if (!answers.goal || !answers.diet) {
+            // If essential answers are missing, maybe they skipped the quiz.
+            // Redirect them back. Check for user to avoid redirect loop on logout.
+            if(auth.currentUser) router.push('/quiz/passo-1');
         } else {
             const getPlan = async () => {
                 setLoading(true);
@@ -49,7 +54,6 @@ export default function CardapioPage() {
                     setMealPlan(result.mealPlan);
                 } catch (error) {
                     console.error("Failed to generate meal plan:", error);
-                    // Handle error state in UI
                 } finally {
                     setLoading(false);
                 }
@@ -58,9 +62,9 @@ export default function CardapioPage() {
         }
     }, [answers, router]);
 
-    const handleResetQuiz = () => {
-        resetQuiz();
-        router.push('/quiz/passo-1');
+    const handleResetQuiz = async () => {
+        await signOut(auth);
+        router.push('/quiz');
     };
 
     const toggleFavorite = (meal: string) => {
@@ -73,7 +77,7 @@ export default function CardapioPage() {
                 <h1 className="text-2xl font-bold font-headline text-foreground">Cardápio</h1>
                 <Button variant="outline" size="sm" onClick={handleResetQuiz}>
                     <RefreshCw className="mr-2 h-4 w-4" />
-                    Refazer Quiz
+                    Sair e refazer
                 </Button>
             </header>
             <div className="flex-grow p-4 md:p-6 lg:p-8">
@@ -119,7 +123,7 @@ export default function CardapioPage() {
                                                             )) : <p className="text-muted-foreground">Nenhuma refeição planejada.</p>}
                                                             <div className="flex justify-end pt-2">
                                                                 <Button variant="ghost" size="icon" onClick={() => toggleFavorite(`${day}-${mealName}`)}>
-                                                                    <Heart className={cn("h-5 w-5", favorites[`${day}-${mealName}`] ? 'text-red-500 fill-current' : 'text-muted-foreground')} />
+                                                                    <Heart className={favorites[`${day}-${mealName}`] ? 'text-red-500 fill-current' : 'text-muted-foreground'} />
                                                                 </Button>
                                                             </div>
                                                         </div>

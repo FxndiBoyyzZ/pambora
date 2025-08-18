@@ -1,29 +1,51 @@
-
+// src/app/quiz/page.tsx
 'use client';
-import { useQuiz } from '@/services/quiz-service';
 import { useRouter } from 'next/navigation';
-import { StoryLayout } from '@/components/quiz/story-layout';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Send } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { quizSteps, type QuizStep } from './quiz-config';
-import Image from 'next/image';
 import { ChatStep } from '@/components/quiz/chat-step';
+import { StoryLayout } from '@/components/quiz/story-layout';
 import { VitalsStep } from '@/components/quiz/vitals-step';
+import { useQuiz } from '@/services/quiz-service';
+import { Play, Loader2 } from 'lucide-react';
+import Image from 'next/image';
+import { quizSteps, type QuizStep } from './quiz-config';
 
-// Helper to determine if a step is a video step
 const isVideoStep = (step: QuizStep) => step.type === 'video';
 
 export default function QuizPage() {
   const router = useRouter();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const { answers, setAnswer } = useQuiz();
+  const { answers, setAnswer, signUp, user, loading } = useQuiz();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleNext = () => {
+  useEffect(() => {
+    // If user is logged in and somehow lands on quiz, push to app
+    if (user && !loading && currentStepIndex < 2) {
+       router.push('/treinos');
+    }
+  }, [user, loading, router, currentStepIndex]);
+  
+
+  const handleNext = async () => {
+    const currentStep = quizSteps[currentStepIndex];
+    if (currentStep.type === 'form') {
+        setIsSubmitting(true);
+        try {
+            await signUp(answers.email || '', answers.name || '', answers.whatsapp || '');
+        } catch (error) {
+            console.error("Sign up failed", error);
+            // Optionally, show an error message to the user
+            setIsSubmitting(false);
+            return;
+        }
+        setIsSubmitting(false);
+    }
+    
     if (currentStepIndex < quizSteps.length - 1) {
       setCurrentStepIndex(prevIndex => prevIndex + 1);
     } else {
@@ -33,7 +55,6 @@ export default function QuizPage() {
 
   const currentStep = quizSteps[currentStepIndex];
 
-  // Auto-advance for video steps
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isVideoStep(currentStep)) {
@@ -46,8 +67,8 @@ export default function QuizPage() {
         clearTimeout(timer);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStepIndex, currentStep]);
-
 
   const renderStepContent = () => {
     const step = currentStep;
@@ -88,7 +109,10 @@ export default function QuizPage() {
                 ))}
               </CardContent>
               <CardFooter>
-                <Button onClick={handleNext} className="w-full" disabled={!isFormValid}>Continuar</Button>
+                <Button onClick={handleNext} className="w-full" disabled={!isFormValid || isSubmitting}>
+                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Continuar
+                </Button>
               </CardFooter>
             </Card>
           </div>
@@ -128,7 +152,6 @@ export default function QuizPage() {
                         <Label htmlFor={step.content.answerKey}>{step.content.title}</Label>
                         <Input id={step.content.answerKey} placeholder="Ex: Glúten, lactose..." value={(answers as any)[step.content.answerKey] || ''} onChange={(e) => setAnswer(step.content.answerKey as any, e.target.value)} />
                     </div>
-                    <Button onClick={handleNext} className="w-full">Continuar</Button>
                   </div>
                 )}
               </CardContent>
@@ -179,6 +202,14 @@ export default function QuizPage() {
         );
     }
   };
+
+  if (loading) {
+    return (
+        <div className="flex justify-center items-center h-screen bg-background">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+    )
+  }
 
   return (
     <StoryLayout step={currentStepIndex + 1} totalSteps={quizSteps.length}>
