@@ -1,4 +1,3 @@
-
 'use client';
 import { useQuiz } from '@/services/quiz-service';
 import { useRouter } from 'next/navigation';
@@ -8,204 +7,245 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play } from 'lucide-react';
+import { Play, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { quizSteps, type QuizStep } from './quiz-config';
+import Image from 'next/image';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-// Mock data, replace with real data as needed
-const goals = [
-  { id: 'perder-peso', label: 'Perder Peso' },
-  { id: 'ganhar-massa', label: 'Ganhar Massa Muscular' },
-  { id: 'manter-forma', label: 'Manter a Forma' },
-  { id: 'melhorar-saude', label: 'Melhorar a Saúde Geral' },
-];
-
-const diets = [
-  { id: 'sem-restricao', label: 'Sem Restrições' },
-  { id: 'vegetariana', label: 'Vegetariana' },
-  { id: 'vegana', label: 'Vegana' },
-  { id: 'low-carb', label: 'Low-Carb' },
-];
-
-const bonusOptions = [
-    { id: 'sim', label: 'Sim, quero o plano personalizado!' },
-    { id: 'nao', label: 'Não, seguirei o padrão.' },
-]
+// Helper to determine if a step is a video step
+const isVideoStep = (step: QuizStep) => step.type === 'video';
 
 export default function QuizPage() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const { answers, setAnswer } = useQuiz();
 
   const handleNext = () => {
-     if (step < 10) { // Total steps
-      setStep(prevStep => prevStep + 1);
+    if (currentStepIndex < quizSteps.length - 1) {
+      setCurrentStepIndex(prevIndex => prevIndex + 1);
     } else {
       router.push('/treinos');
     }
-  }
+  };
+
+  const currentStep = quizSteps[currentStepIndex];
+
+  // Auto-advance for video steps
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isVideoStep(currentStep)) {
+      timer = setTimeout(() => {
+        handleNext();
+      }, 5000); // 5 second video
+    }
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [currentStepIndex, currentStep]);
+
 
   const renderStepContent = () => {
-    switch (step) {
-      case 1:
-      case 5:
-      case 8:
+    const step = currentStep;
+    switch (step.type) {
+      case 'video':
         return (
-            <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-8">
-                 <div className="relative w-full aspect-9/16 max-h-full">
-                    <video
-                        src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        className="w-full h-full object-cover"
-                    ></video>
-                    <div className="absolute inset-0 bg-black/30 flex justify-center items-center">
-                       <Play className="text-white/70 h-16 w-16" />
-                    </div>
-                </div>
-                <p className="text-white mt-4 text-sm">Vídeo impulsionável</p>
+          <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-8">
+            <div className="relative w-full aspect-9/16 max-h-full">
+              <video
+                src={step.content.videoUrl}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="w-full h-full object-cover"
+              ></video>
+              <div className="absolute inset-0 bg-black/30 flex justify-center items-center">
+                <Play className="text-white/70 h-16 w-16" />
+              </div>
             </div>
-        )
-      case 2:
+          </div>
+        );
+      case 'form':
+        const isFormValid = step.content.fields.every(field => !!answers[field as keyof typeof answers]);
         return (
-          <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: "url('https://placehold.co/420x850.png')"}}>
+          <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={{ backgroundImage: `url('${step.content.backgroundUrl}')` }}>
             <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm text-foreground">
               <CardHeader>
-                <CardTitle>Quase lá!</CardTitle>
-                <CardDescription>Nos conte um pouco sobre você para personalizar sua experiência.</CardDescription>
+                <CardTitle>{step.content.title}</CardTitle>
+                <CardDescription>{step.content.description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome</Label>
-                  <Input id="name" placeholder="Seu nome completo" value={answers.name || ''} onChange={(e) => setAnswer('name', e.target.value)} />
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="whatsapp">Whatsapp</Label>
-                  <Input id="whatsapp" placeholder="(00) 00000-0000" value={answers.whatsapp || ''} onChange={(e) => setAnswer('whatsapp', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="seu@email.com" value={answers.email || ''} onChange={(e) => setAnswer('email', e.target.value)} />
-                </div>
+                {step.content.fields.map(field => (
+                  <div className="space-y-2" key={field}>
+                    <Label htmlFor={field}>{field.charAt(0).toUpperCase() + field.slice(1)}</Label>
+                    <Input id={field} placeholder={step.content.placeholders[field]} value={(answers as any)[field] || ''} onChange={(e) => setAnswer(field as any, e.target.value)} type={field === 'email' ? 'email' : 'text'} />
+                  </div>
+                ))}
               </CardContent>
               <CardFooter>
-                 <Button onClick={handleNext} className="w-full" disabled={!answers.name || !answers.whatsapp || !answers.email}>Continuar</Button>
+                <Button onClick={handleNext} className="w-full" disabled={!isFormValid}>Continuar</Button>
               </CardFooter>
             </Card>
           </div>
         );
-      case 3:
-      case 6:
-        const currentGoals = step === 3 ? goals : diets;
-        const currentAnswer = step === 3 ? answers.goal : answers.diet;
-        const setAnswerKey = step === 3 ? 'goal' : 'diet';
-        const title = step === 3 ? "Qual seu objetivo?" : "Você tem alguma preferência de dieta?";
-
+      case 'question':
         return (
-             <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: "url('https://placehold.co/420x850.png')"}}>
-                <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm text-foreground">
-                    <CardHeader>
-                        <CardTitle>{title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <RadioGroup
-                            value={currentAnswer}
-                            onValueChange={(value) => {
-                                setAnswer(setAnswerKey, value);
-                                setTimeout(handleNext, 300);
-                            }}
-                            className="space-y-3"
-                            >
-                            {currentGoals.map((item) => (
-                                <Label
-                                key={item.id}
-                                htmlFor={item.id}
-                                className="flex items-center space-x-3 rounded-md border border-border p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground transition-colors"
-                                >
-                                <RadioGroupItem value={item.id} id={item.id} />
-                                <span>{item.label}</span>
-                                </Label>
-                            ))}
-                        </RadioGroup>
-                    </CardContent>
-                 </Card>
-            </div>
-        )
-       case 4:
-       case 7:
-        const setAllergiesKey = 'allergies';
-        const allergiesTitle = "Você possui alguma alergia ou restrição alimentar?";
-
-        return (
-            <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: "url('https://placehold.co/420x850.png')"}}>
+          <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={{ backgroundImage: `url('${step.content.backgroundUrl}')` }}>
             <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm text-foreground">
               <CardHeader>
-                <CardTitle>{allergiesTitle}</CardTitle>
-                 <CardDescription>(Opcional)</CardDescription>
+                <CardTitle>{step.content.title}</CardTitle>
+                {step.content.description && <CardDescription>{step.content.description}</CardDescription>}
               </CardHeader>
-              <CardContent className="space-y-4">
-                 <div className="space-y-2">
-                  <Label htmlFor="allergies">Alergias</Label>
-                  <Input id="allergies" placeholder="Ex: Glúten, lactose..." value={answers.allergies || ''} onChange={(e) => setAnswer(setAllergiesKey, e.target.value)} />
-                </div>
+              <CardContent>
+                {step.content.questionType === 'multiple-choice' ? (
+                  <RadioGroup
+                    value={(answers as any)[step.content.answerKey]}
+                    onValueChange={(value) => {
+                      setAnswer(step.content.answerKey as any, value);
+                      setTimeout(handleNext, 300);
+                    }}
+                    className="space-y-3"
+                  >
+                    {step.content.options.map((item) => (
+                      <Label
+                        key={item.id}
+                        htmlFor={item.id}
+                        className="flex items-center space-x-3 rounded-md border border-border p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground transition-colors"
+                      >
+                        <RadioGroupItem value={item.id} id={item.id} />
+                        <span>{item.label}</span>
+                      </Label>
+                    ))}
+                  </RadioGroup>
+                ) : (
+                  <div className="space-y-4">
+                     <div className="space-y-2">
+                        <Label htmlFor={step.content.answerKey}>{step.content.title}</Label>
+                        <Input id={step.content.answerKey} placeholder="Ex: Glúten, lactose..." value={(answers as any)[step.content.answerKey] || ''} onChange={(e) => setAnswer(step.content.answerKey as any, e.target.value)} />
+                    </div>
+                    <Button onClick={handleNext} className="w-full">Continuar</Button>
+                  </div>
+                )}
               </CardContent>
-              <CardFooter>
-                 <Button onClick={handleNext} className="w-full">Continuar</Button>
-              </CardFooter>
+               {step.content.questionType === 'text' && (
+                 <CardFooter>
+                    <Button onClick={handleNext} className="w-full">Continuar</Button>
+                 </CardFooter>
+               )}
             </Card>
           </div>
         )
-      case 9:
-         return (
-            <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: "url('https://placehold.co/420x850.png')"}}>
+      case 'wheel':
+        return (
+            <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: `url('${step.content.backgroundUrl}')`}}>
                 <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm text-foreground text-center">
                     <CardHeader>
-                        <CardTitle>Gire a Roda da Sorte!</CardTitle>
-                        <CardDescription>Você ganhou um prêmio especial!</CardDescription>
+                        <CardTitle>{step.content.title}</CardTitle>
+                        <CardDescription>{step.content.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {/* Placeholder for Wheel of Fortune */}
-                        <div className="w-64 h-64 bg-gradient-to-tr from-primary to-accent rounded-full mx-auto flex items-center justify-center animate-spin" style={{animationDuration: '5s'}}>
-                            <span className="text-2xl font-bold text-primary-foreground">🎁</span>
+                        <div className="relative w-64 h-64 mx-auto my-4">
+                            <Image src="/wheel.png" alt="Roda da Sorte" layout="fill" className="animate-spin" style={{ animationDuration: '5s' }}/>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                 <div className="w-8 h-8 bg-red-500 rounded-full border-4 border-white" />
+                            </div>
+                            <div 
+                                style={{clipPath: 'polygon(100% 50%, 0 0, 0 100%)'}}
+                                className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-primary rounded-sm"
+                            />
                         </div>
                     </CardContent>
                     <CardFooter>
-                        <Button onClick={handleNext} className="w-full">Resgatar Prêmio e Continuar</Button>
+                        <Button onClick={handleNext} className="w-full">Girar e Continuar</Button>
                     </CardFooter>
                 </Card>
             </div>
          );
-    case 10:
+    case 'chat':
+        const [chatMessages, setChatMessages] = useState([step.content.messages[0]]);
+        const [chatInput, setChatInput] = useState('');
+        const [canReply, setCanReply] = useState(false);
+        
+        useEffect(() => {
+            let messageIndex = 1;
+            const showMessages = () => {
+                if(messageIndex < step.content.messages.length) {
+                   const nextMessage = step.content.messages[messageIndex];
+                   if(nextMessage.author === 'ByPamela') {
+                     setTimeout(() => {
+                         setChatMessages(prev => [...prev, nextMessage]);
+                         messageIndex++;
+                         showMessages();
+                     }, 1500);
+                   } else {
+                     setCanReply(true);
+                   }
+                } else {
+                    setTimeout(handleNext, 1500);
+                }
+            }
+            showMessages();
+        }, [step.content.messages]);
+
+        const handleSend = () => {
+             const userMessage = { author: 'user', text: chatInput };
+             const pamelaMessage = step.content.messages.find(m => m.author === 'ByPamela' && !chatMessages.includes(m));
+             setChatMessages(prev => [...prev, userMessage]);
+             setChatInput('');
+             setCanReply(false);
+             setTimeout(() => {
+                if(pamelaMessage) {
+                    setChatMessages(prev => [...prev, pamelaMessage]);
+                }
+                setTimeout(handleNext, 1500);
+             }, 1500)
+        }
+
+        const handleOptionClick = (optionText: string) => {
+            const userMessage = { author: 'user', text: optionText };
+            setChatMessages(prev => [...prev, userMessage]);
+            setCanReply(false);
+
+            // Logic to show Pamela's next 3 messages
+            let pamelaMessageIndex = chatMessages.filter(m => m.author === 'ByPamela').length;
+            const remainingPamelaMessages = step.content.messages.filter(m => m.author === 'ByPamela').slice(pamelaMessageIndex);
+            
+            let delay = 1000;
+            remainingPamelaMessages.forEach((msg, i) => {
+                setTimeout(() => {
+                    setChatMessages(prev => [...prev, msg]);
+                    if (i === remainingPamelaMessages.length - 1) {
+                         setTimeout(handleNext, 1500);
+                    }
+                }, delay);
+                delay += 1500;
+            });
+        };
+        
         return (
-             <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: "url('https://placehold.co/420x850.png')"}}>
-                <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm text-foreground">
-                    <CardHeader>
-                        <CardTitle>Bônus: Nutricionista</CardTitle>
-                        <CardDescription>Quer um plano alimentar feito sob medida por um nutricionista parceiro?</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <RadioGroup
-                            value={answers.bonusPlan}
-                            onValueChange={(value) => {
-                                setAnswer('bonusPlan', value);
-                                setTimeout(handleNext, 300);
-                            }}
-                            className="space-y-3"
-                            >
-                            {bonusOptions.map((item) => (
-                                <Label
-                                key={item.id}
-                                htmlFor={item.id}
-                                className="flex items-center space-x-3 rounded-md border border-border p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground transition-colors"
-                                >
-                                <RadioGroupItem value={item.id} id={item.id} />
-                                <span>{item.label}</span>
-                                </Label>
-                            ))}
-                        </RadioGroup>
-                    </CardContent>
-                 </Card>
+             <div className="w-full h-full flex flex-col justify-end p-4 bg-zinc-800 text-white" style={{backgroundImage: `url('${step.content.backgroundUrl}')`, backgroundSize: 'cover', backgroundPosition: 'center'}}>
+                <div className="flex-grow flex flex-col justify-end space-y-3 pb-4">
+                    {chatMessages.map((msg, index) => (
+                         <div key={index} className={`flex items-end gap-2 ${msg.author === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            {msg.author === 'ByPamela' && <Avatar className="h-8 w-8"><AvatarImage src={step.content.avatarUrl} /></Avatar>}
+                            <div className={`rounded-2xl px-4 py-2 max-w-xs lg:max-w-md ${msg.author === 'user' ? 'bg-blue-500 text-white rounded-br-none' : 'bg-zinc-700 text-white rounded-bl-none'}`}>
+                                <p className="text-sm">{msg.text}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                 {canReply && step.content.replyOptions && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                        {step.content.replyOptions.map((option, i) => (
+                           <Button key={i} variant="outline" size="sm" onClick={() => handleOptionClick(option.text)} className="bg-white/20 border-white/30 text-white backdrop-blur-sm">
+                               {option.text}
+                           </Button>
+                        ))}
+                    </div>
+                )}
             </div>
         )
       default:
@@ -218,27 +258,11 @@ export default function QuizPage() {
     }
   };
 
-  const isVideoStep = [1, 5, 8].includes(step);
-  
-  // Auto-advance for video steps
-   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (isVideoStep) {
-      timer = setTimeout(() => {
-        handleNext();
-      }, 5000); // 5 second video
-    }
-    return () => {
-      if (timer) {
-        clearTimeout(timer);
-      }
-    };
-  }, [step, isVideoStep]);
-
-
   return (
-    <StoryLayout step={step} totalSteps={10}>
+    <StoryLayout step={currentStepIndex + 1} totalSteps={quizSteps.length}>
+      <div className="w-full h-full flex-1">
         {renderStepContent()}
+      </div>
     </StoryLayout>
   );
 }
