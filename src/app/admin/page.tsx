@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { type QuizStep } from "@/app/quiz/quiz-config";
-import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2 } from 'lucide-react';
+import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ const getIcon = (type: string) => {
         case 'form': return <User className="h-6 w-6 text-primary" />;
         case 'question': return <HelpCircle className="h-6 w-6 text-primary" />;
         case 'chat': return <MessageSquare className="h-6 w-6 text-primary" />;
-        case 'wheel': return <Gift className="h-6 w-6 text-primary" />;
+        case 'scratch': return <Sparkles className="h-6 w-6 text-primary" />;
         default: return <ListChecks className="h-6 w-6 text-primary" />;
     }
 }
@@ -134,20 +134,24 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
                     </div>
                 </div>
              )
-        case 'wheel':
+        case 'scratch':
              return (
                 <div className="space-y-4">
                     <div>
-                        <Label htmlFor={`wheel-title-${index}`}>Título</Label>
-                        <Input id={`wheel-title-${index}`} value={stepData.title} onChange={(e) => handleChange('title', e.target.value)} />
+                        <Label htmlFor={`scratch-title-${index}`}>Título</Label>
+                        <Input id={`scratch-title-${index}`} value={stepData.title} onChange={(e) => handleChange('title', e.target.value)} />
                     </div>
                     <div>
-                        <Label htmlFor={`wheel-desc-${index}`}>Descrição</Label>
-                        <Textarea id={`wheel-desc-${index}`} value={stepData.description} onChange={(e) => handleChange('description', e.target.value)} />
+                        <Label htmlFor={`scratch-desc-${index}`}>Descrição</Label>
+                        <Textarea id={`scratch-desc-${index}`} value={stepData.description} onChange={(e) => handleChange('description', e.target.value)} />
+                    </div>
+                    <div>
+                        <Label htmlFor={`scratch-prize-${index}`}>Texto do Prêmio</Label>
+                        <Input id={`scratch-prize-${index}`} value={stepData.prizeText} onChange={(e) => handleChange('prizeText', e.target.value)} />
                     </div>
                      <div>
-                        <Label htmlFor={`wheel-bg-${index}`}>URL da Imagem de Fundo</Label>
-                        <Input id={`wheel-bg-${index}`} value={stepData.backgroundUrl} onChange={(e) => handleChange('backgroundUrl', e.target.value)} />
+                        <Label htmlFor={`scratch-bg-${index}`}>URL da Imagem de Fundo</Label>
+                        <Input id={`scratch-bg-${index}`} value={stepData.backgroundUrl} onChange={(e) => handleChange('backgroundUrl', e.target.value)} />
                     </div>
                 </div>
              )

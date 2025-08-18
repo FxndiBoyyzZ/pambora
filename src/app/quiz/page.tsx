@@ -11,12 +11,12 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { StoryLayout } from '@/components/quiz/story-layout';
 import { useQuiz } from '@/services/quiz-service';
 import { Play, Loader2 } from 'lucide-react';
-import Image from 'next/image';
 import { type QuizStep } from './quiz-config';
 import { ChatStep } from '@/components/quiz/chat-step';
 import { VitalsStep } from '@/components/quiz/vitals-step';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
+import { ScratchCardStep } from '@/components/quiz/scratch-card-step';
 
 const isVideoStep = (step: QuizStep) => step.type === 'video';
 
@@ -210,32 +210,8 @@ export default function QuizPage() {
             </Card>
           </div>
         )
-      case 'wheel':
-        return (
-            <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: `url('${step.content.backgroundUrl}')`}}>
-                <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm text-foreground text-center">
-                    <CardHeader>
-                        <CardTitle>{step.content.title}</CardTitle>
-                        <CardDescription>{step.content.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="relative w-64 h-64 mx-auto my-4">
-                            <Image src="/wheel.png" alt="Roda da Sorte" layout="fill" className="animate-spin" style={{ animationDuration: '5s' }}/>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                 <div className="w-8 h-8 bg-red-500 rounded-full border-4 border-white" />
-                            </div>
-                            <div 
-                                style={{clipPath: 'polygon(100% 50%, 0 0, 0 100%)'}}
-                                className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-primary rounded-sm"
-                            />
-                        </div>
-                    </CardContent>
-                    <CardFooter>
-                        <Button onClick={handleNext} className="w-full">Girar e Continuar</Button>
-                    </CardFooter>
-                </Card>
-            </div>
-         );
+      case 'scratch':
+        return <ScratchCardStep step={step} onComplete={handleNext} />;
     case 'chat':
         return <ChatStep step={step} onComplete={handleNext} />;
     case 'vitals':

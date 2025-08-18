@@ -1,7 +1,7 @@
 // src/app/quiz/quiz-config.ts
 
 export interface QuizStep {
-    type: 'video' | 'form' | 'question' | 'wheel' | 'chat' | 'vitals';
+    type: 'video' | 'form' | 'question' | 'scratch' | 'chat' | 'vitals';
     content: any;
 }
 
@@ -103,10 +103,11 @@ export const quizSteps: QuizStep[] = [
         }
     },
     {
-        type: 'wheel',
+        type: 'scratch',
         content: {
-            title: 'Gire a Roda da Sorte!',
-            description: 'Você ganhou um prêmio especial!',
+            title: 'Você ganhou um prêmio!',
+            description: 'Raspe para revelar seu bônus exclusivo.',
+            prizeText: 'Acesso Vitalício ao Cardápio Personalizado!',
             backgroundUrl: 'https://placehold.co/420x850.png',
         }
     },
