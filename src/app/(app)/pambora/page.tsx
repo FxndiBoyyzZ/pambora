@@ -6,49 +6,11 @@ import Image from "next/image";
 import { ContentAssistantDialog } from "@/components/pambora/content-assistant-dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const posts = [
-  {
-    id: 1,
-    user: { name: "Ana Clara", handle: "anaclara", avatar: "https://placehold.co/40x40.png" },
-    content: "Dia 2 concluído! Sentindo a energia! 💪 #PAMBORA",
-    image: "https://placehold.co/600x400.png",
-    imageHint: "workout selfie",
-    likes: 128,
-    comments: 12,
-    category: "conquistas",
-  },
-  {
-    id: 2,
-    user: { name: "Juliana Silva", handle: "jusilva", avatar: "https://placehold.co/40x40.png" },
-    content: "Qual a melhor receita de smoothie de proteína que vocês têm? 🤔 #dicas #dúvidas",
-    image: null,
-    likes: 45,
-    comments: 23,
-    category: "dúvidas",
-  },
-  {
-    id: 3,
-    user: { name: "ByPamela", handle: "bypamela", avatar: "https://placehold.co/40x40.png" },
-    content: "Lembre-se: a consistência é mais importante que a intensidade. Um passo de cada vez! ✨ #frases",
-    image: "https://placehold.co/600x400.png",
-    imageHint: "motivational quote",
-    likes: 532,
-    comments: 89,
-    category: "frases",
-  },
-  {
-    id: 4,
-    user: { name: "Mariana Costa", handle: "maricosta", avatar: "https://placehold.co/40x40.png" },
-    content: "Amei a receita de salmão do cardápio de hoje! 😋 #dicas",
-    image: "https://placehold.co/600x400.png",
-    imageHint: "healthy food",
-    likes: 98,
-    comments: 7,
-    category: "dicas",
-  },
+const posts: any[] = [
+  // Posts removidos para resetar o feed
 ];
 
-const PostCard = ({ post }: { post: typeof posts[0] }) => (
+const PostCard = ({ post }: { post: any }) => (
   <Card className="overflow-hidden">
     <CardHeader className="flex flex-row items-center gap-3 p-4">
       <Avatar>
@@ -110,7 +72,14 @@ export default function PamboraPage() {
             </Tabs>
 
             <div className="space-y-6">
-              {posts.map(post => <PostCard key={post.id} post={post} />)}
+              {posts.length > 0 ? (
+                posts.map(post => <PostCard key={post.id} post={post} />)
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p className="text-lg font-semibold">Ainda não há publicações.</p>
+                  <p>Que tal ser o primeiro a postar? Use o botão "Gerar Post"!</p>
+                </div>
+              )}
             </div>
         </div>
       </div>

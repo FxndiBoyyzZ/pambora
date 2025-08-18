@@ -12,9 +12,9 @@ import { useQuiz } from "@/services/quiz-service";
 import * as React from 'react';
 
 const stats = [
-  { name: "Dias de Foco", value: "2" },
-  { name: "Treinos Concluídos", value: "2" },
-  { name: "Refeições no Plano", value: "34" },
+  { name: "Dias de Foco", value: "0" },
+  { name: "Treinos Concluídos", value: "0" },
+  { name: "Refeições no Plano", value: "0" },
 ];
 
 const settings = [
