@@ -38,19 +38,10 @@ export default function CardapioPage() {
     const [favorites, setFavorites] = React.useState<Record<string, boolean>>({});
 
     React.useEffect(() => {
-        // We need goal and diet to generate a plan.
-        if ((!answers.goal || !answers.diet)) {
-            // If essential answers are missing, maybe they skipped the quiz.
-            // Redirect them back, but only if they are a signed-in (non-anonymous) user.
-            if (user && !user.isAnonymous) {
-                router.push('/quiz');
-            } else {
-                // For anonymous users or users without answers, we can't generate a plan.
-                // We'll just show a loading/empty state.
-                setLoading(false);
-            }
-        } else {
-            const getPlan = async () => {
+        const hasRequiredAnswers = answers.goal && answers.diet;
+
+        if (hasRequiredAnswers) {
+             const getPlan = async () => {
                 setLoading(true);
                 try {
                     const result = await generateMealPlan({
@@ -66,6 +57,16 @@ export default function CardapioPage() {
                 }
             };
             getPlan();
+        } else {
+            // If essential answers are missing, maybe they skipped the quiz.
+            // Redirect them back, but ONLY if they are a permanent user.
+            if (user && !user.isAnonymous) {
+                router.push('/quiz');
+            } else {
+                 // For anonymous users or users just starting out, show the empty/loading state.
+                 // This prevents the redirect loop.
+                 setLoading(false);
+            }
         }
     }, [answers.goal, answers.diet, answers.allergies, router, user]);
 
