@@ -2,7 +2,7 @@
 // src/app/quiz/page.tsx
 'use client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -62,7 +62,7 @@ export default function QuizPage() {
     }
   }, [user, authLoading, router]);
   
-  const handleNext = async () => {
+  const handleNext = useCallback(async () => {
     if (configLoading || quizSteps.length === 0) return;
 
     const currentStep = quizSteps[currentStepIndex];
@@ -84,7 +84,7 @@ export default function QuizPage() {
     } else {
       router.push('/treinos');
     }
-  };
+  }, [configLoading, quizSteps, currentStepIndex, signUp, answers.email, answers.name, answers.whatsapp, router]);
 
   const currentStep = quizSteps[currentStepIndex];
 
@@ -101,8 +101,7 @@ export default function QuizPage() {
         clearTimeout(timer);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStepIndex, currentStep]);
+  }, [currentStepIndex, currentStep, handleNext]);
 
   const renderStepContent = () => {
     if (!currentStep) return null;

@@ -31,7 +31,7 @@ function MealPlanSkeleton() {
 
 export default function CardapioPage() {
     const router = useRouter();
-    const { answers, resetQuiz } = useQuiz();
+    const { user, answers, resetQuiz } = useQuiz();
     const [loading, setLoading] = React.useState(true);
     const [mealPlan, setMealPlan] = React.useState<MealPlanOutput['mealPlan'] | null>(null);
     const [favorites, setFavorites] = React.useState<Record<string, boolean>>({});
@@ -40,8 +40,8 @@ export default function CardapioPage() {
         // We need goal, diet, and allergies to generate a plan
         if (!answers.goal || !answers.diet) {
             // If essential answers are missing, maybe they skipped the quiz.
-            // Redirect them back. Check for user to avoid redirect loop on logout.
-            if(auth.currentUser) router.push('/quiz');
+            // Redirect them back, but only if they are a signed-in user, not anonymous.
+            if(user && !user.isAnonymous) router.push('/quiz');
         } else {
             const getPlan = async () => {
                 setLoading(true);
@@ -60,7 +60,7 @@ export default function CardapioPage() {
             };
             getPlan();
         }
-    }, [answers, router]);
+    }, [answers, router, user]);
 
     const handleResetQuiz = async () => {
         await resetQuiz();
