@@ -1,7 +1,7 @@
 
 'use client';
 import { useQuiz } from '@/services/quiz-service';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { StoryLayout } from '@/components/quiz/story-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Play } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 // Mock data, replace with real data as needed
 const goals = [
@@ -31,15 +31,14 @@ const bonusOptions = [
     { id: 'nao', label: 'Não, seguirei o padrão.' },
 ]
 
-export default function QuizStepPage() {
+export default function QuizPage() {
   const router = useRouter();
-  const params = useParams();
-  const step = parseInt(params.step as string, 10);
+  const [step, setStep] = useState(1);
   const { answers, setAnswer } = useQuiz();
 
   const handleNext = () => {
      if (step < 10) { // Total steps
-      router.push(`/quiz/${step + 1}`);
+      setStep(prevStep => prevStep + 1);
     } else {
       router.push('/treinos');
     }
@@ -220,21 +219,25 @@ export default function QuizStepPage() {
   };
 
   const isVideoStep = [1, 5, 8].includes(step);
-  const isFormStep = [2, 4, 7, 9].includes(step);
-  const isFinalStep = step === 10;
   
-  // Auto-advance for video steps, disabled for manual clicking
+  // Auto-advance for video steps
    useEffect(() => {
+    let timer: NodeJS.Timeout;
     if (isVideoStep) {
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         handleNext();
       }, 5000); // 5 second video
-      return () => clearTimeout(timer);
     }
-  }, [step, isVideoStep, handleNext]);
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [step, isVideoStep]);
+
 
   return (
-    <StoryLayout step={step} showNext={isFormStep || isFinalStep}>
+    <StoryLayout step={step} totalSteps={10}>
         {renderStepContent()}
     </StoryLayout>
   );

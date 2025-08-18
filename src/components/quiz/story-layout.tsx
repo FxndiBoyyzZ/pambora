@@ -1,22 +1,18 @@
 
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { X } from 'lucide-react';
 
-const TOTAL_STEPS = 10; // 1 video + form + 2 questions + video + 2 questions + video + wheel + bonus question
-
 interface StoryLayoutProps {
   step: number;
+  totalSteps: number;
   children: ReactNode;
-  showNext?: boolean;
-  onNext?: () => void;
-  onPrev?: () => void;
 }
 
-export function StoryLayout({ step, children }: StoryLayoutProps) {
+export function StoryLayout({ step, totalSteps, children }: StoryLayoutProps) {
   const router = useRouter();
 
   return (
@@ -24,11 +20,11 @@ export function StoryLayout({ step, children }: StoryLayoutProps) {
         {/* Header */}
         <div className="absolute top-0 left-0 right-0 p-4 z-10 bg-gradient-to-b from-black/50 to-transparent">
           <div className="flex items-center gap-2 mb-2">
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+            {Array.from({ length: totalSteps }).map((_, i) => (
                 <div key={i} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
                     <div 
-                        className="h-full bg-white transition-all duration-500 ease-in-out"
-                        style={{ width: i < step -1 ? '100%' : (i === step -1 ? '100%' : '0%') }}
+                        className="h-full bg-white transition-all duration-300 ease-linear"
+                        style={{ width: i < step ? '100%' : '0%' }}
                      />
                 </div>
             ))}
