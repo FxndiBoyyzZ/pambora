@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Logo } from '@/components/logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { QuizProvider } from '@/services/quiz-service';
 
 const navItems = [
   { href: '/treinos', label: 'Treinos', icon: Dumbbell },
@@ -77,10 +78,12 @@ function MobileBottomNav() {
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-background">
-      <DesktopSidebar />
-      <main className="flex-1 pb-20 lg:pb-0">{children}</main>
-      <MobileBottomNav />
-    </div>
+    <QuizProvider>
+      <div className="flex min-h-screen bg-background">
+        <DesktopSidebar />
+        <main className="flex-1 pb-20 lg:pb-0">{children}</main>
+        <MobileBottomNav />
+      </div>
+    </QuizProvider>
   );
 }
