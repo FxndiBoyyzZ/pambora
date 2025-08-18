@@ -1,11 +1,16 @@
+
 // src/services/quiz-service.tsx
 'use client';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 interface QuizAnswers {
+  name?: string;
+  whatsapp?: string;
+  email?: string;
   goal?: string;
   diet?: string;
   allergies?: string;
+  bonusPlan?: string;
 }
 
 interface QuizContextType {

@@ -1,4 +1,4 @@
-import { Logo } from "@/components/logo";
+
 import { QuizProvider } from "@/services/quiz-service";
 
 export default function QuizLayout({
@@ -8,11 +8,8 @@ export default function QuizLayout({
 }) {
   return (
     <QuizProvider>
-        <div className="min-h-screen flex flex-col bg-background">
-            <header className="p-4 border-b border-border">
-                <Logo />
-            </header>
-            <main className="flex-grow flex items-center justify-center p-4">
+        <div className="min-h-screen flex flex-col bg-black">
+            <main className="flex-grow flex items-center justify-center p-0 sm:p-4">
                 {children}
             </main>
         </div>
