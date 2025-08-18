@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { useQuiz } from '@/services/quiz-service';
-import { Send, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 
@@ -25,6 +25,13 @@ export function ChatStep({ step, onComplete }: ChatStepProps) {
   const [currentMessageIndex, setCurrentMessageIndex] = React.useState(1);
   const [showReplyOptions, setShowReplyOptions] = React.useState(false);
   const [isReplying, setIsReplying] = React.useState(false);
+  const chatContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages, isReplying]);
 
   React.useEffect(() => {
     if (currentMessageIndex < step.content.messages.length) {
@@ -37,7 +44,10 @@ export function ChatStep({ step, onComplete }: ChatStepProps) {
         return () => clearTimeout(timer);
       } else {
         // It's the user's turn to reply
-        setShowReplyOptions(true);
+        const timer = setTimeout(() => {
+            setShowReplyOptions(true);
+        }, 1000);
+        return () => clearTimeout(timer);
       }
     } else {
         // End of scripted messages
@@ -66,28 +76,28 @@ export function ChatStep({ step, onComplete }: ChatStepProps) {
   };
 
   return (
-    <div className="w-full h-full flex flex-col p-4 bg-cover bg-center" style={{ backgroundImage: `url('${step.content.backgroundUrl}')` }}>
-        <div className="flex-grow flex flex-col justify-end space-y-4 overflow-y-auto">
+    <div className="w-full h-full flex flex-col bg-cover bg-center" style={{ backgroundImage: `url('${step.content.backgroundUrl}')` }}>
+        <div className="flex-grow flex flex-col justify-end p-4 space-y-4 overflow-y-auto" ref={chatContainerRef}>
             {messages.map((message, index) => (
                 <div
                     key={index}
                     className={cn(
-                        "flex items-end gap-2 max-w-[80%]",
+                        "flex items-end gap-2 max-w-[85%]",
                         message.author === 'user' ? 'self-end' : 'self-start'
                     )}
                 >
                     {message.author === 'ByPamela' && (
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-7 w-7">
                             <AvatarImage src={step.content.avatarUrl} alt="ByPamela" />
                             <AvatarFallback>BP</AvatarFallback>
                         </Avatar>
                     )}
                     <div
                         className={cn(
-                            "rounded-2xl p-3 text-sm",
+                            "rounded-2xl px-4 py-2 text-sm md:text-base",
                             message.author === 'user'
-                                ? 'bg-primary text-primary-foreground rounded-br-none'
-                                : 'bg-muted text-muted-foreground rounded-bl-none'
+                                ? 'bg-blue-500 text-white rounded-br-lg'
+                                : 'bg-zinc-700 text-white rounded-bl-lg'
                         )}
                     >
                         <p>{message.text}</p>
@@ -95,26 +105,30 @@ export function ChatStep({ step, onComplete }: ChatStepProps) {
                 </div>
             ))}
             {isReplying && (
-                 <div className="flex items-end gap-2 max-w-[80%] self-start">
-                     <Avatar className="h-8 w-8">
+                 <div className="flex items-end gap-2 max-w-[85%] self-start">
+                     <Avatar className="h-7 w-7">
                         <AvatarImage src={step.content.avatarUrl} alt="ByPamela" />
                         <AvatarFallback>BP</AvatarFallback>
                     </Avatar>
-                     <div className="rounded-2xl p-3 text-sm bg-muted text-muted-foreground rounded-bl-none">
-                         <Loader2 className="h-5 w-5 animate-spin" />
+                     <div className="rounded-2xl px-4 py-2 text-sm bg-zinc-700 text-white rounded-bl-lg">
+                         <div className="flex gap-1.5 items-center">
+                            <span className="h-2 w-2 rounded-full bg-current animate-pulse delay-0"></span>
+                            <span className="h-2 w-2 rounded-full bg-current animate-pulse delay-150"></span>
+                            <span className="h-2 w-2 rounded-full bg-current animate-pulse delay-300"></span>
+                         </div>
                      </div>
                  </div>
             )}
         </div>
 
-      <div className="pt-4">
+      <div className="p-4 border-t border-white/10">
         {showReplyOptions && (
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
             {step.content.replyOptions.map(option => (
               <Button
                 key={option.value}
                 variant="outline"
-                className="flex-1 bg-background/70 backdrop-blur-sm"
+                className="flex-1 bg-transparent border-white/50 text-white hover:bg-white/10 hover:text-white rounded-full"
                 onClick={() => handleReply(option)}
               >
                 {option.text}
