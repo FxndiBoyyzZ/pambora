@@ -11,6 +11,7 @@ interface QuizAnswers {
   diet?: string;
   allergies?: string;
   bonusPlan?: string;
+  profilePictureUrl?: string;
 }
 
 interface QuizContextType {

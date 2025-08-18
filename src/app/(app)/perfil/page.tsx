@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Bell, Shield, LogOut, ChevronRight } from "lucide-react";
+import { Bell, Shield, LogOut, ChevronRight, Camera } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,9 +73,25 @@ function EditProfileDialog({ children }: { children: React.ReactNode }) {
 }
 
 export default function PerfilPage() {
-  const { answers } = useQuiz();
+  const { answers, setAnswer } = useQuiz();
   const userHandle = answers.name ? `@${answers.name.split(' ')[0].toLowerCase()}` : '@usuario';
-  
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAnswer('profilePictureUrl', reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       <header className="p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
@@ -86,10 +102,27 @@ export default function PerfilPage() {
 
       <div className="flex-grow p-4 md:p-6 lg:p-8 space-y-8">
         <div className="flex flex-col items-center lg:flex-row lg:items-start gap-6">
-          <Avatar className="h-24 w-24">
-            <AvatarImage src="https://placehold.co/100x100.png" alt={answers.name || "Usuário"} />
-            <AvatarFallback>{answers.name ? answers.name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
+              <AvatarImage src={answers.profilePictureUrl} alt={answers.name || "Usuário"} />
+              <AvatarFallback className="text-4xl">
+                <span>💪</span>
+              </AvatarFallback>
+            </Avatar>
+            <div 
+              className="absolute bottom-0 right-0 bg-primary rounded-full p-1.5 cursor-pointer hover:bg-primary/90"
+              onClick={handleAvatarClick}
+            >
+              <Camera className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <input 
+              type="file" 
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden" 
+              accept="image/*"
+            />
+          </div>
           <div className="text-center lg:text-left">
             <h2 className="text-2xl font-bold">{answers.name || "Usuário"}</h2>
             <p className="text-muted-foreground">{userHandle}</p>
