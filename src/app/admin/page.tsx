@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadVideo } from './actions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/services/firebase';
+import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const getIcon = (type: string) => {
     switch (type) {
@@ -190,7 +191,6 @@ export default function AdminDashboard() {
             if(configDoc.exists()) {
                 setQuizSteps(configDoc.data().steps);
             } else {
-                // Se não existir, importa do arquivo local e salva no Firestore
                 const { quizSteps: initialQuizSteps } = await import('@/app/quiz/quiz-config');
                 await setDoc(configDocRef, { steps: initialQuizSteps });
                 setQuizSteps(initialQuizSteps);
@@ -200,13 +200,24 @@ export default function AdminDashboard() {
             toast({
                 variant: 'destructive',
                 title: 'Erro!',
-                description: 'Não foi possível carregar a configuração do quiz.'
+                description: 'Não foi possível carregar a configuração do quiz. Verifique as regras de segurança do Firestore.'
             });
         } finally {
             setIsLoading(false);
         }
     };
-    fetchQuizConfig();
+    
+    // Check auth state before fetching
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+            fetchQuizConfig();
+        } else {
+            setIsLoading(false); // Not logged in, so don't attempt to fetch
+            console.log("Admin: usuário não autenticado. O login é necessário para carregar ou salvar dados.");
+        }
+    });
+
+    return () => unsubscribe();
   }, [toast]);
 
 
@@ -218,7 +229,14 @@ export default function AdminDashboard() {
   }
 
   const handleSaveChanges = async () => {
-    if (!quizSteps) return;
+    if (!quizSteps || !auth.currentUser) {
+        toast({
+            variant: 'destructive',
+            title: 'Não autenticado',
+            description: 'Você precisa estar logado para salvar as alterações.'
+        });
+        return;
+    }
     setIsSaving(true);
     try {
         const configDocRef = doc(db, 'config', 'quiz');
@@ -232,7 +250,7 @@ export default function AdminDashboard() {
          toast({
             variant: 'destructive',
             title: 'Erro!',
-            description: 'Não foi possível salvar a configuração do quiz.'
+            description: 'Não foi possível salvar a configuração. Verifique as regras do Firestore.'
         });
     } finally {
         setIsSaving(false);
@@ -248,7 +266,7 @@ export default function AdminDashboard() {
             </h1>
             <p className="text-muted-foreground">Arraste e solte para reordenar as etapas (funcionalidade em breve).</p>
         </div>
-        <Button onClick={handleSaveChanges} disabled={isSaving || isLoading}>
+        <Button onClick={handleSaveChanges} disabled={isSaving || isLoading || !auth.currentUser}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Salvar Alterações
         </Button>
@@ -258,6 +276,11 @@ export default function AdminDashboard() {
         {isLoading ? (
             <div className="flex justify-center items-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        ) : !auth.currentUser ? (
+             <div className="text-center py-12 text-muted-foreground">
+              <p className="text-lg font-semibold">Acesso Negado</p>
+              <p>Você precisa estar autenticado para gerenciar o quiz.</p>
             </div>
         ) : quizSteps && quizSteps.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
