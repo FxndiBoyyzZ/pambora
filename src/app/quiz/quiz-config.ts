@@ -9,7 +9,7 @@ export const quizSteps: QuizStep[] = [
     {
         type: 'video',
         content: {
-            videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+            videoUrl: '/video1.mp4',
         }
     },
     {
