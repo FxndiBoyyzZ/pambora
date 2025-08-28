@@ -18,8 +18,6 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { ScratchCardStep } from '@/components/quiz/scratch-card-step';
 
-const isVideoStep = (step: QuizStep) => step.type === 'video';
-
 export default function QuizPage() {
   const router = useRouter();
   const [quizSteps, setQuizSteps] = useState<QuizStep[]>([]);
@@ -91,6 +89,7 @@ export default function QuizPage() {
   const renderStepContent = () => {
     if (!currentStep) return null;
     const step = currentStep;
+    const isFirstStep = currentStepIndex === 0;
 
     switch (step.type) {
       case 'video':
@@ -101,8 +100,6 @@ export default function QuizPage() {
             const videoId = new URL(videoSrc).searchParams.get('v') || videoSrc.split('/').pop();
             videoSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0`;
         }
-
-        const isFirstStep = currentStepIndex === 0;
 
         return (
           <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-0">
@@ -124,7 +121,7 @@ export default function QuizPage() {
                    playsInline
                    className="w-full h-full object-cover"
                    onEnded={isFirstStep ? handleNext : undefined}
-                   loop={!isFirstStep} // Loop only if it's not the first video
+                   loop={!isFirstStep}
                  ></video>
                )}
                {!isFirstStep && (
@@ -240,3 +237,5 @@ export default function QuizPage() {
     </StoryLayout>
   );
 }
+
+    
