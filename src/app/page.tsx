@@ -9,9 +9,9 @@ export default function LandingPage() {
       <Image
         src="/FundoPAM.png"
         alt="Mulher se exercitando"
-        layout="fill"
-        objectFit="cover"
-        className="absolute inset-0 z-0 opacity-20"
+        fill
+        priority
+        className="absolute inset-0 z-0 object-cover opacity-20"
         data-ai-hint="woman fitness"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
