@@ -99,11 +99,6 @@ export default function QuizPage() {
                    loop={!isFirstStep}
                  ></video>
                )}
-               {!isFirstStep && (
-                <div className="absolute inset-0 bg-black/30 flex justify-center items-center pointer-events-none" onClick={handleNext}>
-                  <Play className="text-white/70 h-16 w-16" />
-                </div>
-               )}
             </div>
           </div>
         );
