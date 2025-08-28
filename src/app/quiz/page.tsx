@@ -2,7 +2,7 @@
 // src/app/quiz/page.tsx
 'use client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,7 @@ export default function QuizPage() {
   const { answers, setAnswer, signUp, user, loading: authLoading } = useQuiz();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [configLoading, setConfigLoading] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const fetchQuizConfig = async () => {
@@ -101,9 +102,11 @@ export default function QuizPage() {
             videoSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0`;
         }
 
+        const isFirstStep = currentStepIndex === 0;
+
         return (
           <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-0">
-            <div className="relative w-full aspect-[9/16] max-h-full" onClick={handleNext}>
+            <div className="relative w-full aspect-[9/16] max-h-full" onClick={!isFirstStep ? handleNext : undefined}>
                {isYoutube ? (
                  <iframe
                     src={videoSrc}
@@ -114,17 +117,21 @@ export default function QuizPage() {
                  ></iframe>
                ) : (
                  <video
+                   ref={videoRef}
                    src={videoSrc}
                    autoPlay
                    muted
-                   loop
                    playsInline
                    className="w-full h-full object-cover"
+                   onEnded={isFirstStep ? handleNext : undefined}
+                   loop={!isFirstStep} // Loop only if it's not the first video
                  ></video>
                )}
-              <div className="absolute inset-0 bg-black/30 flex justify-center items-center pointer-events-none">
-                <Play className="text-white/70 h-16 w-16" />
-              </div>
+               {!isFirstStep && (
+                <div className="absolute inset-0 bg-black/30 flex justify-center items-center pointer-events-none">
+                  <Play className="text-white/70 h-16 w-16" />
+                </div>
+               )}
             </div>
           </div>
         );
