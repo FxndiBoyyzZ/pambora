@@ -7,7 +7,7 @@ export default function LandingPage() {
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background p-4 text-center">
       <Image
-        src="https://placehold.co/1080x1920.png"
+        src="/FundoPAM.png"
         alt="Mulher se exercitando"
         layout="fill"
         objectFit="cover"
