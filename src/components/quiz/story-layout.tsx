@@ -32,7 +32,7 @@ export function StoryLayout({ step, totalSteps, children }: StoryLayoutProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Avatar>
-                <AvatarImage src="https://placehold.co/40x40.png" alt="@bypamela" />
+                <AvatarImage src="/fotodeperfil.jpg" alt="@bypamela" />
                 <AvatarFallback>BP</AvatarFallback>
               </Avatar>
               <span className="font-semibold text-white">@bypamela</span>
