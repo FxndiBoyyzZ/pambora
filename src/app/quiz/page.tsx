@@ -87,21 +87,6 @@ export default function QuizPage() {
 
   const currentStep = quizSteps[currentStepIndex];
 
-  useEffect(() => {
-    if (!currentStep) return;
-    let timer: NodeJS.Timeout;
-    if (isVideoStep(currentStep)) {
-      timer = setTimeout(() => {
-        handleNext();
-      }, 5000); // 5 second video
-    }
-    return () => {
-      if (timer) {
-        clearTimeout(timer);
-      }
-    };
-  }, [currentStepIndex, currentStep, handleNext]);
-
   const renderStepContent = () => {
     if (!currentStep) return null;
     const step = currentStep;
@@ -118,7 +103,7 @@ export default function QuizPage() {
 
         return (
           <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-0">
-            <div className="relative w-full aspect-[9/16] max-h-full">
+            <div className="relative w-full aspect-[9/16] max-h-full" onClick={handleNext}>
                {isYoutube ? (
                  <iframe
                     src={videoSrc}
