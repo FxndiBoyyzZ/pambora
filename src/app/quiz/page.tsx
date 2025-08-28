@@ -59,53 +59,29 @@ export default function QuizPage() {
   const renderStepContent = () => {
     if (!currentStep) return null;
     const step = currentStep;
-    const isFirstStep = currentStepIndex === 0;
-
+    const backgroundStyle = step.content.backgroundUrl ? { backgroundImage: `url('${step.content.backgroundUrl}')` } : {};
+    
     switch (step.type) {
       case 'video':
-        const isYoutube = step.content.videoUrl && (step.content.videoUrl.includes('youtube.com') || step.content.videoUrl.includes('youtu.be'));
-        
-        let videoSrc = step.content.videoUrl;
-        if (isYoutube) {
-            const videoId = new URL(videoSrc).searchParams.get('v') || videoSrc.split('/').pop();
-            videoSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0`;
-        }
-
         return (
           <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-0">
             <div className="relative w-full aspect-[9/16] max-h-full">
-               {isYoutube ? (
-                 <iframe
-                    src={videoSrc}
-                    className="w-full h-full object-cover"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    title="Quiz Video"
-                 ></iframe>
-               ) : (
                  <video
                    ref={videoRef}
-                   src={videoSrc}
+                   src={step.content.videoUrl}
                    autoPlay
                    muted
                    playsInline
                    className="w-full h-full object-cover"
-                   onEnded={isFirstStep ? handleNext : undefined}
-                   loop={!isFirstStep}
+                   onEnded={handleNext}
                  ></video>
-               )}
             </div>
-             {isFirstStep && (
-                  <div className="absolute bottom-10 w-full px-8">
-                     {/* The button is not displayed but could be added here if needed */}
-                  </div>
-              )}
           </div>
         );
       case 'form':
         const isFormValid = step.content.fields.every((field: string | number) => !!answers[field as keyof typeof answers]);
         return (
-          <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={{ backgroundImage: `url('${step.content.backgroundUrl}')` }}>
+          <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={backgroundStyle}>
             <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm text-foreground">
               <CardHeader>
                 <CardTitle>{step.content.title}</CardTitle>
@@ -129,7 +105,7 @@ export default function QuizPage() {
         );
       case 'question':
         return (
-          <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={{ backgroundImage: `url('${step.content.backgroundUrl}')` }}>
+          <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={backgroundStyle}>
             <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm text-foreground">
               <CardHeader>
                 <CardTitle>{step.content.title}</CardTitle>
