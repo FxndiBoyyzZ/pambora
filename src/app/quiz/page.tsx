@@ -14,6 +14,7 @@ import { Play, Loader2 } from 'lucide-react';
 import { quizSteps as localQuizSteps, type QuizStep } from './quiz-config';
 import { ChatStep } from '@/components/quiz/chat-step';
 import { VitalsStep } from '@/components/quiz/vitals-step';
+import { ScratchCardStep } from '@/components/quiz/scratch-card-step';
 
 
 export default function QuizPage() {
@@ -59,6 +60,8 @@ export default function QuizPage() {
 
   const renderStepContent = () => {
     if (!currentStep) return null;
+
+    const backgroundStyle = currentStep.content.backgroundUrl ? { backgroundImage: `url('${currentStep.content.backgroundUrl}')` } : {};
     
     switch (currentStep.type) {
       case 'video':
@@ -82,7 +85,7 @@ export default function QuizPage() {
         return (
           <div 
             className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" 
-            style={{ backgroundImage: `url('${currentStep.content.backgroundUrl}')` }}
+            style={backgroundStyle}
           >
             <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm text-foreground">
               <CardHeader>
@@ -109,7 +112,7 @@ export default function QuizPage() {
         return (
           <div 
             className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" 
-            style={{ backgroundImage: `url('${currentStep.content.backgroundUrl}')` }}
+            style={backgroundStyle}
           >
             <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm text-foreground">
               <CardHeader>
@@ -158,6 +161,8 @@ export default function QuizPage() {
         return <VitalsStep step={currentStep} onComplete={handleNext} />;
     case 'chat':
         return <ChatStep step={currentStep} onComplete={handleNext} />;
+    case 'scratch':
+        return <ScratchCardStep step={currentStep} onComplete={handleNext} />;
     default:
         return (
             <div className="p-8 text-center">
