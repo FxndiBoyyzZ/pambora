@@ -31,7 +31,7 @@ export const quizSteps: QuizStep[] = [
         content: {
             title: 'Detalhes Corporais',
             description: 'Essas informações nos ajudam a criar um plano ainda mais personalizado para você.',
-            backgroundUrl: 'https://placehold.co/420x850.png',
+            backgroundUrl: '/fundo1.png',
         }
     },
     {
@@ -47,7 +47,7 @@ export const quizSteps: QuizStep[] = [
                 { id: 'manter-forma', label: 'Manter a Forma' },
                 { id: 'melhorar-saude', label: 'Melhorar a Saúde Geral' },
             ],
-            backgroundUrl: 'https://placehold.co/420x850.png',
+            backgroundUrl: '/fundo2.png',
         }
     },
     {
