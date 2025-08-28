@@ -1,7 +1,7 @@
 // src/app/quiz/quiz-config.ts
 
 export interface QuizStep {
-    type: 'video' | 'form' | 'question' | 'scratch' | 'chat' | 'vitals';
+    type: 'video' | 'form' | 'question' | 'chat' | 'vitals';
     content: any;
 }
 
