@@ -1,4 +1,3 @@
-
 // src/app/quiz/quiz-config.ts
 
 export interface QuizStep {
