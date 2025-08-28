@@ -57,7 +57,7 @@ export const quizSteps: QuizStep[] = [
             description: '(Opcional)',
             questionType: 'text',
             answerKey: 'allergies',
-            backgroundUrl: 'https://placehold.co/420x850.png',
+            backgroundUrl: '/fundo2.png',
         }
     },
     {
@@ -72,7 +72,7 @@ export const quizSteps: QuizStep[] = [
                 { id: 'vegana', label: 'Vegana' },
                 { id: 'low-carb', label: 'Low-Carb' },
             ],
-            backgroundUrl: 'https://placehold.co/420x850.png',
+            backgroundUrl: '/fundo2.png',
         }
     },
     {
@@ -87,14 +87,14 @@ export const quizSteps: QuizStep[] = [
                  { id: '6-7', label: '6-7 vezes por semana' },
                  { id: 'everyday', label: 'Todos os dias' },
              ],
-            backgroundUrl: 'https://placehold.co/420x850.png',
+            backgroundUrl: '/fundo2.png',
         }
     },
     {
         type: 'chat',
         content: {
             avatarUrl: '/fotodeperfil.jpg',
-            backgroundUrl: 'https://placehold.co/420x850.png',
+            backgroundUrl: '/fundo2.png',
             messages: [
                 { author: 'ByPamela', text: 'Eba! 🎉 Vi que você está quase dentro!' },
                 { author: 'ByPamela', text: 'Para finalizar, tenho um bônus: um plano alimentar com um nutricionista parceiro. Ajuda MUITO a acelerar os resultados. O que acha?' },
