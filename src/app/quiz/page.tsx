@@ -1,4 +1,3 @@
-
 // src/app/quiz/page.tsx
 'use client';
 import { useRouter } from 'next/navigation';
@@ -61,7 +60,8 @@ export default function QuizPage() {
   const renderStepContent = () => {
     if (!currentStep) return null;
 
-    const backgroundStyle = currentStep.content.backgroundUrl ? { backgroundImage: `url('${currentStep.content.backgroundUrl}')` } : {};
+    const backgroundUrl = currentStep.content.backgroundUrl;
+    const backgroundStyle = backgroundUrl ? { backgroundImage: `url('${backgroundUrl}')` } : {};
     
     switch (currentStep.type) {
       case 'video':
