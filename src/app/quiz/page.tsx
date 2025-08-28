@@ -10,11 +10,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { StoryLayout } from '@/components/quiz/story-layout';
 import { useQuiz } from '@/services/quiz-service';
 import { Play, Loader2 } from 'lucide-react';
-import { type QuizStep } from './quiz-config';
+import { quizSteps as localQuizSteps, type QuizStep } from './quiz-config';
 import { ChatStep } from '@/components/quiz/chat-step';
 import { VitalsStep } from '@/components/quiz/vitals-step';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/services/firebase';
 import { ScratchCardStep } from '@/components/quiz/scratch-card-step';
 
 export default function QuizPage() {
@@ -23,33 +21,11 @@ export default function QuizPage() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const { answers, setAnswer, signUp, user, loading: authLoading } = useQuiz();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [configLoading, setConfigLoading] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    const fetchQuizConfig = async () => {
-        setConfigLoading(true);
-        try {
-            const configDocRef = doc(db, 'config', 'quiz');
-            const configDoc = await getDoc(configDocRef);
-            if (configDoc.exists()) {
-                setQuizSteps(configDoc.data().steps);
-            } else {
-                // Fallback to local config if not found in Firestore
-                const { quizSteps: localQuizSteps } = await import('./quiz-config');
-                setQuizSteps(localQuizSteps);
-                console.warn("Configuração do quiz não encontrada no Firestore. Usando configuração local.");
-            }
-        } catch (error) {
-            console.error("Erro ao buscar configuração do quiz:", error);
-            // Fallback to local config on error
-            const { quizSteps: localQuizSteps } = await import('./quiz-config');
-            setQuizSteps(localQuizSteps);
-        } finally {
-            setConfigLoading(false);
-        }
-    };
-    fetchQuizConfig();
+    // Directly use the local quiz steps configuration
+    setQuizSteps(localQuizSteps);
   }, []);
 
   useEffect(() => {
@@ -61,7 +37,7 @@ export default function QuizPage() {
   }, [user, authLoading, router]);
   
   const handleNext = useCallback(async () => {
-    if (configLoading || quizSteps.length === 0) return;
+    if (quizSteps.length === 0) return;
 
     // Check if we are on the last step
     if (currentStepIndex >= quizSteps.length - 1) {
@@ -80,7 +56,7 @@ export default function QuizPage() {
       // Just move to the next step
       setCurrentStepIndex(prevIndex => prevIndex + 1);
     }
-  }, [configLoading, quizSteps, currentStepIndex, signUp, answers, router]);
+  }, [quizSteps, currentStepIndex, signUp, answers, router]);
 
 
   const currentStep = quizSteps[currentStepIndex];
@@ -102,7 +78,7 @@ export default function QuizPage() {
 
         return (
           <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-0">
-            <div className="relative w-full aspect-[9/16] max-h-full" onClick={!isFirstStep ? handleNext : undefined}>
+            <div className="relative w-full aspect-[9/16] max-h-full">
                {isYoutube ? (
                  <iframe
                     src={videoSrc}
@@ -124,7 +100,7 @@ export default function QuizPage() {
                  ></video>
                )}
                {!isFirstStep && (
-                <div className="absolute inset-0 bg-black/30 flex justify-center items-center pointer-events-none">
+                <div className="absolute inset-0 bg-black/30 flex justify-center items-center pointer-events-none" onClick={handleNext}>
                   <Play className="text-white/70 h-16 w-16" />
                 </div>
                )}
@@ -218,9 +194,8 @@ export default function QuizPage() {
     }
   };
 
-  const loading = authLoading || configLoading;
 
-  if (loading) {
+  if (authLoading) {
     return (
         <div className="flex justify-center items-center h-screen bg-background">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
