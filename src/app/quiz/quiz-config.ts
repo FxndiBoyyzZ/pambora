@@ -114,7 +114,7 @@ export const quizSteps: QuizStep[] = [
     {
         type: 'chat',
         content: {
-            avatarUrl: 'https://placehold.co/40x40.png',
+            avatarUrl: '/fotodeperfil.jpg',
             backgroundUrl: 'https://placehold.co/420x850.png',
             messages: [
                 { author: 'ByPamela', text: 'Eba! 🎉 Vi que você está quase dentro!' },

@@ -4,7 +4,7 @@
 import { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { X } from 'lucide-react';
+import { X, CheckCircle } from 'lucide-react';
 
 interface StoryLayoutProps {
   step: number;
@@ -32,10 +32,13 @@ export function StoryLayout({ step, totalSteps, children }: StoryLayoutProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Avatar>
-                <AvatarImage src="/fotodeperfil.jpg" alt="@bypamela" />
+                <AvatarImage src="/fotodeperfil.jpg" alt="@bypamella" />
                 <AvatarFallback>BP</AvatarFallback>
               </Avatar>
-              <span className="font-semibold text-white">@bypamela</span>
+              <div className="flex items-center gap-1">
+                <span className="font-semibold text-white">bypamella</span>
+                <CheckCircle className="h-4 w-4 text-white fill-blue-500 stroke-blue-500" />
+              </div>
             </div>
             <button onClick={() => router.push('/')} className="text-white">
                 <X size={24} />
