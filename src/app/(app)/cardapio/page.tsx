@@ -16,6 +16,7 @@ import { signOut } from 'firebase/auth';
 
 type MealName = "Café da Manhã" | "Almoço" | "Lanche" | "Jantar";
 const mealNames: MealName[] = ["Café da Manhã", "Almoço", "Lanche", "Jantar"];
+const orderedDays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
 function MealPlanSkeleton() {
     return (
@@ -36,6 +37,19 @@ export default function CardapioPage() {
     const [loading, setLoading] = React.useState(true);
     const [mealPlan, setMealPlan] = React.useState<MealPlanOutput['mealPlan'] | null>(null);
     const [favorites, setFavorites] = React.useState<Record<string, boolean>>({});
+    const [currentDay, setCurrentDay] = React.useState(orderedDays[0]);
+
+    React.useEffect(() => {
+        // Set the current day to today, or Monday if today is not in the list.
+        const today = new Date().toLocaleString('pt-BR', { weekday: 'short' }).replace('.', '');
+        const capitalizedToday = today.charAt(0).toUpperCase() + today.slice(1);
+        
+        if (orderedDays.includes(capitalizedToday)) {
+            setCurrentDay(capitalizedToday);
+        } else {
+            setCurrentDay('Seg');
+        }
+    }, []);
 
     React.useEffect(() => {
         const hasRequiredAnswers = answers.goal && answers.diet;
@@ -116,47 +130,50 @@ export default function CardapioPage() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <Tabs defaultValue="Seg" className="w-full">
-                        <TabsList className="grid w-full grid-cols-4 md:grid-cols-7">
-                            {Object.keys(mealPlan).map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
+                    <Tabs value={currentDay} onValueChange={setCurrentDay} className="w-full">
+                        <TabsList className="grid w-full grid-cols-7">
+                            {orderedDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
                         </TabsList>
-                        {Object.entries(mealPlan).map(([day, meals]) => (
-                            <TabsContent key={day} value={day}>
-                                <Card>
-                                    <CardContent className="p-4 md:p-6">
-                                        <Accordion type="single" collapsible defaultValue="Café da Manhã" className="w-full">
-                                            {mealNames.map((mealName) => (
-                                                <AccordionItem value={mealName} key={mealName}>
-                                                    <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-                                                        <div className="flex items-center gap-3">
-                                                            <UtensilsCrossed className="h-5 w-5 text-primary" />
-                                                            {mealName}
-                                                        </div>
-                                                    </AccordionTrigger>
-                                                    <AccordionContent className="pt-2 pl-4">
-                                                        <div className="space-y-4">
-                                                            {(meals[mealName] && meals[mealName].length > 0) ? meals[mealName].map((item, index) => (
-                                                                <div key={index} className="flex items-center space-x-3">
-                                                                    <Checkbox id={`${day}-${mealName}-${index}`} />
-                                                                    <Label htmlFor={`${day}-${mealName}-${index}`} className="text-base font-normal text-foreground/80 leading-snug">
-                                                                        {item}
-                                                                    </Label>
-                                                                </div>
-                                                            )) : <p className="text-muted-foreground">Nenhuma refeição planejada.</p>}
-                                                            <div className="flex justify-end pt-2">
-                                                                <Button variant="ghost" size="icon" onClick={() => toggleFavorite(`${day}-${mealName}`)}>
-                                                                    <Heart className={favorites[`${day}-${mealName}`] ? 'text-red-500 fill-current' : 'text-muted-foreground'} />
-                                                                </Button>
+                        {orderedDays.map((day) => {
+                             const meals = mealPlan[day as keyof typeof mealPlan];
+                             return (
+                                <TabsContent key={day} value={day}>
+                                    <Card>
+                                        <CardContent className="p-4 md:p-6">
+                                            <Accordion type="single" collapsible defaultValue="Café da Manhã" className="w-full">
+                                                {mealNames.map((mealName) => (
+                                                    <AccordionItem value={mealName} key={mealName}>
+                                                        <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                                                            <div className="flex items-center gap-3">
+                                                                <UtensilsCrossed className="h-5 w-5 text-primary" />
+                                                                {mealName}
                                                             </div>
-                                                        </div>
-                                                    </AccordionContent>
-                                                </AccordionItem>
-                                            ))}
-                                        </Accordion>
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
-                        ))}
+                                                        </AccordionTrigger>
+                                                        <AccordionContent className="pt-2 pl-4">
+                                                            <div className="space-y-4">
+                                                                {(meals && meals[mealName] && meals[mealName].length > 0) ? meals[mealName].map((item, index) => (
+                                                                    <div key={index} className="flex items-center space-x-3">
+                                                                        <Checkbox id={`${day}-${mealName}-${index}`} />
+                                                                        <Label htmlFor={`${day}-${mealName}-${index}`} className="text-base font-normal text-foreground/80 leading-snug">
+                                                                            {item}
+                                                                        </Label>
+                                                                    </div>
+                                                                )) : <p className="text-muted-foreground">Nenhuma refeição planejada.</p>}
+                                                                <div className="flex justify-end pt-2">
+                                                                    <Button variant="ghost" size="icon" onClick={() => toggleFavorite(`${day}-${mealName}`)}>
+                                                                        <Heart className={favorites[`${day}-${mealName}`] ? 'text-red-500 fill-current' : 'text-muted-foreground'} />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        </AccordionContent>
+                                                    </AccordionItem>
+                                                ))}
+                                            </Accordion>
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+                            )
+                        })}
                     </Tabs>
                 )}
             </div>
