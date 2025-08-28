@@ -13,20 +13,15 @@ import { Play, Loader2 } from 'lucide-react';
 import { quizSteps as localQuizSteps, type QuizStep } from './quiz-config';
 import { ChatStep } from '@/components/quiz/chat-step';
 import { VitalsStep } from '@/components/quiz/vitals-step';
-import { ScratchCardStep } from '@/components/quiz/scratch-card-step';
+
 
 export default function QuizPage() {
   const router = useRouter();
-  const [quizSteps, setQuizSteps] = useState<QuizStep[]>([]);
+  const [quizSteps, setQuizSteps] = useState<QuizStep[]>(localQuizSteps);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const { answers, setAnswer, signUp, user, loading: authLoading } = useQuiz();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    // Directly use the local quiz steps configuration
-    setQuizSteps(localQuizSteps);
-  }, []);
 
   useEffect(() => {
     // If a permanent user lands on the quiz, push them to the app.
@@ -73,7 +68,7 @@ export default function QuizPage() {
         let videoSrc = step.content.videoUrl;
         if (isYoutube) {
             const videoId = new URL(videoSrc).searchParams.get('v') || videoSrc.split('/').pop();
-            videoSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0`;
+            videoSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0`;
         }
 
         return (
@@ -95,11 +90,16 @@ export default function QuizPage() {
                    muted
                    playsInline
                    className="w-full h-full object-cover"
-                   onEnded={handleNext}
+                   onEnded={isFirstStep ? handleNext : undefined}
                    loop={!isFirstStep}
                  ></video>
                )}
             </div>
+             {isFirstStep && (
+                  <div className="absolute bottom-10 w-full px-8">
+                     {/* The button is not displayed but could be added here if needed */}
+                  </div>
+              )}
           </div>
         );
       case 'form':
@@ -173,8 +173,6 @@ export default function QuizPage() {
             </Card>
           </div>
         )
-      case 'scratch':
-        return <ScratchCardStep step={step} onComplete={handleNext} />;
     case 'chat':
         return <ChatStep step={step} onComplete={handleNext} />;
     case 'vitals':
@@ -206,5 +204,3 @@ export default function QuizPage() {
     </StoryLayout>
   );
 }
-
-    
