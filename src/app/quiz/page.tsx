@@ -1,3 +1,4 @@
+
 // src/app/quiz/page.tsx
 'use client';
 import { useRouter } from 'next/navigation';
@@ -58,17 +59,15 @@ export default function QuizPage() {
 
   const renderStepContent = () => {
     if (!currentStep) return null;
-    const step = currentStep;
-    const backgroundStyle = step.content.backgroundUrl ? { backgroundImage: `url('${step.content.backgroundUrl}')` } : {};
     
-    switch (step.type) {
+    switch (currentStep.type) {
       case 'video':
         return (
           <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-0">
             <div className="relative w-full aspect-[9/16] max-h-full">
                  <video
                    ref={videoRef}
-                   src={step.content.videoUrl}
+                   src={currentStep.content.videoUrl}
                    autoPlay
                    muted
                    playsInline
@@ -79,19 +78,22 @@ export default function QuizPage() {
           </div>
         );
       case 'form':
-        const isFormValid = step.content.fields.every((field: string | number) => !!answers[field as keyof typeof answers]);
+        const isFormValid = currentStep.content.fields.every((field: string | number) => !!answers[field as keyof typeof answers]);
         return (
-          <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={backgroundStyle}>
+          <div 
+            className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" 
+            style={{ backgroundImage: `url('${currentStep.content.backgroundUrl}')` }}
+          >
             <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm text-foreground">
               <CardHeader>
-                <CardTitle>{step.content.title}</CardTitle>
-                <CardDescription>{step.content.description}</CardDescription>
+                <CardTitle>{currentStep.content.title}</CardTitle>
+                <CardDescription>{currentStep.content.description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {step.content.fields.map((field: any) => (
+                {currentStep.content.fields.map((field: any) => (
                   <div className="space-y-2" key={field}>
                     <Label htmlFor={field}>{field.charAt(0).toUpperCase() + field.slice(1)}</Label>
-                    <Input id={field} placeholder={step.content.placeholders[field]} value={(answers as any)[field] || ''} onChange={(e) => setAnswer(field as any, e.target.value)} type={field === 'email' ? 'email' : 'text'} />
+                    <Input id={field} placeholder={currentStep.content.placeholders[field]} value={(answers as any)[field] || ''} onChange={(e) => setAnswer(field as any, e.target.value)} type={field === 'email' ? 'email' : 'text'} />
                   </div>
                 ))}
               </CardContent>
@@ -105,23 +107,26 @@ export default function QuizPage() {
         );
       case 'question':
         return (
-          <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={backgroundStyle}>
+          <div 
+            className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" 
+            style={{ backgroundImage: `url('${currentStep.content.backgroundUrl}')` }}
+          >
             <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm text-foreground">
               <CardHeader>
-                <CardTitle>{step.content.title}</CardTitle>
-                {step.content.description && <CardDescription>{step.content.description}</CardDescription>}
+                <CardTitle>{currentStep.content.title}</CardTitle>
+                {currentStep.content.description && <CardDescription>{currentStep.content.description}</CardDescription>}
               </CardHeader>
               <CardContent>
-                {step.content.questionType === 'multiple-choice' ? (
+                {currentStep.content.questionType === 'multiple-choice' ? (
                   <RadioGroup
-                    value={(answers as any)[step.content.answerKey]}
+                    value={(answers as any)[currentStep.content.answerKey]}
                     onValueChange={(value) => {
-                      setAnswer(step.content.answerKey as any, value);
+                      setAnswer(currentStep.content.answerKey as any, value);
                       setTimeout(handleNext, 300);
                     }}
                     className="space-y-3"
                   >
-                    {step.content.options.map((item: any) => (
+                    {currentStep.content.options.map((item: any) => (
                       <Label
                         key={item.id}
                         htmlFor={item.id}
@@ -135,13 +140,13 @@ export default function QuizPage() {
                 ) : (
                   <div className="space-y-4">
                      <div className="space-y-2">
-                        <Label htmlFor={step.content.answerKey}>{step.content.title}</Label>
-                        <Input id={step.content.answerKey} placeholder="Ex: Glúten, lactose..." value={(answers as any)[step.content.answerKey] || ''} onChange={(e) => setAnswer(step.content.answerKey as any, e.target.value)} />
+                        <Label htmlFor={currentStep.content.answerKey}>{currentStep.content.title}</Label>
+                        <Input id={currentStep.content.answerKey} placeholder="Ex: Glúten, lactose..." value={(answers as any)[currentStep.content.answerKey] || ''} onChange={(e) => setAnswer(currentStep.content.answerKey as any, e.target.value)} />
                     </div>
                   </div>
                 )}
               </CardContent>
-               {step.content.questionType === 'text' && (
+               {currentStep.content.questionType === 'text' && (
                  <CardFooter>
                     <Button onClick={handleNext} className="w-full">Continuar</Button>
                  </CardFooter>
@@ -149,10 +154,10 @@ export default function QuizPage() {
             </Card>
           </div>
         )
-    case 'chat':
-        return <ChatStep step={step} onComplete={handleNext} />;
     case 'vitals':
-        return <VitalsStep step={step} onComplete={handleNext} />;
+        return <VitalsStep step={currentStep} onComplete={handleNext} />;
+    case 'chat':
+        return <ChatStep step={currentStep} onComplete={handleNext} />;
     default:
         return (
             <div className="p-8 text-center">
