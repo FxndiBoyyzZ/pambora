@@ -23,7 +23,7 @@ export const quizSteps: QuizStep[] = [
                 whatsapp: '(00) 00000-0000',
                 email: 'seu@email.com',
             },
-            backgroundUrl: 'https://placehold.co/420x850.png',
+            backgroundUrl: '/FundoPAM.png',
         }
     },
     {
@@ -137,5 +137,3 @@ export const quizSteps: QuizStep[] = [
         }
     },
 ];
-
-    
