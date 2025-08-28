@@ -1,4 +1,3 @@
-
 // src/app/quiz/page.tsx
 'use client';
 import { useRouter } from 'next/navigation';
@@ -120,7 +119,7 @@ export default function QuizPage() {
                    muted
                    playsInline
                    className="w-full h-full object-cover"
-                   onEnded={isFirstStep ? handleNext : undefined}
+                   onEnded={handleNext}
                    loop={!isFirstStep}
                  ></video>
                )}
