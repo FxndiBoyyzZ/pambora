@@ -109,15 +109,19 @@ export default function QuizPage() {
     switch (step.type) {
       case 'video':
         const isYoutube = step.content.videoUrl && (step.content.videoUrl.includes('youtube.com') || step.content.videoUrl.includes('youtu.be'));
-        const videoId = isYoutube ? new URL(step.content.videoUrl).searchParams.get('v') || step.content.videoUrl.split('/').pop() : null;
-        const embedUrl = isYoutube ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0` : step.content.videoUrl;
         
+        let videoSrc = step.content.videoUrl;
+        if (isYoutube) {
+            const videoId = new URL(videoSrc).searchParams.get('v') || videoSrc.split('/').pop();
+            videoSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0`;
+        }
+
         return (
           <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-0">
             <div className="relative w-full aspect-[9/16] max-h-full">
                {isYoutube ? (
                  <iframe
-                    src={embedUrl}
+                    src={videoSrc}
                     className="w-full h-full object-cover"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
@@ -125,7 +129,7 @@ export default function QuizPage() {
                  ></iframe>
                ) : (
                  <video
-                   src={step.content.videoUrl}
+                   src={videoSrc}
                    autoPlay
                    muted
                    loop
