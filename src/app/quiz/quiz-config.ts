@@ -23,7 +23,7 @@ export const quizSteps: QuizStep[] = [
                 whatsapp: '(00) 00000-0000',
                 email: 'seu@email.com',
             },
-            backgroundUrl: '/FundoPAM.png',
+            backgroundUrl: '/fundoPam.png',
         }
     },
     {
@@ -61,12 +61,6 @@ export const quizSteps: QuizStep[] = [
         }
     },
     {
-        type: 'video',
-        content: {
-            videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoy.mp4',
-        }
-    },
-    {
         type: 'question',
         content: {
             title: 'Você tem alguma preferência de dieta?',
@@ -97,21 +91,6 @@ export const quizSteps: QuizStep[] = [
         }
     },
     {
-        type: 'video',
-        content: {
-            videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-        }
-    },
-    {
-        type: 'scratch',
-        content: {
-            title: 'Você ganhou um prêmio!',
-            description: 'Raspe para revelar seu bônus exclusivo.',
-            prizeText: 'Acesso Vitalício ao Cardápio Personalizado!',
-            backgroundUrl: 'https://placehold.co/420x850.png',
-        }
-    },
-    {
         type: 'chat',
         content: {
             avatarUrl: '/fotodeperfil.jpg',
@@ -128,12 +107,6 @@ export const quizSteps: QuizStep[] = [
                 { text: 'Sim, quero o plano!', value: 'yes' },
                 { text: 'Não, obrigado(a).', value: 'no' },
             ],
-        }
-    },
-    {
-        type: 'video',
-        content: {
-            videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
         }
     },
 ];
