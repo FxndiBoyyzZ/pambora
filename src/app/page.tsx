@@ -19,7 +19,7 @@ export default function LandingPage() {
         <Logo />
         <div className="flex flex-col items-center gap-2">
           <h1 className="text-4xl font-bold tracking-tighter text-primary sm:text-5xl md:text-6xl font-headline">
-            PAMBORA Boost
+            Desafio PAMBORA!
           </h1>
           <p className="max-w-md text-lg text-foreground/80 md:text-xl">
             Comece sua jornada de 21 dias para uma vida mais saudável e ativa.
