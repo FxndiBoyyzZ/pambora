@@ -15,6 +15,8 @@ import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { onAuthStateChanged } from 'firebase/auth';
 
+export const dynamic = 'force-dynamic';
+
 const getIcon = (type: string) => {
     switch (type) {
         case 'video': return <Film className="h-6 w-6 text-primary" />;
