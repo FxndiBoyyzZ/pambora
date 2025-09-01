@@ -1,7 +1,7 @@
 // src/app/quiz/quiz-config.ts
 
 export interface QuizStep {
-    type: 'video' | 'form' | 'question' | 'chat' | 'vitals' | 'scratch';
+    type: 'video' | 'form' | 'question' | 'vitals' | 'scratch';
     content: any;
 }
 
@@ -55,9 +55,16 @@ export const quizSteps: QuizStep[] = [
         type: 'question',
         content: {
             title: 'Você possui alguma alergia ou restrição alimentar?',
-            description: '(Opcional)',
-            questionType: 'text',
+            description: 'Marque todas as opções aplicáveis.',
+            questionType: 'multiple-select', // Changed from 'text'
             answerKey: 'allergies',
+            options: [
+                { id: 'gluten', label: 'Glúten' },
+                { id: 'lactose', label: 'Lactose' },
+                { id: 'frutos-do-mar', label: 'Frutos do Mar' },
+                { id: 'amendoim', label: 'Amendoim' },
+                { id: 'outra', label: 'Outra' },
+            ],
             backgroundUrl: '/fundo1.png',
         }
     },
@@ -89,25 +96,6 @@ export const quizSteps: QuizStep[] = [
                  { id: 'everyday', label: 'Todos os dias' },
              ],
             backgroundUrl: '/fundo1.png',
-        }
-    },
-    {
-        type: 'chat',
-        content: {
-            avatarUrl: '/fotodeperfil.jpg',
-            backgroundUrl: '/fundo1.png',
-            messages: [
-                { author: 'ByPamela', text: 'Eba! 🎉 Vi que você está quase dentro!' },
-                { author: 'ByPamela', text: 'Para finalizar, tenho um bônus: um plano alimentar com um nutricionista parceiro. Ajuda MUITO a acelerar os resultados. O que acha?' },
-                { author: 'user', text: '' }, // Placeholder for user reply
-                { author: 'ByPamela', text: 'Ótima escolha! 💪' },
-                { author: 'ByPamela', text: 'Nossa equipe vai te contatar para alinhar tudo.' },
-                { author: 'ByPamela', text: 'Prepare-se, nossa jornada começa agora!' },
-            ],
-            replyOptions: [
-                { text: 'Sim, quero o plano!', value: 'yes' },
-                { text: 'Não, obrigado(a).', value: 'no' },
-            ],
         }
     },
 ];

@@ -11,9 +11,9 @@ import { StoryLayout } from '@/components/quiz/story-layout';
 import { useQuiz } from '@/services/quiz-service';
 import { Play, Loader2 } from 'lucide-react';
 import { quizSteps as localQuizSteps, type QuizStep } from './quiz-config';
-import { ChatStep } from '@/components/quiz/chat-step';
 import { VitalsStep } from '@/components/quiz/vitals-step';
 import { ScratchCardStep } from '@/components/quiz/scratch-card-step';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 export default function QuizPage() {
@@ -23,6 +23,10 @@ export default function QuizPage() {
   const { answers, setAnswer, signUp, user, loading: authLoading } = useQuiz();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
+  const [otherAllergy, setOtherAllergy] = useState('');
+
 
   useEffect(() => {
     // If a permanent user lands on the quiz, push them to the app.
@@ -34,6 +38,17 @@ export default function QuizPage() {
   
   const handleNext = useCallback(async () => {
     if (quizSteps.length === 0) return;
+    
+    // Logic to save multiple-select answers
+    const currentStep = quizSteps[currentStepIndex];
+    if (currentStep.type === 'question' && currentStep.content.questionType === 'multiple-select') {
+        const finalAllergies = selectedAllergies.filter(a => a !== 'Outra');
+        if (selectedAllergies.includes('Outra') && otherAllergy) {
+            finalAllergies.push(otherAllergy);
+        }
+        setAnswer('allergies', finalAllergies.join(', '));
+    }
+
 
     // Check if we are on the last step
     if (currentStepIndex >= quizSteps.length - 1) {
@@ -52,11 +67,17 @@ export default function QuizPage() {
       // Just move to the next step
       setCurrentStepIndex(prevIndex => prevIndex + 1);
     }
-  }, [quizSteps, currentStepIndex, signUp, answers, router]);
+  }, [quizSteps, currentStepIndex, signUp, answers, router, selectedAllergies, otherAllergy, setAnswer]);
 
 
   const currentStep = quizSteps[currentStepIndex];
 
+  const handleAllergyChange = (allergy: string, checked: boolean) => {
+    setSelectedAllergies(prev => 
+        checked ? [...prev, allergy] : prev.filter(a => a !== allergy)
+    );
+  };
+  
   const renderStepContent = () => {
     if (!currentStep) return null;
 
@@ -140,6 +161,35 @@ export default function QuizPage() {
                       </Label>
                     ))}
                   </RadioGroup>
+                ) : currentStep.content.questionType === 'multiple-select' ? (
+                     <div className="space-y-3">
+                        {currentStep.content.options.map((item: any) => (
+                           <Label
+                            key={item.id}
+                            htmlFor={item.id}
+                            className="flex items-center space-x-3 rounded-md border border-border p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[input:checked]:border-primary transition-colors"
+                          >
+                             <Checkbox 
+                                id={item.id} 
+                                onCheckedChange={(checked) => handleAllergyChange(item.label, !!checked)}
+                                checked={selectedAllergies.includes(item.label)}
+                             />
+                             <span>{item.label}</span>
+                          </Label>
+                        ))}
+                        {selectedAllergies.includes('Outra') && (
+                            <div className="pt-2">
+                                <Label htmlFor="other-allergy">Qual?</Label>
+                                <Input 
+                                    id="other-allergy" 
+                                    placeholder="Digite a outra alergia" 
+                                    value={otherAllergy}
+                                    onChange={(e) => setOtherAllergy(e.target.value)}
+                                    className="mt-1"
+                                />
+                            </div>
+                        )}
+                     </div>
                 ) : (
                   <div className="space-y-4">
                      <div className="space-y-2">
@@ -149,7 +199,7 @@ export default function QuizPage() {
                   </div>
                 )}
               </CardContent>
-               {currentStep.content.questionType === 'text' && (
+               {(currentStep.content.questionType === 'text' || currentStep.content.questionType === 'multiple-select') && (
                  <CardFooter>
                     <Button onClick={handleNext} className="w-full">Continuar</Button>
                  </CardFooter>
@@ -159,8 +209,6 @@ export default function QuizPage() {
         )
     case 'vitals':
         return <VitalsStep step={currentStep} onComplete={handleNext} />;
-    case 'chat':
-        return <ChatStep step={currentStep} onComplete={handleNext} />;
     case 'scratch':
         return <ScratchCardStep step={currentStep} onComplete={handleNext} />;
     default:
