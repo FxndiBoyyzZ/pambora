@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { auth, db } from '@/services/firebase';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, signInAnonymously } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 interface QuizAnswers {
   name?: string;
@@ -19,6 +19,7 @@ interface QuizAnswers {
   weight?: number;
   height?: number;
   gender?: 'male' | 'female';
+  createdAt?: any;
 }
 
 interface QuizContextType {
@@ -133,7 +134,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
         const newUser = userCredential.user;
         setUser(newUser);
-        const initialData = { ...answers, ...newUserData };
+        const initialData = { ...answers, ...newUserData, createdAt: new Date() };
         await setDoc(doc(db, 'users', newUser.uid), initialData);
         setAnswers(initialData);
     } catch (error: any) {
