@@ -93,7 +93,6 @@ export default function QuizPage() {
                    ref={videoRef}
                    src={currentStep.content.videoUrl}
                    autoPlay
-                   muted
                    playsInline
                    className="w-full h-full object-cover"
                    onEnded={handleNext}
