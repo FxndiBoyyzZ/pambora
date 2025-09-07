@@ -1,3 +1,4 @@
+
 // src/app/quiz/page.tsx
 'use client';
 import { useRouter } from 'next/navigation';
@@ -87,7 +88,7 @@ export default function QuizPage() {
     switch (currentStep.type) {
       case 'video':
         return (
-          <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-0" onClick={handleNext}>
+          <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-0">
             <div className="relative w-full aspect-[9/16] max-h-full">
                  <video
                    ref={videoRef}
@@ -237,3 +238,5 @@ export default function QuizPage() {
     </StoryLayout>
   );
 }
+
+    
