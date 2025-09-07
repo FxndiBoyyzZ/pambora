@@ -9,7 +9,7 @@ export const quizSteps: QuizStep[] = [
     {
         type: 'video',
         content: {
-            videoUrl: '/video1.mp4',
+            videoUrl: '/inicio.mp4',
             backgroundUrl: '/fundo1.png',
         }
     },
