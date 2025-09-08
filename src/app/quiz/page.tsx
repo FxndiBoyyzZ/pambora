@@ -37,9 +37,6 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
             player.on('ended', () => {
                 onNext();
             });
-
-            // The player starts muted.
-            // We can try to unmute it on click.
         }
 
         return () => {
@@ -51,13 +48,9 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
     const handleVideoClick = () => {
         if (playerRef.current) {
             playerRef.current.getMuted().then(muted => {
-                if (muted) {
-                    playerRef.current?.setMuted(false);
-                    setIsMuted(false);
-                } else {
-                    playerRef.current?.setMuted(true);
-                    setIsMuted(true);
-                }
+                const newMutedState = !muted;
+                playerRef.current?.setMuted(newMutedState);
+                setIsMuted(newMutedState);
             });
         }
     };

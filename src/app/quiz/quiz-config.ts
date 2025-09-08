@@ -1,4 +1,3 @@
-
 // src/app/quiz/quiz-config.ts
 
 export interface QuizStep {
@@ -10,7 +9,7 @@ export const quizSteps: QuizStep[] = [
     {
         type: 'video',
         content: {
-            videoUrl: 'https://vimeo.com/1116746550?background=1&controls=0',
+            videoUrl: 'https://vimeo.com/1116746550',
             backgroundUrl: '/fundo1.png',
         }
     },
@@ -111,7 +110,7 @@ export const quizSteps: QuizStep[] = [
     {
         type: 'video',
         content: {
-            videoUrl: 'https://vimeo.com/1116746276?background=1&controls=0',
+            videoUrl: 'https://vimeo.com/1116746276',
             backgroundUrl: '/fundo1.png',
         }
     },
