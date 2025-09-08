@@ -9,29 +9,27 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { StoryLayout } from '@/components/quiz/story-layout';
 import { useQuiz } from '@/services/quiz-service';
-import { Loader2, VolumeX, Volume2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { quizSteps as localQuizSteps, type QuizStep } from './quiz-config';
 import { VitalsStep } from '@/components/quiz/vitals-step';
 import { ScratchCardStep } from '@/components/quiz/scratch-card-step';
 import { Checkbox } from '@/components/ui/checkbox';
 
 function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
-    
     useEffect(() => {
         if (step.content.duration) {
             const timer = setTimeout(() => {
                 onNext();
-            }, step.content.duration * 1000);
-            return () => clearTimeout(timer);
+            }, step.content.duration * 1000); // Converte duração de segundos para milissegundos
+            return () => clearTimeout(timer); // Limpa o timer se o componente for desmontado
         }
     }, [step, onNext]);
 
-
     return (
-        <div className="relative w-full h-full bg-black flex flex-col justify-center items-center text-center p-0">
-             <iframe
+        <div className="relative w-full h-full bg-black pointer-events-none">
+            <iframe
                 src={step.content.videoUrl}
-                className="w-full aspect-[9/16] max-h-full border-0"
+                className="absolute top-0 left-0 w-full h-full border-0"
                 allow="autoplay; fullscreen; picture-in-picture"
                 allowFullScreen
             ></iframe>

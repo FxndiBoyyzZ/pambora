@@ -10,9 +10,9 @@ export const quizSteps: QuizStep[] = [
     {
         type: 'video',
         content: {
-            videoUrl: 'https://player.vimeo.com/video/1116746550?autoplay=1',
+            videoUrl: 'https://player.vimeo.com/video/1116746550?autoplay=1&background=1&controls=0&muted=1',
             backgroundUrl: '/fundo1.png',
-            duration: 55, // Duração em segundos (failsafe)
+            duration: 55, // Duração em segundos
         }
     },
     {
@@ -112,9 +112,9 @@ export const quizSteps: QuizStep[] = [
     {
         type: 'video',
         content: {
-            videoUrl: 'https://player.vimeo.com/video/1116746276?autoplay=1',
+            videoUrl: 'https://player.vimeo.com/video/1116746276?autoplay=1&background=1&controls=0&muted=1',
             backgroundUrl: '/fundo1.png',
-            duration: 19, // Duração em segundos (failsafe)
+            duration: 19, // Duração em segundos
         }
     },
 ];
