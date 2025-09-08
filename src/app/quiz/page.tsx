@@ -1,4 +1,3 @@
-
 // src/app/quiz/page.tsx
 'use client';
 import { useRouter } from 'next/navigation';
@@ -90,15 +89,17 @@ export default function QuizPage() {
         return (
           <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-0">
             <div className="relative w-full aspect-[9/16] max-h-full">
-                 <video
-                   ref={videoRef}
-                   src={currentStep.content.videoUrl}
-                   autoPlay
-                   playsInline
-                   className="w-full h-full object-cover"
-                   onEnded={handleNext}
-                 ></video>
+                 <iframe
+                    src={currentStep.content.videoUrl}
+                    className="w-full h-full object-cover border-0"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    allowFullScreen
+                    onEnded={handleNext} // Note: onEnded doesn't work on iframes, would need Vimeo's player.js API for this
+                 ></iframe>
             </div>
+             <Button onClick={handleNext} className="absolute bottom-10 z-10">
+                Continuar
+             </Button>
           </div>
         );
       case 'form':
@@ -238,5 +239,3 @@ export default function QuizPage() {
     </StoryLayout>
   );
 }
-
-    
