@@ -30,22 +30,24 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
             url: step.content.videoUrl,
             autoplay: true,
             muted: true,
-            background: true, // This is key to remove all controls and ensure cover-like behavior
+            controls: false,
+            loop: false,
         });
         playerRef.current = player;
         
         let onNextCalled = false;
         let duration: number | null = null;
         
-        player.getDuration().then(d => {
-            duration = d;
-        });
-
-        player.on('timeupdate', (data) => {
+        const checkTime = (data: { seconds: number }) => {
             if (duration && !onNextCalled && data.seconds > duration - 0.5) {
                 onNextCalled = true;
                 onNext();
             }
+        };
+
+        player.getDuration().then(d => {
+            duration = d;
+            player.on('timeupdate', checkTime);
         });
         
         // This is the definitive fix for scaling the iframe.
@@ -69,6 +71,7 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
 
         return () => {
             observer.disconnect();
+            player?.off('timeupdate', checkTime);
             player?.destroy();
         };
     }, [step.content.videoUrl, onNext]);
