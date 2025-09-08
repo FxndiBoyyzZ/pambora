@@ -9,7 +9,9 @@ export const quizSteps: QuizStep[] = [
     {
         type: 'video',
         content: {
-            videoUrl: 'https://vimeo.com/1116746550',
+            // Use background=1 to ensure chromeless video, which will loop.
+            // The component will handle navigation before the loop restarts.
+            videoUrl: 'https://vimeo.com/1116746550?background=1',
             backgroundUrl: '/fundo1.png',
         }
     },
@@ -110,7 +112,7 @@ export const quizSteps: QuizStep[] = [
     {
         type: 'video',
         content: {
-            videoUrl: 'https://vimeo.com/1116746276',
+            videoUrl: 'https://vimeo.com/1116746276?background=1',
             backgroundUrl: '/fundo1.png',
         }
     },

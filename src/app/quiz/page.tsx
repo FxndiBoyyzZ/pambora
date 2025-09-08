@@ -23,24 +23,37 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
     const playerRef = useRef<Player | null>(null);
 
     useEffect(() => {
+        let player: Player;
         if (videoRef.current) {
-            const player = new Player(videoRef.current, {
+            player = new Player(videoRef.current, {
                 url: step.content.videoUrl,
                 autoplay: true,
                 muted: true,
-                loop: false,
                 controls: false,
-                responsive: true,
+                background: true, // Ensures no controls and loops
             });
             playerRef.current = player;
+            
+            let duration: number | null = null;
+            let onNextCalled = false;
 
-            player.on('ended', () => {
-                onNext();
+            player.getDuration().then((d) => {
+                duration = d;
+            });
+            
+            player.on('timeupdate', (data) => {
+                 if (duration && !onNextCalled) {
+                    // Trigger next step slightly before the video ends to ensure a smooth transition
+                    if (data.seconds >= duration - 0.5) {
+                        onNextCalled = true; // Prevent multiple calls
+                        onNext();
+                    }
+                }
             });
         }
 
         return () => {
-            playerRef.current?.destroy();
+            player?.destroy();
         };
     }, [step.content.videoUrl, onNext]);
 
@@ -59,15 +72,28 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
     return (
         <div className="relative w-full h-full bg-black cursor-pointer" onClick={handleVideoClick}>
              <div ref={videoRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
-            {isMuted && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2 text-white pointer-events-none">
-                    <VolumeX className="h-10 w-10" />
-                    <span className="text-sm font-semibold bg-black/50 rounded-md px-2 py-1">Toque para ativar o som</span>
-                </div>
-            )}
+            <AnimatePresence>
+                {isMuted && (
+                     <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2 text-white pointer-events-none"
+                     >
+                        <VolumeX className="h-10 w-10" />
+                        <span className="text-sm font-semibold bg-black/50 rounded-md px-2 py-1">Toque para ativar o som</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
+
+// Dummy components for motion to avoid import errors
+const motion = {
+    div: ({ children, ...props }: any) => <div {...props}>{children}</div>
+};
+const AnimatePresence = ({ children }: {children: React.ReactNode}) => <>{children}</>;
 
 
 export default function QuizPage() {
@@ -87,7 +113,7 @@ export default function QuizPage() {
     }
   }, [user, authLoading, router]);
   
-  const handleNext = useCallback(async () => {
+  const handleNext = useCallback(() => {
     if (quizSteps.length === 0) return;
     
     const currentStep = quizSteps[currentStepIndex];
@@ -102,7 +128,7 @@ export default function QuizPage() {
     if (currentStepIndex >= quizSteps.length - 1) {
         setIsSubmitting(true);
         try {
-            await signUp(answers.email || '', answers.name || '', answers.whatsapp || '');
+            signUp(answers.email || '', answers.name || '', answers.whatsapp || '');
             router.push('/treinos');
         } catch (error) {
             console.error("Sign up failed on the final step", error);
