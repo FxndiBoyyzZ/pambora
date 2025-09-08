@@ -9,12 +9,13 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { StoryLayout } from '@/components/quiz/story-layout';
 import { useQuiz } from '@/services/quiz-service';
-import { Loader2, VolumeX, Volume2 } from 'lucide-react';
+import { Loader2, VolumeX } from 'lucide-react';
 import { quizSteps as localQuizSteps, type QuizStep } from './quiz-config';
 import { VitalsStep } from '@/components/quiz/vitals-step';
 import { ScratchCardStep } from '@/components/quiz/scratch-card-step';
 import { Checkbox } from '@/components/ui/checkbox';
 import Player from '@vimeo/player';
+import { motion, AnimatePresence } from 'framer-motion';
 
 
 function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
@@ -29,10 +30,20 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
                 url: step.content.videoUrl,
                 autoplay: true,
                 muted: true,
-                controls: false,
-                background: true, // Ensures no controls and loops
+                background: true,
             });
             playerRef.current = player;
+            
+            // Apply styles to the iframe to make it cover the container
+            const iframe = videoRef.current.querySelector('iframe');
+            if (iframe) {
+                iframe.style.position = 'absolute';
+                iframe.style.top = '0';
+                iframe.style.left = '0';
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+                iframe.style.objectFit = 'cover';
+            }
             
             let duration: number | null = null;
             let onNextCalled = false;
@@ -43,9 +54,8 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
             
             player.on('timeupdate', (data) => {
                  if (duration && !onNextCalled) {
-                    // Trigger next step slightly before the video ends to ensure a smooth transition
                     if (data.seconds >= duration - 0.5) {
-                        onNextCalled = true; // Prevent multiple calls
+                        onNextCalled = true; 
                         onNext();
                     }
                 }
@@ -70,7 +80,7 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
 
 
     return (
-        <div className="relative w-full h-full bg-black cursor-pointer" onClick={handleVideoClick}>
+        <div className="relative w-full h-full bg-black cursor-pointer overflow-hidden" onClick={handleVideoClick}>
              <div ref={videoRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
             <AnimatePresence>
                 {isMuted && (
@@ -88,13 +98,6 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
         </div>
     );
 }
-
-// Dummy components for motion to avoid import errors
-const motion = {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>
-};
-const AnimatePresence = ({ children }: {children: React.ReactNode}) => <>{children}</>;
-
 
 export default function QuizPage() {
   const router = useRouter();
@@ -293,3 +296,5 @@ export default function QuizPage() {
     </StoryLayout>
   );
 }
+
+    
