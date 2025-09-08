@@ -19,14 +19,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 
 function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
-    const videoRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const [isMuted, setIsMuted] = useState(true);
     const playerRef = useRef<Player | null>(null);
 
     useEffect(() => {
         let player: Player;
-        if (videoRef.current) {
-            player = new Player(videoRef.current, {
+        if (containerRef.current) {
+            player = new Player(containerRef.current, {
                 url: step.content.videoUrl,
                 autoplay: true,
                 muted: true,
@@ -34,17 +34,48 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
             });
             playerRef.current = player;
             
-            // Apply styles to the iframe to make it cover the container
-            const iframe = videoRef.current.querySelector('iframe');
+            const iframe = containerRef.current.querySelector('iframe');
             if (iframe) {
                 iframe.style.position = 'absolute';
-                iframe.style.top = '0';
-                iframe.style.left = '0';
-                iframe.style.width = '100%';
-                iframe.style.height = '100%';
-                iframe.style.objectFit = 'cover';
+                iframe.style.top = '50%';
+                iframe.style.left = '50%';
+                iframe.style.transform = 'translate(-50%, -50%)';
             }
+
+            const scaleVideo = () => {
+                if (!iframe || !containerRef.current) return;
+                const containerWidth = containerRef.current.offsetWidth;
+                const containerHeight = containerRef.current.offsetHeight;
+
+                player.getVideoWidth().then(videoWidth => {
+                    player.getVideoHeight().then(videoHeight => {
+                        const videoRatio = videoWidth / videoHeight;
+                        const containerRatio = containerWidth / containerHeight;
+                        
+                        let scale = 1;
+                        if (containerRatio > videoRatio) {
+                            // Container is wider than video
+                            scale = containerWidth / videoWidth;
+                        } else {
+                            // Container is taller than video
+                            scale = containerHeight / videoHeight;
+                        }
+                        
+                        iframe.style.width = `${videoWidth}px`;
+                        iframe.style.height = `${videoHeight}px`;
+                        iframe.style.transform = `translate(-50%, -50%) scale(${scale * 1.05})`;
+                    });
+                });
+            };
             
+            player.on('loaded', scaleVideo);
+            
+            // ResizeObserver to handle orientation changes or window resize
+            const resizeObserver = new ResizeObserver(scaleVideo);
+            if(containerRef.current) {
+                resizeObserver.observe(containerRef.current);
+            }
+
             let duration: number | null = null;
             let onNextCalled = false;
 
@@ -64,6 +95,8 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
 
         return () => {
             player?.destroy();
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+            if (containerRef.current) resizeObserver.unobserve(containerRef.current);
         };
     }, [step.content.videoUrl, onNext]);
 
@@ -81,7 +114,7 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
 
     return (
         <div className="relative w-full h-full bg-black cursor-pointer overflow-hidden" onClick={handleVideoClick}>
-             <div ref={videoRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
+             <div ref={containerRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
             <AnimatePresence>
                 {isMuted && (
                      <motion.div 
@@ -296,5 +329,3 @@ export default function QuizPage() {
     </StoryLayout>
   );
 }
-
-    
