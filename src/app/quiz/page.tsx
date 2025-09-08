@@ -74,22 +74,29 @@ export default function QuizPage() {
     if (currentStep && currentStep.type === 'video') {
       const handleVimeoMessage = (event: MessageEvent) => {
         if (event.origin !== 'https://player.vimeo.com') return;
-        if (event.data?.method === 'onEnded') {
-          handleNext();
+        
+        try {
+            const data = JSON.parse(event.data);
+            if (data.event === 'ended' || data.method === 'onEnded') {
+                handleNext();
+            }
+        } catch(e) {
+            // Not a json message, ignore.
         }
       };
 
       window.addEventListener('message', handleVimeoMessage);
 
       // Tell vimeo player to listen to events
-      const tellVimeo = (method: string) => {
-        videoRef.current?.contentWindow?.postMessage(JSON.stringify({ method }), '*');
+      const tellVimeo = (method: string, value: any) => {
+        const message = JSON.stringify({ method, value });
+        videoRef.current?.contentWindow?.postMessage(message, '*');
       };
-
+      
       const intervalId = setInterval(() => {
-        tellVimeo('addEventListener');
-        tellVimeo('play'); // Attempt to play again in case autoplay was blocked
-      }, 1000);
+          // Tell the player to listen for the 'ended' event
+          tellVimeo('addEventListener', 'ended');
+      }, 3000);
 
 
       return () => {
