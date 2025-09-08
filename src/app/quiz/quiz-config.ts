@@ -1,3 +1,4 @@
+
 // src/app/quiz/quiz-config.ts
 
 export interface QuizStep {
@@ -9,7 +10,7 @@ export const quizSteps: QuizStep[] = [
     {
         type: 'video',
         content: {
-            videoUrl: 'https://player.vimeo.com/video/1116746550?autoplay=1&muted=1&controls=0&dnt=1&app_id=123456',
+            videoUrl: 'https://player.vimeo.com/video/1116746550?autoplay=1',
             backgroundUrl: '/fundo1.png',
             duration: 55, // Duração em segundos (failsafe)
         }
@@ -111,9 +112,9 @@ export const quizSteps: QuizStep[] = [
     {
         type: 'video',
         content: {
-            videoUrl: 'https://player.vimeo.com/video/1116746276?autoplay=1&muted=1&controls=0&dnt=1&app_id=123456',
+            videoUrl: 'https://player.vimeo.com/video/1116746276?autoplay=1',
             backgroundUrl: '/fundo1.png',
-            duration: 16, // Duração em segundos (failsafe)
+            duration: 19, // Duração em segundos (failsafe)
         }
     },
 ];

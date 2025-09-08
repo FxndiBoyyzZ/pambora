@@ -1,4 +1,4 @@
-// src/app/quiz/page.tsx
+
 'use client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -14,69 +14,27 @@ import { quizSteps as localQuizSteps, type QuizStep } from './quiz-config';
 import { VitalsStep } from '@/components/quiz/vitals-step';
 import { ScratchCardStep } from '@/components/quiz/scratch-card-step';
 import { Checkbox } from '@/components/ui/checkbox';
-import Player from '@vimeo/player';
 
 function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
-    const videoContainerRef = useRef<HTMLDivElement>(null);
-    const playerRef = useRef<Player | null>(null);
-    const [isMuted, setIsMuted] = useState(true);
-
+    
     useEffect(() => {
-        if (!videoContainerRef.current) return;
-
-        const options = {
-            url: step.content.videoUrl,
-            autoplay: true,
-            muted: true, // Always start muted for autoplay to work
-            controls: false,
-            dnt: true,
-        };
-
-        const player = new Player(videoContainerRef.current, options);
-        playerRef.current = player;
-
-        player.on('ended', () => {
-            onNext();
-        });
-        
-        // This is a failsafe timer, in case the 'ended' event doesn't fire
         if (step.content.duration) {
             const timer = setTimeout(() => {
                 onNext();
             }, step.content.duration * 1000);
             return () => clearTimeout(timer);
         }
-
-        return () => {
-            player.destroy();
-        };
     }, [step, onNext]);
 
-    const toggleMute = () => {
-        if (playerRef.current) {
-            playerRef.current.setMuted(!isMuted).then(() => {
-                setIsMuted(!isMuted);
-            }).catch(error => {
-                // This might happen if user hasn't interacted with the page yet
-                console.warn("Could not change volume:", error.name);
-                 // Fallback: try to play and then unmute
-                playerRef.current?.play().then(() => {
-                    playerRef.current?.setMuted(false).then(() => setIsMuted(false));
-                });
-            });
-        }
-    };
 
     return (
-        <div className="relative w-full h-full bg-black flex flex-col justify-center items-center text-center p-0" onClick={toggleMute}>
-            <div ref={videoContainerRef} className="w-full aspect-[9/16] max-h-full" />
-            
-            {isMuted && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2 text-white bg-black/50 p-4 rounded-full pointer-events-none">
-                    <VolumeX className="h-8 w-8" />
-                    <span className="text-sm font-semibold">Toque para ativar o som</span>
-                </div>
-            )}
+        <div className="relative w-full h-full bg-black flex flex-col justify-center items-center text-center p-0">
+             <iframe
+                src={step.content.videoUrl}
+                className="w-full aspect-[9/16] max-h-full border-0"
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+            ></iframe>
         </div>
     );
 }
