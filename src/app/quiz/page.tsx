@@ -9,30 +9,73 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { StoryLayout } from '@/components/quiz/story-layout';
 import { useQuiz } from '@/services/quiz-service';
-import { Loader2 } from 'lucide-react';
+import { Loader2, VolumeX, Volume2 } from 'lucide-react';
 import { quizSteps as localQuizSteps, type QuizStep } from './quiz-config';
 import { VitalsStep } from '@/components/quiz/vitals-step';
 import { ScratchCardStep } from '@/components/quiz/scratch-card-step';
 import { Checkbox } from '@/components/ui/checkbox';
+import Player from '@vimeo/player';
+
 
 function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
+    const videoRef = useRef<HTMLDivElement>(null);
+    const [isMuted, setIsMuted] = useState(true);
+    const playerRef = useRef<Player | null>(null);
+
     useEffect(() => {
+        // Timer for automatic advancement
         if (step.content.duration) {
             const timer = setTimeout(() => {
                 onNext();
-            }, step.content.duration * 1000); // Converte duração de segundos para milissegundos
-            return () => clearTimeout(timer); // Limpa o timer se o componente for desmontado
+            }, step.content.duration * 1000);
+            return () => clearTimeout(timer);
         }
     }, [step, onNext]);
 
+    useEffect(() => {
+        if (videoRef.current) {
+            const player = new Player(videoRef.current, {
+                url: step.content.videoUrl,
+                background: true, // Autoplay, muted, loop, no controls
+                responsive: true,
+            });
+            playerRef.current = player;
+
+            // The player starts muted due to `background: true`.
+            // We can try to unmute it, but it might be blocked by the browser.
+            // This logic is handled by the user click now.
+        }
+
+        return () => {
+            playerRef.current?.destroy();
+        };
+    }, [step.content.videoUrl]);
+
+
+    const handleVideoClick = () => {
+        if (playerRef.current) {
+            playerRef.current.getVolume().then(volume => {
+                if (volume === 0) {
+                    playerRef.current?.setVolume(1);
+                    setIsMuted(false);
+                } else {
+                    playerRef.current?.setVolume(0);
+                    setIsMuted(true);
+                }
+            });
+        }
+    };
+
+
     return (
-        <div className="relative w-full h-full bg-black pointer-events-none">
-            <iframe
-                src={step.content.videoUrl}
-                className="absolute top-0 left-0 w-full h-full border-0"
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowFullScreen
-            ></iframe>
+        <div className="relative w-full h-full bg-black" onClick={handleVideoClick}>
+             <div ref={videoRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
+            {isMuted && (
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2 text-white pointer-events-none">
+                    <VolumeX className="h-10 w-10" />
+                    <span className="text-sm font-semibold bg-black/50 rounded-md px-2 py-1">Toque para ativar o som</span>
+                </div>
+            )}
         </div>
     );
 }
