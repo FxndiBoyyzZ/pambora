@@ -26,7 +26,10 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
         if (videoRef.current) {
             const player = new Player(videoRef.current, {
                 url: step.content.videoUrl,
-                background: true, // Autoplay, muted, loop, no controls
+                autoplay: true,
+                muted: true,
+                loop: false,
+                controls: false,
                 responsive: true,
             });
             playerRef.current = player;
@@ -35,9 +38,8 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
                 onNext();
             });
 
-            // The player starts muted due to `background: true`.
-            // We can try to unmute it, but it might be blocked by the browser.
-            // This logic is handled by the user click now.
+            // The player starts muted.
+            // We can try to unmute it on click.
         }
 
         return () => {
@@ -48,12 +50,12 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
 
     const handleVideoClick = () => {
         if (playerRef.current) {
-            playerRef.current.getVolume().then(volume => {
-                if (volume === 0) {
-                    playerRef.current?.setVolume(1);
+            playerRef.current.getMuted().then(muted => {
+                if (muted) {
+                    playerRef.current?.setMuted(false);
                     setIsMuted(false);
                 } else {
-                    playerRef.current?.setVolume(0);
+                    playerRef.current?.setMuted(true);
                     setIsMuted(true);
                 }
             });
@@ -62,7 +64,7 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
 
 
     return (
-        <div className="relative w-full h-full bg-black" onClick={handleVideoClick}>
+        <div className="relative w-full h-full bg-black cursor-pointer" onClick={handleVideoClick}>
              <div ref={videoRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
             {isMuted && (
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2 text-white pointer-events-none">
