@@ -30,13 +30,28 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
                 url: step.content.videoUrl,
                 autoplay: true,
                 muted: true,
-                background: true, // background=true is essential to hide all vimeo controls and end-screens
+                background: true, 
             });
             playerRef.current = player;
 
+            let duration: number | null = null;
+            let onNextCalled = false;
+
+            player.getDuration().then((d) => {
+                duration = d;
+            });
+
+            player.on('timeupdate', (data) => {
+                 if (duration && !onNextCalled) {
+                    if (data.seconds >= duration - 0.5) {
+                        onNextCalled = true; 
+                        onNext();
+                    }
+                }
+            });
+            
             const iframe = containerRef.current.querySelector('iframe');
             if (iframe) {
-                // Force the iframe to cover the container
                 iframe.style.position = 'absolute';
                 iframe.style.top = '50%';
                 iframe.style.left = '50%';
@@ -46,24 +61,6 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
                 iframe.style.width = 'auto';
                 iframe.style.height = 'auto';
             }
-            
-            let duration: number | null = null;
-            let onNextCalled = false;
-
-            player.getDuration().then((d) => {
-                duration = d;
-            });
-
-            // Since 'ended' event doesn't fire with background=true, we check timeupdate
-            player.on('timeupdate', (data) => {
-                 if (duration && !onNextCalled) {
-                    // Go to next slightly before the video ends to avoid seeing the loop stutter
-                    if (data.seconds >= duration - 0.5) {
-                        onNextCalled = true; 
-                        onNext();
-                    }
-                }
-            });
         }
 
         return () => {
@@ -300,5 +297,7 @@ export default function QuizPage() {
     </StoryLayout>
   );
 }
+
+    
 
     
