@@ -71,38 +71,12 @@ export default function QuizPage() {
 
   useEffect(() => {
     const currentStep = quizSteps[currentStepIndex];
-    if (currentStep && currentStep.type === 'video') {
-      const handleVimeoMessage = (event: MessageEvent) => {
-        if (event.origin !== 'https://player.vimeo.com') return;
-        
-        try {
-            const data = JSON.parse(event.data);
-            if (data.event === 'ended' || data.method === 'onEnded') {
-                handleNext();
-            }
-        } catch(e) {
-            // Not a json message, ignore.
-        }
-      };
+    if (currentStep?.type === 'video' && currentStep.content.duration) {
+      const timer = setTimeout(() => {
+        handleNext();
+      }, currentStep.content.duration * 1000); // Convert seconds to milliseconds
 
-      window.addEventListener('message', handleVimeoMessage);
-
-      // Tell vimeo player to listen to events
-      const tellVimeo = (method: string, value: any) => {
-        const message = JSON.stringify({ method, value });
-        videoRef.current?.contentWindow?.postMessage(message, '*');
-      };
-      
-      const intervalId = setInterval(() => {
-          // Tell the player to listen for the 'ended' event
-          tellVimeo('addEventListener', 'ended');
-      }, 3000);
-
-
-      return () => {
-        window.removeEventListener('message', handleVimeoMessage);
-        clearInterval(intervalId);
-      };
+      return () => clearTimeout(timer); // Cleanup timer on component unmount
     }
   }, [currentStepIndex, quizSteps, handleNext]);
 
@@ -128,7 +102,7 @@ export default function QuizPage() {
             <div className="relative w-full aspect-[9/16] max-h-full">
                  <iframe
                     ref={videoRef}
-                    src={`${currentStep.content.videoUrl}&dnt=1&app_id=123456`}
+                    src={currentStep.content.videoUrl}
                     className="w-full h-full object-cover border-0"
                     allow="autoplay; fullscreen; picture-in-picture"
                     allowFullScreen
