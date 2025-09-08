@@ -24,46 +24,51 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
     const playerRef = useRef<Player | null>(null);
 
     useEffect(() => {
-        let player: Player;
-        if (containerRef.current) {
-            player = new Player(containerRef.current, {
-                url: step.content.videoUrl,
-                autoplay: true,
-                muted: true,
-                background: true, 
-            });
-            playerRef.current = player;
+        if (!containerRef.current) return;
 
-            let duration: number | null = null;
-            let onNextCalled = false;
+        const player = new Player(containerRef.current, {
+            url: step.content.videoUrl,
+            autoplay: true,
+            muted: true,
+            background: true, // This is key to remove all controls and ensure cover-like behavior
+        });
+        playerRef.current = player;
+        
+        let onNextCalled = false;
+        let duration: number | null = null;
+        
+        player.getDuration().then(d => {
+            duration = d;
+        });
 
-            player.getDuration().then((d) => {
-                duration = d;
-            });
-
-            player.on('timeupdate', (data) => {
-                 if (duration && !onNextCalled) {
-                    if (data.seconds >= duration - 0.5) {
-                        onNextCalled = true; 
-                        onNext();
-                    }
-                }
-            });
-            
-            const iframe = containerRef.current.querySelector('iframe');
+        player.on('timeupdate', (data) => {
+            if (duration && !onNextCalled && data.seconds > duration - 0.5) {
+                onNextCalled = true;
+                onNext();
+            }
+        });
+        
+        // This is the definitive fix for scaling the iframe.
+        // It waits for the iframe to be added, then styles it directly.
+        const observer = new MutationObserver((mutations, obs) => {
+            const iframe = containerRef.current?.querySelector('iframe');
             if (iframe) {
                 iframe.style.position = 'absolute';
                 iframe.style.top = '50%';
                 iframe.style.left = '50%';
-                iframe.style.transform = 'translate(-50%, -50%)';
-                iframe.style.minWidth = '100%';
-                iframe.style.minHeight = '100%';
                 iframe.style.width = 'auto';
                 iframe.style.height = 'auto';
+                iframe.style.minWidth = '100%';
+                iframe.style.minHeight = '100%';
+                iframe.style.transform = 'translate(-50%, -50%)';
+                obs.disconnect(); // We're done once the iframe is styled
             }
-        }
+        });
+
+        observer.observe(containerRef.current, { childList: true });
 
         return () => {
+            observer.disconnect();
             player?.destroy();
         };
     }, [step.content.videoUrl, onNext]);
@@ -82,7 +87,7 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
 
     return (
         <div className="relative w-full h-full bg-black cursor-pointer overflow-hidden" onClick={handleVideoClick}>
-             <div ref={containerRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
+             <div ref={containerRef} className="absolute top-0 left-0 w-full h-full" />
             <AnimatePresence>
                 {isMuted && (
                      <motion.div 
@@ -297,6 +302,8 @@ export default function QuizPage() {
     </StoryLayout>
   );
 }
+
+    
 
     
 
