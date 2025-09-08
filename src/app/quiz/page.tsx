@@ -22,7 +22,7 @@ export default function QuizPage() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const { answers, setAnswer, signUp, user, loading: authLoading } = useQuiz();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLIFrameElement>(null);
   
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [otherAllergy, setOtherAllergy] = useState('');
@@ -69,6 +69,36 @@ export default function QuizPage() {
     }
   }, [quizSteps, currentStepIndex, signUp, answers, router, selectedAllergies, otherAllergy, setAnswer]);
 
+  useEffect(() => {
+    const currentStep = quizSteps[currentStepIndex];
+    if (currentStep && currentStep.type === 'video') {
+      const handleVimeoMessage = (event: MessageEvent) => {
+        if (event.origin !== 'https://player.vimeo.com') return;
+        if (event.data?.method === 'onEnded') {
+          handleNext();
+        }
+      };
+
+      window.addEventListener('message', handleVimeoMessage);
+
+      // Tell vimeo player to listen to events
+      const tellVimeo = (method: string) => {
+        videoRef.current?.contentWindow?.postMessage(JSON.stringify({ method }), '*');
+      };
+
+      const intervalId = setInterval(() => {
+        tellVimeo('addEventListener');
+        tellVimeo('play'); // Attempt to play again in case autoplay was blocked
+      }, 1000);
+
+
+      return () => {
+        window.removeEventListener('message', handleVimeoMessage);
+        clearInterval(intervalId);
+      };
+    }
+  }, [currentStepIndex, quizSteps, handleNext]);
+
 
   const currentStep = quizSteps[currentStepIndex];
 
@@ -90,16 +120,13 @@ export default function QuizPage() {
           <div className="w-full h-full bg-black flex flex-col justify-center items-center text-center p-0">
             <div className="relative w-full aspect-[9/16] max-h-full">
                  <iframe
-                    src={currentStep.content.videoUrl}
+                    ref={videoRef}
+                    src={`${currentStep.content.videoUrl}&dnt=1&app_id=123456`}
                     className="w-full h-full object-cover border-0"
                     allow="autoplay; fullscreen; picture-in-picture"
                     allowFullScreen
-                    onEnded={handleNext} // Note: onEnded doesn't work on iframes, would need Vimeo's player.js API for this
                  ></iframe>
             </div>
-             <Button onClick={handleNext} className="absolute bottom-10 z-10">
-                Continuar
-             </Button>
           </div>
         );
       case 'form':
