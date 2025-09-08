@@ -30,61 +30,34 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
                 url: step.content.videoUrl,
                 autoplay: true,
                 muted: true,
-                background: true,
+                background: true, // background=true is essential to hide all vimeo controls and end-screens
             });
             playerRef.current = player;
-            
+
             const iframe = containerRef.current.querySelector('iframe');
             if (iframe) {
+                // Force the iframe to cover the container
                 iframe.style.position = 'absolute';
                 iframe.style.top = '50%';
                 iframe.style.left = '50%';
                 iframe.style.transform = 'translate(-50%, -50%)';
+                iframe.style.minWidth = '100%';
+                iframe.style.minHeight = '100%';
+                iframe.style.width = 'auto';
+                iframe.style.height = 'auto';
             }
-
-            const scaleVideo = () => {
-                if (!iframe || !containerRef.current) return;
-                const containerWidth = containerRef.current.offsetWidth;
-                const containerHeight = containerRef.current.offsetHeight;
-
-                player.getVideoWidth().then(videoWidth => {
-                    player.getVideoHeight().then(videoHeight => {
-                        const videoRatio = videoWidth / videoHeight;
-                        const containerRatio = containerWidth / containerHeight;
-                        
-                        let scale = 1;
-                        if (containerRatio > videoRatio) {
-                            // Container is wider than video
-                            scale = containerWidth / videoWidth;
-                        } else {
-                            // Container is taller than video
-                            scale = containerHeight / videoHeight;
-                        }
-                        
-                        iframe.style.width = `${videoWidth}px`;
-                        iframe.style.height = `${videoHeight}px`;
-                        iframe.style.transform = `translate(-50%, -50%) scale(${scale * 1.05})`;
-                    });
-                });
-            };
             
-            player.on('loaded', scaleVideo);
-            
-            // ResizeObserver to handle orientation changes or window resize
-            const resizeObserver = new ResizeObserver(scaleVideo);
-            if(containerRef.current) {
-                resizeObserver.observe(containerRef.current);
-            }
-
             let duration: number | null = null;
             let onNextCalled = false;
 
             player.getDuration().then((d) => {
                 duration = d;
             });
-            
+
+            // Since 'ended' event doesn't fire with background=true, we check timeupdate
             player.on('timeupdate', (data) => {
                  if (duration && !onNextCalled) {
+                    // Go to next slightly before the video ends to avoid seeing the loop stutter
                     if (data.seconds >= duration - 0.5) {
                         onNextCalled = true; 
                         onNext();
@@ -95,8 +68,6 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
 
         return () => {
             player?.destroy();
-            // eslint-disable-next-line react-hooks/exhaustive-deps
-            if (containerRef.current) resizeObserver.unobserve(containerRef.current);
         };
     }, [step.content.videoUrl, onNext]);
 
@@ -329,3 +300,5 @@ export default function QuizPage() {
     </StoryLayout>
   );
 }
+
+    
