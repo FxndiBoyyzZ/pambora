@@ -12,7 +12,6 @@ export const quizSteps: QuizStep[] = [
         content: {
             videoUrl: 'https://vimeo.com/1116746550?background=1&controls=0',
             backgroundUrl: '/fundo1.png',
-            duration: 58, // Duração em segundos
         }
     },
     {
@@ -50,7 +49,7 @@ export const quizSteps: QuizStep[] = [
                 { id: 'manter-forma', label: 'Manter a Forma' },
                 { id: 'melhorar-saude', label: 'Melhorar a Saúde Geral' },
             ],
-            backgroundUrl: '/fundo1.png',
+            backgroundUrl: '/fundo1p.png',
         }
     },
     {
@@ -67,7 +66,7 @@ export const quizSteps: QuizStep[] = [
                 { id: 'amendoim', label: 'Amendoim' },
                 { id: 'outra', label: 'Outra' },
             ],
-            backgroundUrl: '/fundo1.png',
+            backgroundUrl: '/fundo1p.png',
         }
     },
     {
@@ -82,7 +81,7 @@ export const quizSteps: QuizStep[] = [
                 { id: 'vegana', label: 'Vegana' },
                 { id: 'low-carb', label: 'Low-Carb' },
             ],
-            backgroundUrl: '/fundo1.png',
+            backgroundUrl: '/fundo1p.png',
         }
     },
     {
@@ -97,7 +96,7 @@ export const quizSteps: QuizStep[] = [
                  { id: '6-7', label: '6-7 vezes por semana' },
                  { id: 'everyday', label: 'Todos os dias' },
              ],
-            backgroundUrl: '/fundo1.png',
+            backgroundUrl: '/fundo1p.png',
         }
     },
     {
@@ -114,7 +113,6 @@ export const quizSteps: QuizStep[] = [
         content: {
             videoUrl: 'https://vimeo.com/1116746276?background=1&controls=0',
             backgroundUrl: '/fundo1.png',
-            duration: 22, // Duração em segundos
         }
     },
 ];

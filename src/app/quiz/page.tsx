@@ -23,16 +23,6 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
     const playerRef = useRef<Player | null>(null);
 
     useEffect(() => {
-        // Timer for automatic advancement
-        if (step.content.duration) {
-            const timer = setTimeout(() => {
-                onNext();
-            }, step.content.duration * 1000);
-            return () => clearTimeout(timer);
-        }
-    }, [step, onNext]);
-
-    useEffect(() => {
         if (videoRef.current) {
             const player = new Player(videoRef.current, {
                 url: step.content.videoUrl,
@@ -40,6 +30,10 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
                 responsive: true,
             });
             playerRef.current = player;
+
+            player.on('ended', () => {
+                onNext();
+            });
 
             // The player starts muted due to `background: true`.
             // We can try to unmute it, but it might be blocked by the browser.
@@ -49,7 +43,7 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
         return () => {
             playerRef.current?.destroy();
         };
-    }, [step.content.videoUrl]);
+    }, [step.content.videoUrl, onNext]);
 
 
     const handleVideoClick = () => {
