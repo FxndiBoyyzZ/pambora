@@ -86,21 +86,6 @@ export const quizSteps: QuizStep[] = [
         }
     },
     {
-        type: 'question',
-        content: {
-            title: 'Com que frequência você planeja treinar?',
-             questionType: 'multiple-choice',
-             answerKey: 'workoutFrequency',
-             options: [
-                 { id: '2-3', label: '2-3 vezes por semana' },
-                 { id: '4-5', label: '4-5 vezes por semana' },
-                 { id: '6-7', label: '6-7 vezes por semana' },
-                 { id: 'everyday', label: 'Todos os dias' },
-             ],
-            backgroundUrl: '/fundo1p.png',
-        }
-    },
-    {
         type: 'scratch',
         content: {
             title: 'Você ganhou um presente!',

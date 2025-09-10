@@ -15,7 +15,6 @@ interface QuizAnswers {
   bonusPlan?: string;
   profilePictureUrl?: string;
   completedWorkouts?: number[];
-  workoutFrequency?: string;
   weight?: number;
   height?: number;
   gender?: 'male' | 'female';
