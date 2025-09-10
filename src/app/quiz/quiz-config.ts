@@ -86,15 +86,6 @@ export const quizSteps: QuizStep[] = [
         }
     },
     {
-        type: 'scratch',
-        content: {
-            title: 'Você ganhou um presente!',
-            description: 'Raspe para revelar seu bônus exclusivo por ter chegado até aqui.',
-            prizeText: 'Acesso a um Guia de Receitas Fit!',
-            backgroundUrl: '/fundo1.png',
-        }
-    },
-    {
         type: 'video',
         content: {
             videoUrl: 'https://vimeo.com/1116746276?background=1',
