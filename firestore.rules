@@ -3,30 +3,22 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Regra geral para a coleção de usuários: cada usuário pode ler e escrever seus próprios dados.
+
+    // Users can only read and write their own data.
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Regras para a coleção de posts: qualquer usuário autenticado pode ler todos os posts,
-    // mas só pode criar, atualizar ou deletar seus próprios posts.
+    // Authenticated users can read the entire posts collection,
+    // create new posts, and update/delete their own posts.
     match /posts/{postId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow get, list, create: if request.auth != null;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
-
-    // Regras para a coleção de configuração: permitir leitura para qualquer usuário autenticado
-    // Isso é necessário para que o cliente possa buscar a configuração do quiz, por exemplo.
-    match /config/{configId} {
+    
+    // Allow authenticated users to read the quiz configuration
+    match /config/quiz {
       allow get: if request.auth != null;
-      // Para o painel de admin, considere restringir a escrita a um UID de administrador específico
-      allow write: if request.auth != null; // Mantenha aberto por enquanto para facilitar o desenvolvimento
-    }
-
-    // Regra de negação padrão: nega acesso a todos os outros documentos
-    match /{document=**} {
-      allow read, write: if false;
     }
   }
 }
