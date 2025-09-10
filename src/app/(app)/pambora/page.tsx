@@ -1,3 +1,4 @@
+
 // src/app/(app)/pambora/page.tsx
 'use client';
 import * as React from 'react';
@@ -13,20 +14,22 @@ export default function PamboraPage() {
   const { user, loading: authLoading } = useQuiz();
   const [posts, setPosts] = React.useState<DocumentData[]>([]);
   const [dataLoading, setDataLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    // Wait until the authentication state is resolved.
+    // We must wait for the auth state to be resolved.
     if (authLoading) {
       return;
     }
-
-    // If there is no authenticated user, do not attempt to fetch data.
+    
+    // If there is no authenticated user, we can't (and shouldn't) fetch data.
     if (!user) {
       setDataLoading(false);
+      setError("Você precisa estar autenticado para ver o feed.");
       return;
     }
-
-    // User is authenticated, it's safe to query Firestore.
+    
+    // At this point, we have an authenticated user. It's safe to query Firestore.
     const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -36,16 +39,16 @@ export default function PamboraPage() {
       });
       setPosts(postsData);
       setDataLoading(false);
-    }, (error) => {
-      console.error("Error fetching posts from Firestore:", error);
-      // This is where a "Missing or insufficient permissions" error would be caught.
+      setError(null);
+    }, (err) => {
+      console.error("Firestore snapshot error:", err);
+      setError("Ocorreu um erro ao carregar o feed. Verifique as permissões do Firestore.");
       setDataLoading(false);
     });
 
-    // Cleanup the Firestore listener when the component unmounts
-    // or when the user/auth state changes.
+    // Cleanup the listener when the component unmounts or dependencies change.
     return () => unsubscribe();
-  }, [user, authLoading]); // Re-run effect if user or authLoading state changes.
+  }, [user, authLoading]);
 
   const renderContent = () => {
     if (authLoading || dataLoading) {
@@ -55,6 +58,15 @@ export default function PamboraPage() {
           <p className="text-lg font-semibold text-muted-foreground mt-4">Carregando feed #PAMBORA...</p>
         </div>
       );
+    }
+    
+    if (error) {
+        return (
+             <div className="text-center py-12 bg-destructive/10 text-destructive-foreground rounded-lg border border-destructive">
+                <p className="text-lg font-semibold">Erro de Permissão</p>
+                <p className="text-sm">{error}</p>
+             </div>
+        )
     }
 
     if (posts.length > 0) {

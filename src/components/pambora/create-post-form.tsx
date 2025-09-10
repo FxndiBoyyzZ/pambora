@@ -1,3 +1,4 @@
+
 // src/components/pambora/create-post-form.tsx
 'use client';
 import * as React from 'react';
@@ -44,11 +45,19 @@ export function CreatePostForm() {
 
     const handlePost = async () => {
         if (!user) {
-            toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Você precisa estar logado para postar.' });
+            toast({ 
+                variant: 'destructive', 
+                title: 'Erro de Autenticação', 
+                description: 'Você precisa estar logado para postar.' 
+            });
             return;
         }
         if (!text.trim() && !mediaFile) {
-            toast({ variant: 'destructive', title: 'Post Vazio', description: 'Seu post precisa de texto ou uma imagem/vídeo.' });
+            toast({ 
+                variant: 'destructive', 
+                title: 'Post Vazio', 
+                description: 'Seu post precisa de texto ou uma imagem/vídeo.' 
+            });
             return;
         }
 
@@ -57,7 +66,7 @@ export function CreatePostForm() {
             let mediaUrl = '';
             let mediaType = '';
 
-            // Upload media if it exists
+            // 1. Upload media if it exists
             if (mediaFile) {
                 const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}-${mediaFile.name}`);
                 const snapshot = await uploadBytes(storageRef, mediaFile);
@@ -65,16 +74,16 @@ export function CreatePostForm() {
                 mediaType = mediaFile.type.startsWith('video') ? 'video' : 'image';
             }
 
-            // This is the new, correct post object structure.
-            // It includes the `userId` field that matches the security rules.
+            // 2. Prepare the post object with all required fields for security rules
             const newPost = {
-                userId: user.uid,
                 text: text,
                 mediaUrl: mediaUrl,
                 mediaType: mediaType,
                 timestamp: serverTimestamp(),
                 likes: 0,
                 commentsCount: 0,
+                // This userId is CRITICAL for the security rules to work
+                userId: user.uid, 
                 // Denormalized user data for easy display
                 author: {
                     name: answers.name || 'Usuário Anônimo',
@@ -82,31 +91,29 @@ export function CreatePostForm() {
                 },
             };
 
+            // 3. Add the document to Firestore
             await addDoc(collection(db, 'posts'), newPost);
 
             toast({ title: 'Sucesso!', description: 'Seu post foi publicado na comunidade #PAMBORA!' });
             
-            // Reset form state
+            // 4. Reset form state
             setText('');
             clearMedia();
 
         } catch (error) {
             console.error("Error creating post:", error);
             const firebaseError = error as { code?: string };
-
+            
+            let description = 'Não foi possível publicar seu post. Por favor, tente novamente.';
             if (firebaseError.code === 'permission-denied') {
-                 toast({ 
-                     variant: 'destructive', 
-                     title: 'Erro de Permissão', 
-                     description: 'Você não tem permissão para publicar. Verifique as regras do Firestore e se você está autenticado.'
-                 });
-            } else {
-                 toast({ 
-                     variant: 'destructive', 
-                     title: 'Erro ao Publicar', 
-                     description: 'Não foi possível publicar seu post. Por favor, tente novamente.' 
-                });
+                 description = 'Você não tem permissão para publicar. Verifique as regras do Firestore e se você está autenticado.';
             }
+
+            toast({ 
+                variant: 'destructive', 
+                title: 'Erro ao Publicar', 
+                description: description
+            });
         } finally {
             setIsSubmitting(false);
         }
