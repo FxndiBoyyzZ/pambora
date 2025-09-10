@@ -1,24 +1,35 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can only read and write their own data.
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Default deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    // Authenticated users can read the entire posts collection,
-    // create new posts, and update/delete their own posts.
-    match /posts/{postId} {
-      allow get, list, create: if request.auth != null;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    // Allow authenticated users to read from any collection
+    match /{path=**}/_ {
+        allow read: if request.auth.uid != null;
     }
     
-    // Allow authenticated users to read the quiz configuration
-    match /config/quiz {
-      allow get: if request.auth != null;
+    // Users can only manage their own data
+    match /users/{userId} {
+      allow read, update, delete: if request.auth.uid == userId;
+      allow create: if request.auth.uid != null;
+    }
+
+    // Anyone authenticated can read/list posts.
+    // Users can only manage their own posts.
+    match /posts/{postId} {
+      allow read: if request.auth.uid != null;
+      allow create: if request.auth.uid != null;
+      allow update, delete: if request.auth.uid == resource.data.userId;
+    }
+    
+    // Public config can be read by anyone
+    match /config/{configId} {
+        allow get: if true;
+        allow list, create, update, delete: if false; 
     }
   }
 }
