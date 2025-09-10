@@ -2,18 +2,18 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only read and write to their own document.
+    
+    // As regras de usuário permitem que alguém leia e escreva apenas em seus próprios dados.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth.uid == userId;
     }
 
-    // Any authenticated user can list/read posts.
-    // Users can only create posts for themselves.
-    // Users can only update/delete their own posts.
+    // Qualquer usuário autenticado pode ler e criar posts.
+    // Apenas o autor original pode atualizar ou excluir seu próprio post.
     match /posts/{postId} {
-      allow list, read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read, create: if request.auth.uid != null;
+      allow update, delete: if request.auth.uid == resource.data.userId;
     }
+    
   }
 }
