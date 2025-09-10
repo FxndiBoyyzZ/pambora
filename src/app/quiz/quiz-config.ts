@@ -1,7 +1,7 @@
 // src/app/quiz/quiz-config.ts
 
 export interface QuizStep {
-    type: 'video' | 'form' | 'question' | 'vitals' | 'scratch';
+    type: 'video' | 'form' | 'question' | 'vitals';
     content: any;
 }
 
@@ -57,16 +57,17 @@ export const quizSteps: QuizStep[] = [
         type: 'question',
         content: {
             title: 'Você possui alguma alergia ou restrição alimentar?',
-            description: 'Marque todas as opções aplicáveis.',
-            questionType: 'multiple-select', // Changed from 'text'
+            description: 'Selecione as opções ou descreva abaixo. Esta informação é crucial para a sua segurança.',
+            questionType: 'multiple-select-plus-text',
             answerKey: 'allergies',
             options: [
-                { id: 'gluten', label: 'Glúten' },
-                { id: 'lactose', label: 'Lactose' },
-                { id: 'frutos-do-mar', label: 'Frutos do Mar' },
-                { id: 'amendoim', label: 'Amendoim' },
-                { id: 'outra', label: 'Outra' },
+                { id: 'sem-restricao', label: 'Não possuo restrições' },
+                { id: 'gluten', label: 'Intolerância ao Glúten' },
+                { id: 'lactose', label: 'Intolerância à Lactose' },
+                { id: 'frutos-do-mar', label: 'Alergia a Frutos do Mar' },
+                { id: 'amendoim', label: 'Alergia a Amendoim' },
             ],
+            textPlaceholder: "Ex: Tenho alergia a nozes e não como carne de porco.",
             backgroundUrl: '/fundo1p.png',
         }
     },

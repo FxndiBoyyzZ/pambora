@@ -14,6 +14,7 @@ import { quizSteps as localQuizSteps, type QuizStep } from './quiz-config';
 import { VitalsStep } from '@/components/quiz/vitals-step';
 import { ScratchCardStep } from '@/components/quiz/scratch-card-step';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import Player from '@vimeo/player';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -44,33 +45,33 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
                 onNext();
             }
         };
-
-        player.getDuration().then(d => {
-            duration = d;
-            player.on('timeupdate', checkTime);
-        });
         
-        // This is the definitive fix for scaling the iframe.
-        // It waits for the iframe to be added, then styles it directly.
-        const observer = new MutationObserver((mutations, obs) => {
-            const iframe = containerRef.current?.querySelector('iframe');
-            if (iframe) {
-                iframe.style.position = 'absolute';
-                iframe.style.top = '50%';
-                iframe.style.left = '50%';
-                iframe.style.width = 'auto';
-                iframe.style.height = 'auto';
-                iframe.style.minWidth = '100%';
-                iframe.style.minHeight = '100%';
-                iframe.style.transform = 'translate(-50%, -50%)';
-                obs.disconnect(); // We're done once the iframe is styled
-            }
-        });
+        const setupPlayer = async () => {
+            try {
+                await player.ready();
+                const d = await player.getDuration();
+                duration = d;
+                player.on('timeupdate', checkTime);
 
-        observer.observe(containerRef.current, { childList: true });
+                const iframe = containerRef.current?.querySelector('iframe');
+                if (iframe) {
+                    iframe.style.position = 'absolute';
+                    iframe.style.top = '50%';
+                    iframe.style.left = '50%';
+                    iframe.style.width = 'auto';
+                    iframe.style.height = 'auto';
+                    iframe.style.minWidth = '100%';
+                    iframe.style.minHeight = '100%';
+                    iframe.style.transform = 'translate(-50%, -50%)';
+                }
+            } catch (e) {
+                console.error("Error setting up Vimeo player", e);
+            }
+        };
+
+        setupPlayer();
 
         return () => {
-            observer.disconnect();
             player?.off('timeupdate', checkTime);
             player?.destroy();
         };
@@ -89,15 +90,15 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
 
 
     return (
-        <div className="relative w-full h-full bg-black cursor-pointer overflow-hidden" onClick={handleVideoClick}>
-             <div ref={containerRef} className="absolute top-0 left-0 w-full h-full" />
+        <div className="relative w-full h-full bg-black overflow-hidden" onClick={handleVideoClick}>
+             <div ref={containerRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
             <AnimatePresence>
                 {isMuted && (
                      <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2 text-white pointer-events-none"
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2 text-white pointer-events-none z-10"
                      >
                         <VolumeX className="h-10 w-10" />
                         <span className="text-sm font-semibold bg-black/50 rounded-md px-2 py-1">Toque para ativar o som</span>
@@ -116,7 +117,7 @@ export default function QuizPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
-  const [otherAllergy, setOtherAllergy] = useState('');
+  const [otherAllergyText, setOtherAllergyText] = useState('');
 
 
   useEffect(() => {
@@ -129,12 +130,10 @@ export default function QuizPage() {
     if (quizSteps.length === 0) return;
     
     const currentStep = quizSteps[currentStepIndex];
-    if (currentStep.type === 'question' && currentStep.content.questionType === 'multiple-select') {
-        const finalAllergies = selectedAllergies.filter(a => a !== 'Outra');
-        if (selectedAllergies.includes('Outra') && otherAllergy) {
-            finalAllergies.push(otherAllergy);
-        }
-        setAnswer('allergies', finalAllergies.join(', '));
+    if (currentStep.type === 'question' && currentStep.content.questionType === 'multiple-select-plus-text') {
+        const allergies = selectedAllergies.join(', ');
+        const fullAllergyInfo = [allergies, otherAllergyText].filter(Boolean).join('; ');
+        setAnswer('allergies', fullAllergyInfo);
     }
 
     if (currentStepIndex >= quizSteps.length - 1) {
@@ -149,7 +148,7 @@ export default function QuizPage() {
     } else {
       setCurrentStepIndex(prevIndex => prevIndex + 1);
     }
-  }, [quizSteps, currentStepIndex, signUp, answers, router, selectedAllergies, otherAllergy, setAnswer]);
+  }, [quizSteps, currentStepIndex, signUp, answers, router, selectedAllergies, otherAllergyText, setAnswer]);
 
   const currentStep = quizSteps[currentStepIndex];
 
@@ -228,7 +227,7 @@ export default function QuizPage() {
                       </Label>
                     ))}
                   </RadioGroup>
-                ) : currentStep.content.questionType === 'multiple-select' ? (
+                ) : currentStep.content.questionType === 'multiple-select-plus-text' ? (
                      <div className="space-y-3">
                         {currentStep.content.options.map((item: any) => (
                            <Label
@@ -244,18 +243,17 @@ export default function QuizPage() {
                              <span>{item.label}</span>
                           </Label>
                         ))}
-                        {selectedAllergies.includes('Outra') && (
-                            <div className="pt-2">
-                                <Label htmlFor="other-allergy">Qual?</Label>
-                                <Input 
-                                    id="other-allergy" 
-                                    placeholder="Digite a outra alergia" 
-                                    value={otherAllergy}
-                                    onChange={(e) => setOtherAllergy(e.target.value)}
-                                    className="mt-1"
-                                />
-                            </div>
-                        )}
+                        <div className="pt-2">
+                            <Label htmlFor="other-allergy-text" className="text-muted-foreground">Ou descreva em detalhes aqui:</Label>
+                            <Textarea 
+                                id="other-allergy-text" 
+                                placeholder={currentStep.content.textPlaceholder}
+                                value={otherAllergyText}
+                                onChange={(e) => setOtherAllergyText(e.target.value)}
+                                className="mt-1"
+                                rows={3}
+                            />
+                        </div>
                      </div>
                 ) : (
                   <div className="space-y-4">
@@ -266,7 +264,7 @@ export default function QuizPage() {
                   </div>
                 )}
               </CardContent>
-               {(currentStep.content.questionType === 'text' || currentStep.content.questionType === 'multiple-select') && (
+               {(currentStep.content.questionType === 'text' || currentStep.content.questionType === 'multiple-select-plus-text') && (
                  <CardFooter>
                     <Button onClick={handleNext} className="w-full">Continuar</Button>
                  </CardFooter>
@@ -276,8 +274,6 @@ export default function QuizPage() {
         )
     case 'vitals':
         return <VitalsStep step={currentStep} onComplete={handleNext} />;
-    case 'scratch':
-        return <ScratchCardStep step={currentStep} onComplete={handleNext} />;
     default:
         return (
             <div className="p-8 text-center">
@@ -305,9 +301,3 @@ export default function QuizPage() {
     </StoryLayout>
   );
 }
-
-    
-
-    
-
-    
