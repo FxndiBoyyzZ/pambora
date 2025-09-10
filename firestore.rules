@@ -1,28 +1,28 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can only read and write to their own document.
+    // Allow users to read and write to their own data
     match /users/{userId} {
       allow read, write: if request.auth.uid == userId;
     }
 
-    // Authenticated users can list and create posts.
-    match /posts {
-      allow list, create: if request.auth.uid != null;
-    }
-
-    // Any authenticated user can read an individual post.
-    // Only the author can update or delete their own post.
+    // Rules for posts collection
     match /posts/{postId} {
+      // Anyone authenticated can read any post
       allow get: if request.auth.uid != null;
+      // The author of a post can update and delete it
       allow update, delete: if request.auth.uid == resource.data.userId;
     }
+    
+    // Anyone authenticated can create posts and list the posts collection
+    match /posts/{document=**} {
+        allow list, create: if request.auth.uid != null;
+    }
 
-    // Authenticated users can read the remote config.
+    // Allow authenticated users to read the quiz configuration
     match /config/{document=**} {
-      allow read: if request.auth.uid != null;
+      allow get, list: if request.auth.uid != null;
     }
   }
 }

@@ -66,6 +66,8 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         await fetchUserData(currentUser);
       } else {
         setUser(null);
+        // Reset answers to default when no user is logged in.
+        setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
       }
       setLoading(false);
     });
@@ -104,6 +106,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     setAnswers(defaultState);
     if (user) {
       const initialData = {
+          uid: user.uid, // Ensure UID is preserved
           name: answers.name || '',
           email: answers.email || '',
           whatsapp: answers.whatsapp || '',
@@ -138,7 +141,8 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
         const newUser = userCredential.user;
         const finalAnswers = { ...answers, ...newUserData };
-        const initialData = { ...finalAnswers, createdAt: serverTimestamp() };
+        // Ensure UID is included when creating the document
+        const initialData = { ...finalAnswers, uid: newUser.uid, createdAt: serverTimestamp() };
         await setDoc(doc(db, 'users', newUser.uid), initialData);
         if (typeof window !== 'undefined') {
           localStorage.removeItem('quizAnswers');
@@ -149,7 +153,8 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
                 const userCredential = await signInWithEmailAndPassword(auth, email, tempPassword);
                 const existingUser = userCredential.user;
                 const finalAnswers = { ...answers, ...newUserData };
-                await updateFirestore(existingUser.uid, finalAnswers);
+                 // Ensure UID is included when updating the document
+                await updateFirestore(existingUser.uid, { ...finalAnswers, uid: existingUser.uid });
                 if (typeof window !== 'undefined') {
                   localStorage.removeItem('quizAnswers');
                 }
