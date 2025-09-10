@@ -1,23 +1,21 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Regra para a coleção 'users'
+    // Users can only manage their own profile data.
     match /users/{userId} {
-      // Usuários podem ler, atualizar e apagar seu próprio documento.
       allow read, update, delete: if request.auth.uid == userId;
-      // Qualquer usuário autenticado pode criar seu próprio documento de usuário.
       allow create: if request.auth.uid != null;
     }
 
-    // Regra para a coleção 'posts'
+    // Authenticated users can read the entire feed.
+    match /posts/{document=**} {
+      allow read: if request.auth.uid != null;
+    }
+    
+    // Authenticated users can create posts, and only edit or delete their own.
     match /posts/{postId} {
-      // Qualquer usuário autenticado pode ler a lista de posts e posts individuais.
-      allow get, list: if request.auth.uid != null;
-      // Qualquer usuário autenticado pode criar um post.
-      allow create: if request.auth.uid != null;
-      // Usuários só podem atualizar ou apagar seus próprios posts.
-      allow update, delete: if request.auth.uid == resource.data.userId;
+      allow create: if request.auth.uid != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth.uid != null && resource.data.userId == request.auth.uid;
     }
   }
 }
