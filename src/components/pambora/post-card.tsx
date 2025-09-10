@@ -1,9 +1,9 @@
-// src/components/pambora/post-card.tsx
+
 'use client';
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, MoreHorizontal, Send } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Send, User } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -24,15 +24,16 @@ const formatTimestamp = (timestamp: any): string => {
 export function PostCard({ post }: { post: any }) {
     // Destructure with default values for safety
     const { author, text, mediaUrl, timestamp, likes, commentsCount } = post;
-    const { name = 'Usuário', avatarUrl = '' } = author || {};
+    const { name = 'Visitante Anônimo', avatarUrl = '' } = author || {};
     const postTimestamp = formatTimestamp(timestamp);
+    const fallback = name.charAt(0).toUpperCase() || <User className="h-5 w-5" />;
 
     return (
         <Card className="overflow-hidden">
             <CardHeader className="flex flex-row items-center gap-3 p-4">
                 <Avatar>
                     <AvatarImage src={avatarUrl} alt={name} />
-                    <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback>{fallback}</AvatarFallback>
                 </Avatar>
                 <div className="flex-grow">
                     <p className="font-semibold">{name}</p>

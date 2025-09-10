@@ -1,4 +1,4 @@
-// src/app/(app)/pambora/page.tsx
+
 'use client';
 import * as React from 'react';
 import { PostCard } from "@/components/pambora/post-card";
@@ -7,13 +7,16 @@ import { db } from '@/services/firebase';
 import { collection, query, onSnapshot, DocumentData } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuiz } from '@/services/quiz-service';
 
 export default function PamboraPage() {
   const [posts, setPosts] = React.useState<DocumentData[]>([]);
   const [dataLoading, setDataLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const { user, loading: authLoading } = useQuiz();
 
   React.useEffect(() => {
+    // We can proceed to fetch data regardless of auth state, as the feed is public.
     setDataLoading(true);
     setError(null);
     
@@ -26,7 +29,7 @@ export default function PamboraPage() {
         postsData.push({ id: doc.id, ...doc.data() });
       });
 
-      // Sort posts on the client-side.
+      // Sort posts on the client-side to ensure newest are first.
       postsData.sort((a, b) => {
         const dateA = a.timestamp?.toDate() || 0;
         const dateB = b.timestamp?.toDate() || 0;

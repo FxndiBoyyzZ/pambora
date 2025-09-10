@@ -1,4 +1,4 @@
-// src/components/pambora/create-post-form.tsx
+
 'use client';
 import * as React from 'react';
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,7 @@ export function CreatePostForm() {
                 timestamp: serverTimestamp(),
                 likes: 0,
                 commentsCount: 0,
-                userId: user?.uid || null, 
+                userId: user?.uid || null, // Can be null for anonymous users
                 author: {
                     name: user ? (answers.name || 'Usuário') : 'Visitante Anônimo',
                     avatarUrl: user ? (answers.profilePictureUrl || null) : null,
@@ -97,17 +97,17 @@ export function CreatePostForm() {
         }
     };
     
+    // Dynamically set author info based on login state
     const authorName = user ? (answers.name?.split(' ')[0] || 'Você') : 'Visitante';
     const authorAvatar = user ? answers.profilePictureUrl : '';
     const authorFallback = user ? (answers.name?.charAt(0).toUpperCase() || 'U') : <User className="h-5 w-5" />;
-
 
     return (
         <Card>
             <CardContent className="p-4">
                  <div className="flex items-start gap-4">
                     <Avatar>
-                        <AvatarImage src={authorAvatar} alt={answers.name || "Visitante"} />
+                        <AvatarImage src={authorAvatar} alt={authorName} />
                         <AvatarFallback>{authorFallback}</AvatarFallback>
                     </Avatar>
                     <div className='w-full'>
