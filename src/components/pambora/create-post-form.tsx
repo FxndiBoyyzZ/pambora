@@ -57,7 +57,6 @@ export function CreatePostForm() {
             let mediaUrl = '';
             let mediaType = '';
 
-            // 1. Upload media if it exists
             if (mediaFile) {
                 const storageRef = ref(storage, `posts/${user?.uid || 'anonymous'}/${Date.now()}-${mediaFile.name}`);
                 const snapshot = await uploadBytes(storageRef, mediaFile);
@@ -65,7 +64,6 @@ export function CreatePostForm() {
                 mediaType = mediaFile.type.startsWith('video') ? 'video' : 'image';
             }
 
-            // 2. Prepare the post object
             const newPost = {
                 text: text,
                 mediaUrl: mediaUrl,
@@ -73,21 +71,17 @@ export function CreatePostForm() {
                 timestamp: serverTimestamp(),
                 likes: 0,
                 commentsCount: 0,
-                // userId is critical for security rules (edit/delete)
                 userId: user?.uid || null, 
-                // Denormalized user data for easy display
                 author: {
                     name: user ? (answers.name || 'Usuário') : 'Visitante Anônimo',
                     avatarUrl: user ? (answers.profilePictureUrl || null) : null,
                 },
             };
 
-            // 3. Add the document to Firestore
             await addDoc(collection(db, 'posts'), newPost);
 
             toast({ title: 'Sucesso!', description: 'Seu post foi publicado na comunidade #PAMBORA!' });
             
-            // 4. Reset form state
             setText('');
             clearMedia();
 
@@ -113,7 +107,7 @@ export function CreatePostForm() {
             <CardContent className="p-4">
                  <div className="flex items-start gap-4">
                     <Avatar>
-                        <AvatarImage src={authorAvatar} alt={answers.name} />
+                        <AvatarImage src={authorAvatar} alt={answers.name || "Visitante"} />
                         <AvatarFallback>{authorFallback}</AvatarFallback>
                     </Avatar>
                     <div className='w-full'>
