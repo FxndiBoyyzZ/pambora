@@ -16,17 +16,20 @@ export default function PamboraPage() {
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
+    // Do not attempt to fetch data until authentication is resolved.
     if (authLoading) {
-        setLoading(true);
-        return;
-    }
-    
-    if (!user) {
-        setLoading(false);
-        // Maybe redirect to login or show a message, but for now just don't fetch.
-        return;
+      setLoading(true);
+      return;
     }
 
+    // Only proceed if we have a confirmed, authenticated user.
+    if (!user) {
+      setLoading(false);
+      // In a real scenario, the layout would redirect, but this is a safeguard.
+      return;
+    }
+
+    // Now it's safe to create the query.
     const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const postsData: DocumentData[] = [];
@@ -36,12 +39,13 @@ export default function PamboraPage() {
       setPosts(postsData);
       setLoading(false);
     }, (error) => {
-        console.error("Error fetching posts:", error);
-        setLoading(false);
+      console.error("Error fetching posts:", error);
+      setLoading(false);
     });
 
+    // Cleanup the listener when the component unmounts or dependencies change.
     return () => unsubscribe();
-  }, [user, authLoading]);
+  }, [user, authLoading]); // Depend directly on user and authLoading
 
   return (
     <div className="flex flex-col h-full">
