@@ -8,16 +8,22 @@ import { db } from '@/services/firebase';
 import { collection, query, orderBy, onSnapshot, DocumentData } from 'firebase/firestore';
 import { CreatePostForm } from '@/components/pambora/create-post-form';
 import { useQuiz } from '@/services/quiz-service';
+import { Loader2 } from 'lucide-react';
 
 export default function PamboraPage() {
-  const { user } = useQuiz();
+  const { user, loading: authLoading } = useQuiz();
   const [posts, setPosts] = React.useState<DocumentData[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    // Only fetch posts if the user is authenticated (even anonymously)
+    if (authLoading) {
+        setLoading(true);
+        return;
+    }
+    
     if (!user) {
         setLoading(false);
+        // Maybe redirect to login or show a message, but for now just don't fetch.
         return;
     }
 
@@ -35,7 +41,7 @@ export default function PamboraPage() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, authLoading]);
 
   return (
     <div className="flex flex-col h-full">
@@ -62,7 +68,8 @@ export default function PamboraPage() {
             <div className="space-y-6">
               {loading ? (
                  <div className="text-center py-12 bg-card rounded-lg border border-border">
-                  <p className="text-lg font-semibold text-muted-foreground">Carregando feed...</p>
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+                  <p className="text-lg font-semibold text-muted-foreground mt-4">Carregando feed...</p>
                 </div>
               ) : posts.length > 0 ? (
                 posts.map(post => <PostCard key={post.id} post={post} />)

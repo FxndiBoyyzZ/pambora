@@ -36,7 +36,13 @@ const QuizContext = createContext<QuizContextType | undefined>(undefined);
 
 export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [answers, setAnswers] = useState<QuizAnswers>({ completedWorkouts: [], weight: 60, height: 160 });
+  const [answers, setAnswers] = useState<QuizAnswers>(() => {
+    if (typeof window !== 'undefined') {
+      const savedAnswers = localStorage.getItem('quizAnswers');
+      return savedAnswers ? JSON.parse(savedAnswers) : { completedWorkouts: [], weight: 60, height: 160 };
+    }
+    return { completedWorkouts: [], weight: 60, height: 160 };
+  });
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = useCallback(async (user: User) => {
@@ -58,21 +64,10 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       if (currentUser) {
         setUser(currentUser);
         await fetchUserData(currentUser);
-        setLoading(false);
       } else {
-        // No user is signed in, sign in anonymously.
-        try {
-          const userCredential = await signInAnonymously(auth);
-          // onAuthStateChanged will be called again with the new anonymous user
-          // which will then set user, fetch data, and set loading to false.
-        } catch (error) {
-          console.error("Error signing in anonymously:", error);
-          // If anonymous sign-in fails, we are in an unauthenticated state.
-          setUser(null);
-          setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
-          setLoading(false);
-        }
+        setUser(null);
       }
+      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -91,6 +86,9 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const setAnswer = (step: keyof QuizAnswers, answer: any) => {
     setAnswers((prevAnswers) => {
       const newAnswers = { ...prevAnswers, [step]: answer };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
+      }
       if (user) {
         updateFirestore(user.uid, { [step]: answer });
       }
@@ -100,9 +98,11 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
 
   const resetQuiz = async () => {
     const defaultState = { completedWorkouts: [], weight: 60, height: 160 };
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('quizAnswers');
+    }
     setAnswers(defaultState);
     if (user) {
-      // Keep basic info like name, email, etc. when resetting.
       const initialData = {
           name: answers.name || '',
           email: answers.email || '',
@@ -131,31 +131,32 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const signUp = async (email: string, name: string, whatsapp: string) => {
-    // Note: In a real app, use a more secure temporary password method.
     const tempPassword = "temporaryPassword123";
     const newUserData = { name, email, whatsapp };
 
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
         const newUser = userCredential.user;
-        const initialData = { ...answers, ...newUserData, createdAt: serverTimestamp() };
+        const finalAnswers = { ...answers, ...newUserData };
+        const initialData = { ...finalAnswers, createdAt: serverTimestamp() };
         await setDoc(doc(db, 'users', newUser.uid), initialData);
-        // onAuthStateChanged will handle setting the user and answers.
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('quizAnswers');
+        }
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
             try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, tempPassword);
                 const existingUser = userCredential.user;
-                await updateFirestore(existingUser.uid, { ...answers, ...newUserData });
-                // onAuthStateChanged will handle fetching the user data.
+                const finalAnswers = { ...answers, ...newUserData };
+                await updateFirestore(existingUser.uid, finalAnswers);
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('quizAnswers');
+                }
             } catch (signInError) {
                  console.error("Error signing in existing user:", signInError);
                  throw signInError;
             }
-        } else if (error.code === 'auth/operation-not-allowed') {
-            console.error("Sign-up with Email/Password is not enabled in Firebase. Please enable it in the console.");
-            alert("O serviço de cadastro está temporariamente indisponível. Por favor, tente mais tarde.");
-            throw error;
         } else {
             console.error("Error signing up:", error);
             throw error;

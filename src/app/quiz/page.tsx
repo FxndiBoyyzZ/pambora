@@ -116,17 +116,17 @@ export default function QuizPage() {
   const { answers, setAnswer, signUp, user, loading: authLoading } = useQuiz();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
-  const [otherAllergyText, setOtherAllergyText] = useState('');
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>(answers.allergies?.split(', ')[0].split(',') || []);
+  const [otherAllergyText, setOtherAllergyText] = useState(answers.allergies?.split('; ')[1] || '');
 
 
   useEffect(() => {
-    if (user && !user.isAnonymous && !authLoading) {
+    if (user && !authLoading) {
       router.push('/treinos');
     }
   }, [user, authLoading, router]);
   
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
     if (quizSteps.length === 0) return;
     
     const currentStep = quizSteps[currentStepIndex];
@@ -139,8 +139,8 @@ export default function QuizPage() {
     if (currentStepIndex >= quizSteps.length - 1) {
         setIsSubmitting(true);
         try {
-            signUp(answers.email || '', answers.name || '', answers.whatsapp || '');
-            router.push('/treinos');
+            await signUp(answers.email || '', answers.name || '', answers.whatsapp || '');
+            // The useEffect will handle the redirect once the user is signed in.
         } catch (error) {
             console.error("Sign up failed on the final step", error);
             setIsSubmitting(false);
@@ -188,7 +188,7 @@ export default function QuizPage() {
                 ))}
               </CardContent>
               <CardFooter>
-                <Button onClick={handleNext} className="w-full" disabled={!isFormValid}>
+                <Button onClick={handleNext} className="w-full" disabled={!isFormValid || isSubmitting}>
                   Continuar
                 </Button>
               </CardFooter>
@@ -266,7 +266,7 @@ export default function QuizPage() {
               </CardContent>
                {(currentStep.content.questionType === 'text' || currentStep.content.questionType === 'multiple-select-plus-text') && (
                  <CardFooter>
-                    <Button onClick={handleNext} className="w-full">Continuar</Button>
+                    <Button onClick={handleNext} className="w-full" disabled={isSubmitting}>Continuar</Button>
                  </CardFooter>
                )}
             </Card>
@@ -285,7 +285,7 @@ export default function QuizPage() {
   };
 
 
-  if (authLoading) {
+  if (authLoading || isSubmitting) {
     return (
         <div className="flex justify-center items-center h-screen bg-background">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
