@@ -15,37 +15,25 @@ export default function PamboraPage() {
 
   React.useEffect(() => {
     setDataLoading(true);
-    let unsubscribe: Unsubscribe | undefined;
+    setError(null);
     
-    try {
-      const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
-      
-      unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const postsData: DocumentData[] = [];
-        querySnapshot.forEach((doc) => {
-          postsData.push({ id: doc.id, ...doc.data() });
-        });
-        setPosts(postsData);
-        setDataLoading(false);
-        setError(null);
-      }, (err) => {
-        console.error("Firestore snapshot error:", err);
-        setError("Ocorreu um erro ao carregar o feed. Por favor, tente recarregar a página.");
-        setDataLoading(false);
+    const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const postsData: DocumentData[] = [];
+      querySnapshot.forEach((doc) => {
+        postsData.push({ id: doc.id, ...doc.data() });
       });
+      setPosts(postsData);
+      setDataLoading(false);
+    }, (err) => {
+      console.error("Firestore snapshot error:", err);
+      setError("Ocorreu um erro ao carregar o feed. Por favor, tente recarregar a página.");
+      setDataLoading(false);
+    });
 
-    } catch (err) {
-       console.error("Error setting up Firestore listener:", err);
-       setError("Falha ao iniciar a comunicação com o banco de dados.");
-       setDataLoading(false);
-    }
-
-    // Cleanup the listener when the component unmounts.
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
+    // Cleanup a assinatura quando o componente for desmontado.
+    return () => unsubscribe();
   }, []);
 
   const renderContent = () => {
