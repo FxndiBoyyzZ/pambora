@@ -137,27 +137,28 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     const tempPassword = "temporaryPassword123";
     const newUserData = { name, email, whatsapp };
 
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
-        const newUser = userCredential.user;
+    const saveUserData = async (user: User) => {
         const finalAnswers = { ...answers, ...newUserData };
-        // Ensure UID is included when creating the document
-        const initialData = { ...finalAnswers, uid: newUser.uid, createdAt: serverTimestamp() };
-        await setDoc(doc(db, 'users', newUser.uid), initialData);
+        const userData = { 
+            ...finalAnswers, 
+            uid: user.uid, 
+            email: user.email, // Ensure email is from the auth user object
+            createdAt: serverTimestamp() 
+        };
+        await setDoc(doc(db, 'users', user.uid), userData);
         if (typeof window !== 'undefined') {
           localStorage.removeItem('quizAnswers');
         }
+    };
+
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
+        await saveUserData(userCredential.user);
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
             try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, tempPassword);
-                const existingUser = userCredential.user;
-                const finalAnswers = { ...answers, ...newUserData };
-                 // Ensure UID is included when updating the document
-                await updateFirestore(existingUser.uid, { ...finalAnswers, uid: existingUser.uid });
-                if (typeof window !== 'undefined') {
-                  localStorage.removeItem('quizAnswers');
-                }
+                await saveUserData(userCredential.user); // Also save/update data on sign-in
             } catch (signInError) {
                  console.error("Error signing in existing user:", signInError);
                  throw signInError;

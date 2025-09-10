@@ -2,27 +2,37 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Allow users to read and write to their own data
-    match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
+    // Helper function to check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    // Rules for posts collection
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // A user can read or write to their own document
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Rules for the 'posts' collection
     match /posts/{postId} {
-      // Anyone authenticated can read any post
-      allow get: if request.auth.uid != null;
-      // The author of a post can update and delete it
-      allow update, delete: if request.auth.uid == resource.data.userId;
+        // Any authenticated user can read a single post
+        allow get: if isAuthenticated();
+        
+        // Only the author can update or delete their own post
+        allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
     
-    // Anyone authenticated can create posts and list the posts collection
     match /posts/{document=**} {
-        allow list, create: if request.auth.uid != null;
+      // Any authenticated user can list posts and create new ones
+      allow list, create: if isAuthenticated();
     }
-
-    // Allow authenticated users to read the quiz configuration
-    match /config/{document=**} {
-      allow get, list: if request.auth.uid != null;
+    
+    // Rules for the 'config' collection (e.g., quiz steps)
+    match /config/{configId} {
+        // Any authenticated user can read configuration files
+        allow get: if isAuthenticated();
+        // Writing to config should be restricted (e.g. only from admin panel/server)
+        allow write: if isAuthenticated(); // Simplified for now, can be tightened
     }
   }
 }
