@@ -21,7 +21,7 @@ export function PostCard({ post }: { post: any }) {
                 </Avatar>
                 <div className="flex-grow">
                     <p className="font-semibold">{post.user.name}</p>
-                    <p className="text-sm text-muted-foreground">@{post.user.handle} • {postTimestamp}</p>
+                    <p className="text-sm text-muted-foreground">{post.user.handle} • {postTimestamp}</p>
                 </div>
                 <Button variant="ghost" size="icon">
                     <MoreHorizontal className="h-5 w-5" />
