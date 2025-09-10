@@ -1,3 +1,4 @@
+
 // src/app/(app)/pambora/page.tsx
 'use client';
 import * as React from 'react';
@@ -8,17 +9,18 @@ import { collection, query, getDocs, DocumentData } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
+import { useQuiz } from '@/services/quiz-service';
 
 export default function PamboraPage() {
   const [posts, setPosts] = React.useState<DocumentData[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const { loading: authLoading } = useQuiz();
 
   const fetchPosts = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Query without server-side ordering to avoid index requirements
       const q = query(collection(db, "posts"));
       const querySnapshot = await getDocs(q);
       
@@ -89,7 +91,8 @@ export default function PamboraPage() {
       <div className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto">
         <div className="max-w-2xl mx-auto w-full space-y-6">
             
-            <CreatePostForm onPostCreated={fetchPosts} />
+            {/* Conditionally render CreatePostForm only when auth state is resolved */}
+            {!authLoading && <CreatePostForm onPostCreated={fetchPosts} />}
 
             <Tabs defaultValue="all" className="w-full">
                 <TabsList className="w-full">

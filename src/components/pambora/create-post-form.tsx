@@ -1,3 +1,4 @@
+
 // src/components/pambora/create-post-form.tsx
 'use client';
 import * as React from 'react';
@@ -62,7 +63,6 @@ export function CreatePostForm({ onPostCreated }: CreatePostFormProps) {
             let mediaType = '';
 
             if (mediaFile) {
-                // Use a generic path for public posts, but include user UID if available for organization
                 const storagePath = `posts/${user?.uid || 'public'}/${Date.now()}-${mediaFile.name}`;
                 const storageRef = ref(storage, storagePath);
                 const snapshot = await uploadBytes(storageRef, mediaFile);
@@ -77,7 +77,6 @@ export function CreatePostForm({ onPostCreated }: CreatePostFormProps) {
                 timestamp: serverTimestamp(),
                 likes: 0,
                 commentsCount: 0,
-                // Include userId if user is logged in, otherwise null
                 userId: user?.uid || null,
                 author: {
                     name: user ? (answers.name || 'Usuário') : 'Visitante Anônimo',
@@ -91,7 +90,7 @@ export function CreatePostForm({ onPostCreated }: CreatePostFormProps) {
             
             setText('');
             clearMedia();
-            onPostCreated(); // Refresh the feed after posting
+            onPostCreated(); 
 
         } catch (error) {
             console.error("Error creating post:", error);
@@ -105,7 +104,6 @@ export function CreatePostForm({ onPostCreated }: CreatePostFormProps) {
         }
     };
     
-    // Dynamically set author info based on login state
     const authorName = user ? (answers.name?.split(' ')[0] || 'Você') : 'Visitante';
     const authorAvatar = user ? answers.profilePictureUrl : '';
     const authorFallback = user ? (answers.name?.charAt(0).toUpperCase() || 'U') : <User className="h-5 w-5" />;
