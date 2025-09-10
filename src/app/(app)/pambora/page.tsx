@@ -7,12 +7,20 @@ import { PostCard } from "@/components/pambora/post-card";
 import { db } from '@/services/firebase';
 import { collection, query, orderBy, onSnapshot, DocumentData } from 'firebase/firestore';
 import { CreatePostForm } from '@/components/pambora/create-post-form';
+import { useQuiz } from '@/services/quiz-service';
 
 export default function PamboraPage() {
+  const { user } = useQuiz();
   const [posts, setPosts] = React.useState<DocumentData[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
+    // Only fetch posts if the user is authenticated (even anonymously)
+    if (!user) {
+        setLoading(false);
+        return;
+    }
+
     const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const postsData: DocumentData[] = [];
@@ -21,10 +29,13 @@ export default function PamboraPage() {
       });
       setPosts(postsData);
       setLoading(false);
+    }, (error) => {
+        console.error("Error fetching posts:", error);
+        setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   return (
     <div className="flex flex-col h-full">
