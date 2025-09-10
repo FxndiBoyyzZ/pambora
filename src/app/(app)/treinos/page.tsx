@@ -83,7 +83,7 @@ export default function TreinosPage() {
 
             {/* Journey Timeline */}
             <div>
-                <h2 className="text-xl font-bold mb-4">Sua Jornada de 21 Dias</h2>
+                <h2 className="text-xl font-bold mb-4">Seu Histórico de Treinos</h2>
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {dailyWorkouts.map((workout) => {
                         const completed = isWorkoutCompleted(workout.day);
@@ -111,8 +111,7 @@ export default function TreinosPage() {
                                              </div>
                                          )}
                                         <div>
-                                            <p className="text-sm text-muted-foreground">Dia {workout.day}</p>
-                                            <p className={cn("font-semibold", completed && "text-muted-foreground line-through")}>{workout.title}</p>
+                                            <p className={cn("font-semibold", completed && "text-muted-foreground line-through")}>Dia {workout.day}</p>
                                         </div>
                                     </CardContent>
                                 </Card>

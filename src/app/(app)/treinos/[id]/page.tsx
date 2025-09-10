@@ -2,7 +2,7 @@
 'use client';
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { CheckCircle, Circle, Clock, Dumbbell, PlayCircle } from "lucide-react";
+import { CheckCircle, Circle, Clock, Dumbbell, PlayCircle, Flame, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuiz } from '@/services/quiz-service';
 import { useToast } from '@/hooks/use-toast';
