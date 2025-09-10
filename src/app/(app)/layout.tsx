@@ -106,7 +106,7 @@ function AppLayoutContent({ children }: { children: ReactNode }) {
             src="/IMG_8326.JPG"
             alt="Fundo"
             fill
-            className="object-cover opacity-20 z-0"
+            className="object-cover opacity-30 z-0"
             data-ai-hint="fitness background"
         />
         <div className="relative z-10 flex min-h-screen bg-transparent">
