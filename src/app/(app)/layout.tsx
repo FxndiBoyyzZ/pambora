@@ -9,8 +9,9 @@ import { Logo } from '@/components/logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { QuizProvider, useQuiz } from '@/services/quiz-service';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { PwaInstallDialog } from '@/components/pwa-install-dialog';
 
 const navItems = [
   { href: '/treinos', label: 'Treinos', icon: Dumbbell },
@@ -85,12 +86,26 @@ function MobileBottomNav() {
 function AppLayoutContent({ children }: { children: ReactNode }) {
   const { user, loading } = useQuiz();
   const router = useRouter();
+  const [showInstallDialog, setShowInstallDialog] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/quiz');
     }
   }, [user, loading, router]);
+
+   useEffect(() => {
+    // Check if the tutorial has been seen before.
+    const hasSeenTutorial = localStorage.getItem('hasSeenPwaInstallTutorial');
+    if (!loading && user && !hasSeenTutorial) {
+        setShowInstallDialog(true);
+    }
+  }, [user, loading]);
+
+  const handleInstallDialogClose = () => {
+    localStorage.setItem('hasSeenPwaInstallTutorial', 'true');
+    setShowInstallDialog(false);
+  }
 
   if (loading || !user) {
     return (
@@ -110,6 +125,7 @@ function AppLayoutContent({ children }: { children: ReactNode }) {
             data-ai-hint="fitness background"
         />
         <div className="relative z-10 flex min-h-screen bg-transparent">
+            <PwaInstallDialog open={showInstallDialog} onOpenChange={setShowInstallDialog} onDismiss={handleInstallDialogClose} />
             <DesktopSidebar />
             <main className="flex-1 pb-20 lg:pb-0 bg-background/80 backdrop-blur-sm lg:bg-transparent lg:backdrop-blur-none">
                 {children}
