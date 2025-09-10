@@ -1,4 +1,4 @@
-
+// src/components/pambora/create-post-form.tsx
 'use client';
 import * as React from 'react';
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,11 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Image as ImageIcon, Loader2, Send, XCircle, User } from 'lucide-react';
 import Image from 'next/image';
 
-export function CreatePostForm() {
+interface CreatePostFormProps {
+  onPostCreated: () => void;
+}
+
+export function CreatePostForm({ onPostCreated }: CreatePostFormProps) {
     const { user, answers } = useQuiz();
     const { toast } = useToast();
     const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -58,7 +62,9 @@ export function CreatePostForm() {
             let mediaType = '';
 
             if (mediaFile) {
-                const storageRef = ref(storage, `posts/${user?.uid || 'anonymous'}/${Date.now()}-${mediaFile.name}`);
+                // Use a generic path for public posts, but include user UID if available for organization
+                const storagePath = `posts/${user?.uid || 'public'}/${Date.now()}-${mediaFile.name}`;
+                const storageRef = ref(storage, storagePath);
                 const snapshot = await uploadBytes(storageRef, mediaFile);
                 mediaUrl = await getDownloadURL(snapshot.ref);
                 mediaType = mediaFile.type.startsWith('video') ? 'video' : 'image';
@@ -71,7 +77,8 @@ export function CreatePostForm() {
                 timestamp: serverTimestamp(),
                 likes: 0,
                 commentsCount: 0,
-                userId: user?.uid || null, // Can be null for anonymous users
+                // Include userId if user is logged in, otherwise null
+                userId: user?.uid || null,
                 author: {
                     name: user ? (answers.name || 'Usuário') : 'Visitante Anônimo',
                     avatarUrl: user ? (answers.profilePictureUrl || null) : null,
@@ -84,6 +91,7 @@ export function CreatePostForm() {
             
             setText('');
             clearMedia();
+            onPostCreated(); // Refresh the feed after posting
 
         } catch (error) {
             console.error("Error creating post:", error);

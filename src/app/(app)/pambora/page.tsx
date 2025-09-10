@@ -1,35 +1,33 @@
-
+// src/app/(app)/pambora/page.tsx
 'use client';
 import * as React from 'react';
 import { PostCard } from "@/components/pambora/post-card";
 import { CreatePostForm } from "@/components/pambora/create-post-form";
 import { db } from '@/services/firebase';
-import { collection, query, onSnapshot, DocumentData } from 'firebase/firestore';
+import { collection, query, getDocs, DocumentData } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useQuiz } from '@/services/quiz-service';
+import { Button } from '@/components/ui/button';
 
 export default function PamboraPage() {
   const [posts, setPosts] = React.useState<DocumentData[]>([]);
-  const [dataLoading, setDataLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const { user, loading: authLoading } = useQuiz();
 
-  React.useEffect(() => {
-    // We can proceed to fetch data regardless of auth state, as the feed is public.
-    setDataLoading(true);
+  const fetchPosts = React.useCallback(async () => {
+    setLoading(true);
     setError(null);
-    
-    // Query without server-side ordering to avoid needing a composite index for public queries.
-    const q = query(collection(db, "posts"));
-    
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    try {
+      // Query without server-side ordering to avoid index requirements
+      const q = query(collection(db, "posts"));
+      const querySnapshot = await getDocs(q);
+      
       const postsData: DocumentData[] = [];
       querySnapshot.forEach((doc) => {
         postsData.push({ id: doc.id, ...doc.data() });
       });
 
-      // Sort posts on the client-side to ensure newest are first.
+      // Sort posts on the client-side to ensure newest are first
       postsData.sort((a, b) => {
         const dateA = a.timestamp?.toDate() || 0;
         const dateB = b.timestamp?.toDate() || 0;
@@ -37,19 +35,20 @@ export default function PamboraPage() {
       });
 
       setPosts(postsData);
-      setDataLoading(false);
-    }, (err) => {
-      console.error("Firestore snapshot error:", err);
+    } catch (err) {
+      console.error("Firestore getDocs error:", err);
       setError("Ocorreu um erro ao carregar o feed. Por favor, tente recarregar a página.");
-      setDataLoading(false);
-    });
-
-    // Cleanup subscription on unmount.
-    return () => unsubscribe();
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  React.useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
+
   const renderContent = () => {
-    if (dataLoading) {
+    if (loading) {
       return (
         <div className="text-center py-12 bg-card rounded-lg border border-border">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
@@ -63,6 +62,9 @@ export default function PamboraPage() {
              <div className="text-center py-12 bg-destructive/10 text-destructive-foreground rounded-lg border border-destructive p-4">
                 <p className="text-lg font-semibold">Erro ao Carregar</p>
                 <p className="text-sm">{error}</p>
+                <Button onClick={fetchPosts} variant="secondary" className="mt-4">
+                  Tentar Novamente
+                </Button>
              </div>
         )
     }
@@ -87,7 +89,7 @@ export default function PamboraPage() {
       <div className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto">
         <div className="max-w-2xl mx-auto w-full space-y-6">
             
-            <CreatePostForm />
+            <CreatePostForm onPostCreated={fetchPosts} />
 
             <Tabs defaultValue="all" className="w-full">
                 <TabsList className="w-full">
