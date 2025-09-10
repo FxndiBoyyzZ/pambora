@@ -5,7 +5,7 @@ import { PostCard } from "@/components/pambora/post-card";
 import { CreatePostForm } from "@/components/pambora/create-post-form";
 import { useQuiz } from '@/services/quiz-service';
 import { db } from '@/services/firebase';
-import { collection, query, orderBy, onSnapshot, DocumentData } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, DocumentData, Unsubscribe } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -16,13 +16,12 @@ export default function PamboraPage() {
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    // Exit early if auth is still loading.
+    // Do not attempt to fetch data if auth is loading or there's no user.
     if (authLoading) {
       setDataLoading(true);
       return;
     }
 
-    // If there is no authenticated user after loading, set error.
     if (!user) {
       setDataLoading(false);
       setError("Você precisa estar autenticado para ver o feed. Por favor, reinicie o quiz ou faça login.");
@@ -30,29 +29,42 @@ export default function PamboraPage() {
     }
     
     // At this point, we have an authenticated user. It's safe to query Firestore.
-    setDataLoading(true); // Set loading true before starting the query
-    const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+    setDataLoading(true);
+    let unsubscribe: Unsubscribe | undefined;
     
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const postsData: DocumentData[] = [];
-      querySnapshot.forEach((doc) => {
-        postsData.push({ id: doc.id, ...doc.data() });
+    try {
+      const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+      
+      unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const postsData: DocumentData[] = [];
+        querySnapshot.forEach((doc) => {
+          postsData.push({ id: doc.id, ...doc.data() });
+        });
+        setPosts(postsData);
+        setDataLoading(false);
+        setError(null); // Clear any previous errors on successful fetch
+      }, (err) => {
+        console.error("Firestore snapshot error:", err);
+        setError("Ocorreu um erro ao carregar o feed. Verifique as permissões do Firestore e sua conexão.");
+        setDataLoading(false);
       });
-      setPosts(postsData);
-      setDataLoading(false);
-      setError(null);
-    }, (err) => {
-      console.error("Firestore snapshot error:", err);
-      setError("Ocorreu um erro ao carregar o feed. Verifique as permissões do Firestore.");
-      setDataLoading(false);
-    });
+
+    } catch (err) {
+       console.error("Error setting up Firestore listener:", err);
+       setError("Falha ao iniciar a comunicação com o banco de dados.");
+       setDataLoading(false);
+    }
 
     // Cleanup the listener when the component unmounts or dependencies change.
-    return () => unsubscribe();
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [user, authLoading]);
 
   const renderContent = () => {
-    if (dataLoading) { // Use dataLoading state which depends on authLoading
+    if (dataLoading) {
       return (
         <div className="text-center py-12 bg-card rounded-lg border border-border">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
@@ -63,7 +75,7 @@ export default function PamboraPage() {
     
     if (error) {
         return (
-             <div className="text-center py-12 bg-destructive/10 text-destructive-foreground rounded-lg border border-destructive">
+             <div className="text-center py-12 bg-destructive/10 text-destructive-foreground rounded-lg border border-destructive p-4">
                 <p className="text-lg font-semibold">Erro de Permissão</p>
                 <p className="text-sm">{error}</p>
              </div>
