@@ -3,21 +3,40 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can only read and write their own data
-    match /users/{userId} {
-      allow read, update, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Config can be read by any authenticated user
-    match /config/{docId} {
-       allow read: if request.auth != null;
+    // Helper function to check if a user is the owner of a document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
-    // Posts can be listed/read by any authenticated user
-    // Posts can only be created, updated, or deleted by their author
+    // --- USERS Collection ---
+    // Users can read and update their own profile data.
+    // Nobody can create or delete user profiles directly, this is handled by server-side logic (e.g. Firebase Auth triggers) or admin SDKs.
+    match /users/{userId} {
+      allow read, update: if isOwner(userId);
+      allow create, delete: if false; // Disallow client-side creation/deletion
+    }
+    
+    // --- POSTS Collection ---
+    // Any authenticated user can list/read posts.
+    // Any authenticated user can create a post.
+    // Only the owner of a post can update or delete it.
     match /posts/{postId} {
-      allow list, read, create: if request.auth != null;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow list, read: if request.auth.uid != null;
+      allow create: if request.auth.uid != null;
+      allow update, delete: if isOwner(resource.data.userId);
+    }
+
+    // --- CONFIG Collection ---
+    // Allow any authenticated user to read configuration files.
+    // Disallow any client-side writes to config.
+    match /config/{docId} {
+        allow read: if request.auth.uid != null;
+        allow write: if false;
+    }
+
+    // Default deny all other paths
+    match /{path=**}/ {
+      allow read, write: if false;
     }
   }
 }

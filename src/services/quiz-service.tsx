@@ -54,53 +54,29 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setLoading(true);
       if (currentUser) {
         setUser(currentUser);
         await fetchUserData(currentUser);
         setLoading(false);
       } else {
-        // User is signed out, reset state
-        setUser(null);
-        setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
-        // Attempt to sign in anonymously again after sign out.
-        // Set loading to true while this happens.
-        setLoading(true);
+        // No user is signed in, sign in anonymously.
         try {
-            // signInAnonymously will trigger onAuthStateChanged again
-            await signInAnonymously(auth);
+          const userCredential = await signInAnonymously(auth);
+          // onAuthStateChanged will be called again with the new anonymous user
+          // which will then set user, fetch data, and set loading to false.
         } catch (error) {
-            console.error("Firebase anonymous sign-in error after sign out:", error);
-            setLoading(false); // Stop loading even if anonymous sign-in fails
+          console.error("Error signing in anonymously:", error);
+          // If anonymous sign-in fails, we are in an unauthenticated state.
+          setUser(null);
+          setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
+          setLoading(false);
         }
       }
     });
 
     return () => unsubscribe();
   }, [fetchUserData]);
-
-
-  useEffect(() => {
-    // This effect ensures we have an anonymous user on initial load if no one is logged in.
-    const bootstrapAuth = async () => {
-        if (!auth.currentUser) {
-            try {
-                // onAuthStateChanged will handle setting user and loading state
-                await signInAnonymously(auth);
-            } catch (error) {
-                 console.error("Firebase initial anonymous sign-in error:", error);
-                 setLoading(false); // Stop loading on error
-            }
-        } else {
-            // If there's already a user, onAuthStateChanged should have already run.
-            // But as a fallback, we ensure loading is false.
-             if(user) {
-                setLoading(false);
-             }
-        }
-    };
-    bootstrapAuth();
-  }, [user]);
-
 
   const updateFirestore = async (uid: string, data: Partial<QuizAnswers>) => {
     if (!uid) return;
@@ -126,7 +102,16 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     const defaultState = { completedWorkouts: [], weight: 60, height: 160 };
     setAnswers(defaultState);
     if (user) {
-      await setDoc(doc(db, 'users', user.uid), defaultState);
+      // Keep basic info like name, email, etc. when resetting.
+      const initialData = {
+          name: answers.name || '',
+          email: answers.email || '',
+          whatsapp: answers.whatsapp || '',
+          profilePictureUrl: answers.profilePictureUrl || '',
+          createdAt: answers.createdAt || serverTimestamp(),
+          ...defaultState
+      };
+      await setDoc(doc(db, 'users', user.uid), initialData);
     }
   };
 
@@ -153,18 +138,16 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
         const newUser = userCredential.user;
-        setUser(newUser);
         const initialData = { ...answers, ...newUserData, createdAt: serverTimestamp() };
         await setDoc(doc(db, 'users', newUser.uid), initialData);
-        setAnswers(initialData);
+        // onAuthStateChanged will handle setting the user and answers.
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
             try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, tempPassword);
                 const existingUser = userCredential.user;
-                setUser(existingUser);
                 await updateFirestore(existingUser.uid, { ...answers, ...newUserData });
-                await fetchUserData(existingUser);
+                // onAuthStateChanged will handle fetching the user data.
             } catch (signInError) {
                  console.error("Error signing in existing user:", signInError);
                  throw signInError;
