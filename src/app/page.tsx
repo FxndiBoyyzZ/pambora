@@ -18,7 +18,7 @@ export default function LandingPage() {
       <div className="relative z-10 flex flex-col items-center gap-6">
         <Logo />
         <div className="flex flex-col items-center gap-2">
-          <h1 className="text-4xl font-bold tracking-tighter text-primary sm:text-5xl md:text-6xl font-headline">
+          <h1 className="text-6xl font-bold tracking-wider text-primary sm:text-7xl md:text-8xl font-headline uppercase">
             Desafio PAMBORA!
           </h1>
           <p className="max-w-md text-lg text-foreground/80 md:text-xl">

@@ -96,7 +96,7 @@ export default function CardapioPage() {
     return (
         <div className="flex flex-col h-full">
             <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
-                <h1 className="text-2xl font-bold font-headline text-foreground">Cardápio</h1>
+                <h1 className="text-3xl font-bold font-headline text-foreground uppercase tracking-wider">Cardápio</h1>
                 <Button variant="outline" size="sm" onClick={handleResetQuiz}>
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Refazer o Quiz

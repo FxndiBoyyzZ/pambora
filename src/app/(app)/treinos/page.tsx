@@ -119,7 +119,7 @@ export default function TreinosPage() {
       <header className="p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold font-headline text-foreground">
+                <h1 className="text-3xl font-bold font-headline text-foreground uppercase tracking-wider">
                 Sua Jornada
                 </h1>
                 <div className="flex items-center gap-2 text-primary font-bold text-lg">
@@ -137,7 +137,7 @@ export default function TreinosPage() {
             <Card className="bg-gradient-to-br from-primary/20 to-card">
                  <CardHeader>
                     <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {currentDay}</CardDescription>
-                    <CardTitle className="text-3xl">{currentWorkoutDetails.title}</CardTitle>
+                    <CardTitle className="text-3xl font-headline tracking-wide">{currentWorkoutDetails.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-muted-foreground mb-4">{currentWorkoutDetails.description}</p>
@@ -151,7 +151,7 @@ export default function TreinosPage() {
 
             {/* Journey Timeline */}
             <div>
-                <h2 className="text-xl font-bold mb-4">Seu Histórico de Treinos</h2>
+                <h2 className="text-xl font-bold mb-4 font-headline tracking-wide">Seu Histórico de Treinos</h2>
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {dailyWorkouts.map((workout) => {
                         const isCompleted = isWorkoutCompleted(workout.day);
@@ -176,4 +176,3 @@ export default function TreinosPage() {
     </div>
   );
 }
-

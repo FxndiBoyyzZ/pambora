@@ -22,7 +22,7 @@ export default function PamboraPage() {
   return (
     <div className="flex flex-col h-full">
         <header className="p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
-            <h1 className="text-2xl font-bold font-headline text-foreground text-center lg:text-left">
+            <h1 className="text-3xl font-bold font-headline text-foreground text-center lg:text-left uppercase tracking-wider">
             Comunidade #PAMBORA
             </h1>
         </header>
@@ -46,7 +46,7 @@ export default function PamboraPage() {
                      </div>
                  </div>
                 <CardHeader className="pt-8">
-                    <CardTitle className="text-3xl font-bold font-headline text-primary">
+                    <CardTitle className="text-4xl font-bold font-headline text-primary uppercase tracking-wide">
                         Junte-se à Nossa Comunidade!
                     </CardTitle>
                     <CardDescription className="text-lg text-foreground/80 pt-2 max-w-md mx-auto">

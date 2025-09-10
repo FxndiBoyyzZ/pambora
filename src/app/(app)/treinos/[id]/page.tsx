@@ -112,7 +112,7 @@ export default function TreinoDetailPage({ params }: { params: { id: string } })
   return (
     <div className="flex flex-col h-full">
         <header className="p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
-            <h1 className="text-2xl font-bold font-headline text-foreground">Treino do Dia {day}</h1>
+            <h1 className="text-3xl font-bold font-headline text-foreground uppercase tracking-wider">Treino do Dia {day}</h1>
             <p className="text-muted-foreground">{workout.title}</p>
         </header>
 
