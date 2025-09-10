@@ -1,34 +1,32 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check for authentication
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Rules for the 'posts' collection
-    match /posts/{postId} {
-      // Any authenticated user can read all posts and the list of posts
-      allow read: if isAuthenticated();
-      // Any authenticated user can create a post
-      allow create: if isAuthenticated();
-      // Only the author of the post can update or delete it
-      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
-    }
-
-    // Rules for the 'users' collection
+    // Regras para a coleção 'users'
     match /users/{userId} {
-      // A user can only read or write to their own document
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      // Um usuário só pode ler ou escrever em seu próprio documento.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Regras para a coleção 'posts'
+    match /posts/{postId} {
+      // Qualquer usuário autenticado pode ler (get) um post individual.
+      allow get: if request.auth != null;
+      // Apenas o autor do post pode atualizá-lo ou excluí-lo.
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     
-    // Rules for the 'config' collection (e.g., quiz steps)
-    match /config/{configId} {
-        // Any authenticated user can read config documents
-        allow read: if isAuthenticated();
-        // Disallow client-side writes to config for security
-        allow write: if false;
+    // Regras para a lista da coleção 'posts'
+    match /posts/{document=**} {
+        // Qualquer usuário autenticado pode listar (list) posts e criar (create) novos posts.
+        allow list, create: if request.auth != null;
+    }
+
+    // Regras para a coleção 'config'
+    match /config/{docId} {
+      // Qualquer usuário autenticado pode ler a configuração.
+      allow get: if request.auth != null;
     }
   }
 }

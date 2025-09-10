@@ -44,11 +44,11 @@ export function CreatePostForm() {
 
     const handlePost = async () => {
         if (!user) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'Você precisa estar logado para postar.' });
+            toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Você precisa estar logado para postar.' });
             return;
         }
         if (!text.trim() && !mediaFile) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'Seu post precisa de texto ou uma imagem/vídeo.' });
+            toast({ variant: 'destructive', title: 'Post Vazio', description: 'Seu post precisa de texto ou uma imagem/vídeo.' });
             return;
         }
 
@@ -61,8 +61,8 @@ export function CreatePostForm() {
                 mediaUrl = await getDownloadURL(snapshot.ref);
             }
 
-            await addDoc(collection(db, 'posts'), {
-                userId: user.uid,
+            const newPost = {
+                userId: user.uid, // Campo essencial para as regras de segurança
                 user: {
                     name: answers.name || 'Usuário Anônimo',
                     handle: answers.name ? `@${answers.name.split(' ')[0].toLowerCase()}` : '@usuario',
@@ -73,14 +73,21 @@ export function CreatePostForm() {
                 timestamp: serverTimestamp(),
                 likes: 0,
                 comments: 0
-            });
+            };
+
+            await addDoc(collection(db, 'posts'), newPost);
 
             toast({ title: 'Sucesso!', description: 'Seu post foi publicado na comunidade #PAMBORA!' });
             setText('');
             clearMedia();
         } catch (error) {
             console.error("Error creating post:", error);
-            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível publicar seu post. Tente novamente.' });
+            const firebaseError = error as {code?: string};
+            if(firebaseError.code === 'permission-denied') {
+                 toast({ variant: 'destructive', title: 'Erro de Permissão', description: 'Você não tem permissão para publicar. Verifique as regras do Firestore.' });
+            } else {
+                 toast({ variant: 'destructive', title: 'Erro ao Publicar', description: 'Não foi possível publicar seu post. Tente novamente.' });
+            }
         } finally {
             setLoading(false);
         }
@@ -96,7 +103,7 @@ export function CreatePostForm() {
                     </Avatar>
                     <div className='w-full'>
                         <Textarea
-                            placeholder={`No que você está pensando, ${answers.name?.split(' ')[0]}?`}
+                            placeholder={`No que você está pensando, ${answers.name?.split(' ')[0] || ''}?`}
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                             className="min-h-[100px] resize-none border-none focus-visible:ring-0 shadow-none p-0"
