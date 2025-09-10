@@ -8,6 +8,16 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useQuiz } from "@/services/quiz-service";
 import * as React from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const baseWorkouts = [
   { id: 1, title: 'HIIT Intenso', description: 'Queima máxima de calorias em 20 minutos.', icon: Flame },
@@ -16,6 +26,64 @@ const baseWorkouts = [
 ];
 
 const totalDays = 21;
+
+function WorkoutCard({ day, isCompleted, isCurrent, isLocked }: { day: number, isCompleted: boolean, isCurrent: boolean, isLocked: boolean }) {
+    const cardContent = (
+        <Card className={cn(
+            "group relative overflow-hidden transition-all duration-300 h-full hover:bg-muted/50",
+            isCurrent && "border-primary ring-2 ring-primary",
+            isCompleted && "bg-muted/50 border-dashed",
+            isLocked && "cursor-not-allowed"
+        )}>
+            <CardContent className="p-4 flex items-center gap-4">
+                    {isCompleted ? (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/20 text-green-500">
+                        <CheckCircle className="h-6 w-6" />
+                        </div>
+                    ) : isCurrent ? (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary animate-pulse">
+                            <Play className="h-6 w-6" />
+                    </div>
+                    ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                        <Lock className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                    )}
+                <div>
+                    <p className={cn("font-semibold", isCompleted && "text-muted-foreground line-through")}>Dia {day}</p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
+    if (isLocked) {
+        return (
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <div className="cursor-pointer">{cardContent}</div>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Calma, Fera!</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Um passo de cada vez. Foco total no treino de hoje e logo você desbloqueará este desafio. #PAMBORA
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction>Entendido!</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        );
+    }
+
+    return (
+        <Link href={`/treinos/${day}`} passHref>
+            {cardContent}
+        </Link>
+    );
+}
+
 
 export default function TreinosPage() {
   const { answers, isWorkoutCompleted } = useQuiz();
@@ -86,36 +154,19 @@ export default function TreinosPage() {
                 <h2 className="text-xl font-bold mb-4">Seu Histórico de Treinos</h2>
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {dailyWorkouts.map((workout) => {
-                        const completed = isWorkoutCompleted(workout.day);
+                        const isCompleted = isWorkoutCompleted(workout.day);
                         const isCurrent = workout.day === currentDay;
+                        // A day is locked if it's not completed, not the current day, AND it's in the future
+                        const isLocked = !isCompleted && !isCurrent && workout.day > currentDay;
 
                         return (
-                            <Link key={workout.day} href={`/treinos/${workout.day}`} passHref>
-                                <Card className={cn(
-                                    "group relative overflow-hidden transition-all duration-300 h-full hover:bg-muted/50",
-                                    isCurrent && "border-primary ring-2 ring-primary",
-                                    completed && "bg-muted/50 border-dashed"
-                                )}>
-                                    <CardContent className="p-4 flex items-center gap-4">
-                                         {completed ? (
-                                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/20 text-green-500">
-                                                <CheckCircle className="h-6 w-6" />
-                                             </div>
-                                         ) : isCurrent ? (
-                                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary animate-pulse">
-                                                 <Play className="h-6 w-6" />
-                                            </div>
-                                         ) : (
-                                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                                                <Lock className="h-5 w-5 text-muted-foreground" />
-                                             </div>
-                                         )}
-                                        <div>
-                                            <p className={cn("font-semibold", completed && "text-muted-foreground line-through")}>Dia {workout.day}</p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </Link>
+                            <WorkoutCard
+                                key={workout.day}
+                                day={workout.day}
+                                isCompleted={isCompleted}
+                                isCurrent={isCurrent}
+                                isLocked={isLocked}
+                            />
                         )
                     })}
                 </div>
@@ -125,3 +176,4 @@ export default function TreinosPage() {
     </div>
   );
 }
+
