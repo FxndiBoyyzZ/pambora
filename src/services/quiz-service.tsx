@@ -40,7 +40,6 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = useCallback(async (user: User) => {
-    // No need to set loading here, it's handled by the auth state change
     try {
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
@@ -60,11 +59,14 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         await fetchUserData(currentUser);
         setLoading(false);
       } else {
-        // Handle case where user signs out
+        // User is signed out, reset state
         setUser(null);
         setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
-        // Attempt to sign in anonymously again after sign out, to keep session alive for quizzes etc.
+        // Attempt to sign in anonymously again after sign out.
+        // Set loading to true while this happens.
+        setLoading(true);
         try {
+            // signInAnonymously will trigger onAuthStateChanged again
             await signInAnonymously(auth);
         } catch (error) {
             console.error("Firebase anonymous sign-in error after sign out:", error);
@@ -72,23 +74,38 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     });
-    
-    // Initial check for anonymous user
-    if (!auth.currentUser) {
-        signInAnonymously(auth).catch(error => {
-             console.error("Firebase initial anonymous sign-in error:", error);
-             setLoading(false); // Stop loading on error
-        });
-    }
 
     return () => unsubscribe();
   }, [fetchUserData]);
+
+
+  useEffect(() => {
+    // This effect ensures we have an anonymous user on initial load if no one is logged in.
+    const bootstrapAuth = async () => {
+        if (!auth.currentUser) {
+            try {
+                // onAuthStateChanged will handle setting user and loading state
+                await signInAnonymously(auth);
+            } catch (error) {
+                 console.error("Firebase initial anonymous sign-in error:", error);
+                 setLoading(false); // Stop loading on error
+            }
+        } else {
+            // If there's already a user, onAuthStateChanged should have already run.
+            // But as a fallback, we ensure loading is false.
+             if(user) {
+                setLoading(false);
+             }
+        }
+    };
+    bootstrapAuth();
+  }, [user]);
+
 
   const updateFirestore = async (uid: string, data: Partial<QuizAnswers>) => {
     if (!uid) return;
     try {
       const userDocRef = doc(db, 'users', uid);
-      // Use setDoc with merge:true to create or update the document.
       await setDoc(userDocRef, data, { merge: true });
     } catch (error) {
         console.error("Failed to update user data in Firestore", error);
@@ -109,7 +126,6 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     const defaultState = { completedWorkouts: [], weight: 60, height: 160 };
     setAnswers(defaultState);
     if (user) {
-      // Clear the document in Firestore
       await setDoc(doc(db, 'users', user.uid), defaultState);
     }
   };
@@ -147,9 +163,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
                 const userCredential = await signInWithEmailAndPassword(auth, email, tempPassword);
                 const existingUser = userCredential.user;
                 setUser(existingUser);
-                // Update user data in firestore with the new info from the form
                 await updateFirestore(existingUser.uid, { ...answers, ...newUserData });
-                // Fetch all user data to update the state
                 await fetchUserData(existingUser);
             } catch (signInError) {
                  console.error("Error signing in existing user:", signInError);
@@ -157,7 +171,6 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
             }
         } else if (error.code === 'auth/operation-not-allowed') {
             console.error("Sign-up with Email/Password is not enabled in Firebase. Please enable it in the console.");
-            // We can alert the user here or handle it gracefully.
             alert("O serviço de cadastro está temporariamente indisponível. Por favor, tente mais tarde.");
             throw error;
         } else {
