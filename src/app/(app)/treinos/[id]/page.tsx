@@ -7,47 +7,68 @@ import { Button } from "@/components/ui/button";
 import { useQuiz } from '@/services/quiz-service';
 import { useToast } from '@/hooks/use-toast';
 
-const workouts = Array.from({ length: 21 }, (_, i) => ({
-  id: i + 1,
-  day: i + 1,
-  title: `Treino do Dia ${i + 1}`,
-  description: i < 3 ? 'HIIT de 20 min' : 'Treino de Força',
-  duration: i < 3 ? '20 minutos' : '45 minutos',
-  unlocked: i < 3,
-  videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ", // Placeholder video
-  exercises: [
-    { name: "Agachamento", reps: "3x12" },
-    { name: "Flexão de Braço", reps: "3x10" },
-    { name: "Prancha", reps: "3x30s" },
-    { name: "Polichinelo", reps: "3x45s" },
-    { name: "Abdominal", reps: "3x20" },
-  ]
-}));
-
-// This can be removed if we have a better way to generate static params
-// But for now, we keep it to pre-render the pages
-// export async function generateStaticParams() {
-//     return workouts.map((workout) => ({
-//       id: workout.id.toString(),
-//     }))
-// }
+// Base Workouts that will be cycled through
+const baseWorkouts = [
+  {
+    id: 1,
+    title: 'Treino HIIT Intenso',
+    description: 'Queima máxima de calorias em 20 minutos.',
+    duration: '20 minutos',
+    videoUrl: "https://www.youtube.com/embed/nJoG-iGk_hY", 
+    exercises: [
+      { name: "Burpees", reps: "3x10" },
+      { name: "Agachamento com Salto", reps: "3x15" },
+      { name: "Alpinista", reps: "3x30s" },
+      { name: "Polichinelo", reps: "3x45s" },
+    ]
+  },
+  {
+    id: 2,
+    title: 'Força Total',
+    description: 'Foco em construção muscular e definição.',
+    duration: '45 minutos',
+    videoUrl: "https://www.youtube.com/embed/545K3byoJgE", 
+    exercises: [
+      { name: "Agachamento", reps: "3x12" },
+      { name: "Flexão de Braço", reps: "3x10" },
+      { name: "Remada com Halter", reps: "3x12" },
+      { name: "Prancha", reps: "3x45s" },
+    ]
+  },
+   {
+    id: 3,
+    title: 'Mobilidade e Core',
+    description: 'Melhore sua flexibilidade e fortaleça seu abdômen.',
+    duration: '30 minutos',
+    videoUrl: "https://www.youtube.com/embed/jyV-cIC8xNo",
+    exercises: [
+      { name: "Prancha Lateral", reps: "3x30s cada lado" },
+      { name: "Ponte de Glúteos", reps: "3x15" },
+      { name: "Abdominal Remador", reps: "3x20" },
+      { name: "Gato-Camelo", reps: "3x10" },
+    ]
+  }
+];
 
 export default function TreinoDetailPage({ params }: { params: { id: string } }) {
   const { toast } = useToast();
-  const workoutId = parseInt(params.id, 10);
-  const workout = workouts.find(w => w.id === workoutId);
+  const day = parseInt(params.id, 10);
+  
+  // Determine which workout to show based on the day
+  const workout = baseWorkouts[(day - 1) % baseWorkouts.length];
+  
   const { toggleWorkoutCompleted, isWorkoutCompleted } = useQuiz();
-  const isCompleted = isWorkoutCompleted(workoutId);
+  const isCompleted = isWorkoutCompleted(day);
 
   const handleToggleComplete = () => {
-    toggleWorkoutCompleted(workoutId);
+    toggleWorkoutCompleted(day);
     toast({
         title: isCompleted ? "Treino desmarcado!" : "Parabéns!",
-        description: isCompleted ? "O treino não está mais marcado como concluído." : `Você concluiu o Treino do Dia ${workout?.day}!`,
+        description: isCompleted ? "O treino não está mais marcado como concluído." : `Você concluiu o Treino do Dia ${day}!`,
     })
   }
 
-  if (!workout) {
+  if (!workout || !day) {
     return (
       <div className="flex items-center justify-center h-full">
         <p>Treino não encontrado.</p>
@@ -58,8 +79,8 @@ export default function TreinoDetailPage({ params }: { params: { id: string } })
   return (
     <div className="flex flex-col h-full">
         <header className="p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
-            <h1 className="text-2xl font-bold font-headline text-foreground">{workout.title}</h1>
-            <p className="text-muted-foreground">Dia {workout.day}</p>
+            <h1 className="text-2xl font-bold font-headline text-foreground">Treino do Dia {day}</h1>
+            <p className="text-muted-foreground">{workout.title}</p>
         </header>
 
         <div className="flex-grow p-4 md:p-6 lg:p-8 space-y-6">
