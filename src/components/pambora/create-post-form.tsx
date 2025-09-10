@@ -112,8 +112,8 @@ export function CreatePostForm() {
                     </div>
                 )}
             </CardContent>
-            <CardFooter className='flex-col-reverse sm:flex-row sm:justify-between items-center w-full border-t border-border pt-4'>
-                <div className='flex items-center gap-2 mt-2 sm:mt-0'>
+            <CardFooter className='flex justify-between items-center w-full border-t border-border pt-4'>
+                <div>
                      <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} aria-label="Adicionar Foto/Vídeo">
                         <ImageIcon className="text-green-500 h-6 w-6" />
                     </Button>
@@ -125,7 +125,7 @@ export function CreatePostForm() {
                         onChange={handleFileChange}
                     />
                 </div>
-                <Button onClick={handlePost} disabled={loading} className='w-full sm:w-auto'>
+                <Button onClick={handlePost} disabled={loading} className='w-full max-w-xs sm:w-auto'>
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                     Publicar
                 </Button>
