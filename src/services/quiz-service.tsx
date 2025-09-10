@@ -40,7 +40,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = useCallback(async (user: User) => {
-    setLoading(true);
+    // No need to set loading here, it's handled by the auth state change
     try {
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
@@ -50,31 +50,36 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Failed to fetch user data from Firestore", error);
-    } finally {
-        setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        await fetchUserData(user);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        await fetchUserData(currentUser);
+        setLoading(false);
       } else {
-        try {
-            await signInAnonymously(auth);
-        } catch (error: any) {
-            if (error.code === 'auth/operation-not-allowed' || error.code === 'auth/configuration-not-found') {
-                console.error("Firebase Anonymous Sign-in is not enabled. Please enable it in the Firebase console for the app to work correctly.");
-            } else {
-                 console.error("Firebase anonymous sign-in error:", error);
-            }
-        }
+        // Handle case where user signs out
         setUser(null);
         setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
-        setLoading(false);
+        // Attempt to sign in anonymously again after sign out, to keep session alive for quizzes etc.
+        try {
+            await signInAnonymously(auth);
+        } catch (error) {
+            console.error("Firebase anonymous sign-in error after sign out:", error);
+            setLoading(false); // Stop loading even if anonymous sign-in fails
+        }
       }
     });
+    
+    // Initial check for anonymous user
+    if (!auth.currentUser) {
+        signInAnonymously(auth).catch(error => {
+             console.error("Firebase initial anonymous sign-in error:", error);
+             setLoading(false); // Stop loading on error
+        });
+    }
 
     return () => unsubscribe();
   }, [fetchUserData]);
@@ -133,7 +138,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
         const newUser = userCredential.user;
         setUser(newUser);
-        const initialData = { ...answers, ...newUserData, createdAt: new Date() };
+        const initialData = { ...answers, ...newUserData, createdAt: serverTimestamp() };
         await setDoc(doc(db, 'users', newUser.uid), initialData);
         setAnswers(initialData);
     } catch (error: any) {
