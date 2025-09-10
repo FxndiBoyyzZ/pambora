@@ -3,30 +3,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Regras para a coleção 'users'
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users can only read and write their own document.
     match /users/{userId} {
-      // Um usuário só pode ler ou escrever em seu próprio documento.
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth.uid == userId;
     }
 
-    // Regras para a coleção 'posts'
+    // Any authenticated user can read the list of posts or a single post.
+    // Any authenticated user can create a post.
+    // Only the author of a post can update or delete it.
     match /posts/{postId} {
-      // Qualquer usuário autenticado pode ler (get) um post individual.
-      allow get: if request.auth != null;
-      // Apenas o autor do post pode atualizá-lo ou excluí-lo.
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-    }
-    
-    // Regras para a lista da coleção 'posts'
-    match /posts/{document=**} {
-        // Qualquer usuário autenticado pode listar (list) posts e criar (create) novos posts.
-        allow list, create: if request.auth != null;
+      allow list, get: if request.auth.uid != null;
+      allow create: if request.auth.uid != null
+                    && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth.uid == resource.data.userId;
     }
 
-    // Regras para a coleção 'config'
-    match /config/{docId} {
-      // Qualquer usuário autenticado pode ler a configuração.
-      allow get: if request.auth != null;
+    // The quiz configuration can be read by any authenticated user.
+    // Only admins (not implemented in rules yet, so locked down) can write.
+    match /config/quiz {
+      allow get: if request.auth.uid != null;
+      allow write: if false;
     }
   }
 }

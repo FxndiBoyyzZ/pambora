@@ -8,49 +8,65 @@ import Image from "next/image";
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-export function PostCard({ post }: { post: any }) {
+// A simple utility to format time since post
+const formatTimestamp = (timestamp: any): string => {
+    if (!timestamp?.toDate) {
+        return 'agora mesmo';
+    }
+    try {
+        return formatDistanceToNow(timestamp.toDate(), { addSuffix: true, locale: ptBR });
+    } catch (error) {
+        console.error("Error formatting date:", error);
+        return 'algum tempo atrás';
+    }
+}
 
-    const postTimestamp = post.timestamp?.toDate ? formatDistanceToNow(post.timestamp.toDate(), { addSuffix: true, locale: ptBR }) : 'agora';
+export function PostCard({ post }: { post: any }) {
+    // Destructure with default values for safety
+    const { author, text, mediaUrl, timestamp, likes, commentsCount } = post;
+    const { name = 'Usuário', avatarUrl = '' } = author || {};
+    const postTimestamp = formatTimestamp(timestamp);
 
     return (
         <Card className="overflow-hidden">
             <CardHeader className="flex flex-row items-center gap-3 p-4">
                 <Avatar>
-                    <AvatarImage src={post.user.avatar} alt={post.user.name} />
-                    <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={avatarUrl} alt={name} />
+                    <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="flex-grow">
-                    <p className="font-semibold">{post.user.name}</p>
-                    <p className="text-sm text-muted-foreground">{post.user.handle} • {postTimestamp}</p>
+                    <p className="font-semibold">{name}</p>
+                    <p className="text-sm text-muted-foreground">{postTimestamp}</p>
                 </div>
                 <Button variant="ghost" size="icon">
                     <MoreHorizontal className="h-5 w-5" />
                 </Button>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-                <p className="mb-4 whitespace-pre-wrap">{post.text}</p>
-                {post.mediaUrl && (
+                {text && <p className="mb-4 whitespace-pre-wrap">{text}</p>}
+                {mediaUrl && (
                     <div className="aspect-video relative rounded-lg overflow-hidden border border-border">
-                        <Image src={post.mediaUrl} alt="Post image" layout="fill" objectFit="cover" data-ai-hint={post.imageHint} />
+                        <Image src={mediaUrl} alt="Conteúdo da publicação" layout="fill" objectFit="cover" />
                     </div>
                 )}
             </CardContent>
-            {/* Likes and comments count */}
+            
             <div className="px-4 pb-2 flex justify-between text-sm text-muted-foreground">
-                <span>{post.likes || 0} curtidas</span>
-                <span>{post.comments || 0} comentários</span>
+                <span>{likes || 0} curtidas</span>
+                <span>{commentsCount || 0} comentários</span>
             </div>
             <hr className="mx-4 border-border" />
+
             <CardFooter className="flex justify-around items-center p-1">
-                 <Button variant="ghost" className="flex-1 text-muted-foreground hover:bg-accent">
+                 <Button variant="ghost" className="flex-1 text-muted-foreground hover:bg-accent hover:text-primary">
                     <Heart className="mr-2" />
                     Curtir
                 </Button>
-                <Button variant="ghost" className="flex-1 text-muted-foreground hover:bg-accent">
+                <Button variant="ghost" className="flex-1 text-muted-foreground hover:bg-accent hover:text-primary">
                     <MessageCircle className="mr-2" />
                     Comentar
                 </Button>
-                <Button variant="ghost" className="flex-1 text-muted-foreground hover:bg-accent">
+                <Button variant="ghost" className="flex-1 text-muted-foreground hover:bg-accent hover:text-primary">
                     <Send className="mr-2" />
                     Compartilhar
                 </Button>

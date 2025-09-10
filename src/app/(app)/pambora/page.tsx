@@ -1,51 +1,73 @@
 // src/app/(app)/pambora/page.tsx
 'use client';
 import * as React from 'react';
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "@/components/pambora/post-card";
+import { CreatePostForm } from "@/components/pambora/create-post-form";
+import { useQuiz } from '@/services/quiz-service';
 import { db } from '@/services/firebase';
 import { collection, query, orderBy, onSnapshot, DocumentData } from 'firebase/firestore';
-import { CreatePostForm } from '@/components/pambora/create-post-form';
-import { useQuiz } from '@/services/quiz-service';
 import { Loader2 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PamboraPage() {
   const { user, loading: authLoading } = useQuiz();
   const [posts, setPosts] = React.useState<DocumentData[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [dataLoading, setDataLoading] = React.useState(true);
 
   React.useEffect(() => {
-    // Do not attempt to fetch data until authentication is resolved.
+    // Wait until the authentication state is resolved.
     if (authLoading) {
-      setLoading(true);
       return;
     }
 
-    // Only proceed if we have a confirmed, authenticated user.
+    // If there is no authenticated user, do not attempt to fetch data.
     if (!user) {
-      setLoading(false);
-      // In a real scenario, the layout would redirect, but this is a safeguard.
+      setDataLoading(false);
       return;
     }
 
-    // Now it's safe to create the query.
+    // User is authenticated, it's safe to query Firestore.
     const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+    
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const postsData: DocumentData[] = [];
       querySnapshot.forEach((doc) => {
         postsData.push({ id: doc.id, ...doc.data() });
       });
       setPosts(postsData);
-      setLoading(false);
+      setDataLoading(false);
     }, (error) => {
-      console.error("Error fetching posts:", error);
-      setLoading(false);
+      console.error("Error fetching posts from Firestore:", error);
+      // This is where a "Missing or insufficient permissions" error would be caught.
+      setDataLoading(false);
     });
 
-    // Cleanup the listener when the component unmounts or dependencies change.
+    // Cleanup the Firestore listener when the component unmounts
+    // or when the user/auth state changes.
     return () => unsubscribe();
-  }, [user, authLoading]); // Depend directly on user and authLoading
+  }, [user, authLoading]); // Re-run effect if user or authLoading state changes.
+
+  const renderContent = () => {
+    if (authLoading || dataLoading) {
+      return (
+        <div className="text-center py-12 bg-card rounded-lg border border-border">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-lg font-semibold text-muted-foreground mt-4">Carregando feed #PAMBORA...</p>
+        </div>
+      );
+    }
+
+    if (posts.length > 0) {
+      return posts.map(post => <PostCard key={post.id} post={post} />);
+    }
+
+    return (
+      <div className="text-center py-12 bg-card rounded-lg border border-border">
+        <p className="text-lg font-semibold text-muted-foreground">Ainda não há publicações.</p>
+        <p className="text-muted-foreground">Que tal ser o primeiro a postar e inspirar a comunidade?</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -55,10 +77,8 @@ export default function PamboraPage() {
       <div className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto">
         <div className="max-w-2xl mx-auto w-full space-y-6">
             
-            {/* Create Post Form */}
             <CreatePostForm />
 
-            {/* Filter Tabs */}
             <Tabs defaultValue="all" className="w-full">
                 <TabsList className="w-full">
                     <TabsTrigger value="all" className="flex-1">Feed</TabsTrigger>
@@ -68,21 +88,8 @@ export default function PamboraPage() {
                 </TabsList>
             </Tabs>
 
-            {/* Posts */}
             <div className="space-y-6">
-              {loading ? (
-                 <div className="text-center py-12 bg-card rounded-lg border border-border">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-                  <p className="text-lg font-semibold text-muted-foreground mt-4">Carregando feed...</p>
-                </div>
-              ) : posts.length > 0 ? (
-                posts.map(post => <PostCard key={post.id} post={post} />)
-              ) : (
-                <div className="text-center py-12 bg-card rounded-lg border border-border">
-                  <p className="text-lg font-semibold text-muted-foreground">Ainda não há publicações.</p>
-                  <p className="text-muted-foreground">Que tal ser o primeiro a postar?</p>
-                </div>
-              )}
+              {renderContent()}
             </div>
         </div>
       </div>
