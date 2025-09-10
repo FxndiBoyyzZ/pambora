@@ -3,29 +3,36 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can only read and write to their own documents
+    // Helper functions
+    function isSignedIn() {
+      return request.auth.uid != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Users: Can only read/write their own data
     match /users/{userId} {
-      allow read, update, delete: if request.auth.uid == userId;
-      allow create: if request.auth.uid != null;
+      allow read, write: if isSignedIn() && isOwner(userId);
     }
 
-    // Posts can be read by any authenticated user.
-    // Posts can only be created, updated, or deleted by the user who owns them.
+    // Config: Allow any authenticated user to read config files (like the quiz)
+    match /config/{docId} {
+       allow read: if isSignedIn();
+       // Write access should be restricted to admins in a real app
+       allow write: if isSignedIn(); 
+    }
+
+    // Posts: Allow reads for all, but writes only for owners
     match /posts/{postId} {
-      allow read: if request.auth.uid != null;
-      allow create: if request.auth.uid != null;
-      allow update, delete: if request.auth.uid == resource.data.userId;
+      allow read, create: if isSignedIn();
+      allow update, delete: if isSignedIn() && isOwner(resource.data.userId);
     }
-     // Allow authenticated users to list posts for the feed
+    
+    // Allow list on posts collection for the main feed
     match /posts {
-        allow list: if request.auth.uid != null;
-    }
-
-    // Quiz config can be read by anyone (for the quiz to work)
-    // but only written to by authenticated users (for the admin page)
-    match /config/{configId} {
-        allow read: if true;
-        allow write: if request.auth.uid != null;
+        allow list: if isSignedIn();
     }
   }
 }

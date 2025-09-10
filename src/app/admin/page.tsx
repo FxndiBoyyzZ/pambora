@@ -10,9 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadVideo } from './actions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db, auth } from '@/services/firebase';
+import { db } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { onAuthStateChanged } from 'firebase/auth';
+import { useQuiz } from '@/services/quiz-service'; // Import useQuiz
 
 export const dynamic = 'force-dynamic';
 
@@ -183,10 +183,10 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
 
 export default function AdminDashboard() {
   const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
   const { toast } = useToast();
+  const { user, loading: authLoading } = useQuiz(); // Use hook
 
   React.useEffect(() => {
     const fetchQuizConfig = async () => {
@@ -198,7 +198,7 @@ export default function AdminDashboard() {
                 setQuizSteps(configDoc.data().steps);
             } else {
                 const { quizSteps: initialQuizSteps } = await import('@/app/quiz/quiz-config');
-                await setDoc(configDocRef, { steps: initialQuizSteps });
+                // Don't set doc here, let admin save it
                 setQuizSteps(initialQuizSteps);
             }
         } catch (error) {
@@ -213,19 +213,14 @@ export default function AdminDashboard() {
         }
     };
     
-    // Check auth state before fetching
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-        if (user) {
-            setIsAuthenticated(true);
-            fetchQuizConfig();
-        } else {
-            setIsAuthenticated(false);
-            setIsLoading(false);
-        }
-    });
-
-    return () => unsubscribe();
-  }, [toast]);
+    // Only fetch if user is authenticated
+    if (user) {
+        fetchQuizConfig();
+    } else if (!authLoading) {
+        // If not loading and no user, stop loading spinner.
+        setIsLoading(false);
+    }
+  }, [user, authLoading, toast]);
 
 
   const handleStepChange = (index: number, newStep: QuizStep) => {
@@ -236,7 +231,7 @@ export default function AdminDashboard() {
   }
 
   const handleSaveChanges = async () => {
-    if (!quizSteps || !isAuthenticated) {
+    if (!quizSteps || !user) {
         toast({
             variant: 'destructive',
             title: 'Não autenticado',
@@ -265,7 +260,7 @@ export default function AdminDashboard() {
   }
 
   const renderContent = () => {
-    if (isLoading || isAuthenticated === null) {
+    if (isLoading || authLoading) {
       return (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -273,11 +268,11 @@ export default function AdminDashboard() {
       );
     }
 
-    if (!isAuthenticated) {
+    if (!user) {
       return (
         <div className="text-center py-12 text-muted-foreground">
           <p className="text-lg font-semibold">Acesso Negado</p>
-          <p>Você precisa estar autenticado para gerenciar o quiz.</p>
+          <p>Esta é uma área protegida. Por favor, autentique-se para continuar.</p>
         </div>
       );
     }
@@ -326,7 +321,7 @@ export default function AdminDashboard() {
             </h1>
             <p className="text-muted-foreground">Arraste e solte para reordenar as etapas (funcionalidade em breve).</p>
         </div>
-        <Button onClick={handleSaveChanges} disabled={isSaving || isLoading || !isAuthenticated}>
+        <Button onClick={handleSaveChanges} disabled={isSaving || isLoading || !user}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Salvar Alterações
         </Button>
