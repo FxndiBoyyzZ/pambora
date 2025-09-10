@@ -1,19 +1,28 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // As regras de usuário permitem que alguém leia e escreva apenas em seus próprios dados.
+
+    // Allow users to read/write their own data, but not others'
     match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
+      allow read, update, delete: if request.auth.uid == userId;
+      allow create: if request.auth.uid != null;
     }
 
-    // Qualquer usuário autenticado pode ler e criar posts.
-    // Apenas o autor original pode atualizar ou excluir seu próprio post.
+    // Allow anyone authenticated to list the posts collection for the feed
+    match /posts {
+      allow list: if request.auth.uid != null;
+    }
+    
+    // Allow authenticated users to read and create posts.
+    // Only allow users to update/delete their own posts.
     match /posts/{postId} {
       allow read, create: if request.auth.uid != null;
       allow update, delete: if request.auth.uid == resource.data.userId;
     }
-    
+
+    // Protect the quiz configuration so it's only editable from the server/console
+    match /config/{docId} {
+       allow read, write: if false; 
+    }
   }
 }
