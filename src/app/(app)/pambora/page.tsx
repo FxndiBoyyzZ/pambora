@@ -1,4 +1,3 @@
-
 // src/app/(app)/pambora/page.tsx
 'use client';
 import * as React from 'react';
@@ -17,19 +16,21 @@ export default function PamboraPage() {
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    // We must wait for the auth state to be resolved.
+    // Exit early if auth is still loading.
     if (authLoading) {
+      setDataLoading(true);
       return;
     }
-    
-    // If there is no authenticated user, we can't (and shouldn't) fetch data.
+
+    // If there is no authenticated user after loading, set error.
     if (!user) {
       setDataLoading(false);
-      setError("Você precisa estar autenticado para ver o feed.");
+      setError("Você precisa estar autenticado para ver o feed. Por favor, reinicie o quiz ou faça login.");
       return;
     }
     
     // At this point, we have an authenticated user. It's safe to query Firestore.
+    setDataLoading(true); // Set loading true before starting the query
     const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -51,7 +52,7 @@ export default function PamboraPage() {
   }, [user, authLoading]);
 
   const renderContent = () => {
-    if (authLoading || dataLoading) {
+    if (dataLoading) { // Use dataLoading state which depends on authLoading
       return (
         <div className="text-center py-12 bg-card rounded-lg border border-border">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
