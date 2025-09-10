@@ -1,3 +1,4 @@
+
 'use client';
 import type { ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -9,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { QuizProvider, useQuiz } from '@/services/quiz-service';
 import { useEffect } from 'react';
+import Image from 'next/image';
 
 const navItems = [
   { href: '/treinos', label: 'Treinos', icon: Dumbbell },
@@ -24,7 +26,7 @@ function DesktopSidebar() {
   const userHandle = answers.name ? `@${answers.name.split(' ')[0].toLowerCase()}` : '@usuario';
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-background p-4">
+    <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-background/80 backdrop-blur-sm p-4 z-10">
       <div className="p-4 mb-4">
         <Logo />
       </div>
@@ -60,7 +62,7 @@ function DesktopSidebar() {
 function MobileBottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border p-2 flex justify-around">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm border-t border-border p-2 flex justify-around z-20">
       {navItems.map((item) => (
         <Link
           key={item.href}
@@ -99,10 +101,21 @@ function AppLayoutContent({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <DesktopSidebar />
-      <main className="flex-1 pb-20 lg:pb-0">{children}</main>
-      <MobileBottomNav />
+    <div className="relative min-h-screen w-full">
+        <Image
+            src="/IMG_8326.JPG"
+            alt="Fundo"
+            fill
+            className="object-cover opacity-10 z-0"
+            data-ai-hint="fitness background"
+        />
+        <div className="relative z-10 flex min-h-screen bg-transparent">
+            <DesktopSidebar />
+            <main className="flex-1 pb-20 lg:pb-0 bg-background/80 backdrop-blur-sm lg:bg-transparent lg:backdrop-blur-none">
+                {children}
+            </main>
+            <MobileBottomNav />
+        </div>
     </div>
   );
 }
