@@ -4,7 +4,7 @@ import * as React from 'react';
 import { PostCard } from "@/components/pambora/post-card";
 import { CreatePostForm } from "@/components/pambora/create-post-form";
 import { db } from '@/services/firebase';
-import { collection, query, orderBy, onSnapshot, DocumentData, Unsubscribe } from 'firebase/firestore';
+import { collection, query, onSnapshot, DocumentData } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -17,13 +17,22 @@ export default function PamboraPage() {
     setDataLoading(true);
     setError(null);
     
-    const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+    // Query without server-side ordering to avoid needing a composite index for public queries.
+    const q = query(collection(db, "posts"));
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const postsData: DocumentData[] = [];
       querySnapshot.forEach((doc) => {
         postsData.push({ id: doc.id, ...doc.data() });
       });
+
+      // Sort posts on the client-side.
+      postsData.sort((a, b) => {
+        const dateA = a.timestamp?.toDate() || 0;
+        const dateB = b.timestamp?.toDate() || 0;
+        return dateB - dateA;
+      });
+
       setPosts(postsData);
       setDataLoading(false);
     }, (err) => {
@@ -32,7 +41,7 @@ export default function PamboraPage() {
       setDataLoading(false);
     });
 
-    // Cleanup a assinatura quando o componente for desmontado.
+    // Cleanup subscription on unmount.
     return () => unsubscribe();
   }, []);
 

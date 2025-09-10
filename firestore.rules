@@ -1,18 +1,15 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Regra para a coleção de usuários.
-    // Apenas o usuário autenticado pode ler ou escrever em seu próprio documento.
+    // Users can only read and write to their own document.
     match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Regras para a coleção de posts.
-    // Qualquer pessoa (autenticada ou não) pode ler e escrever posts.
-    match /posts/{document=**} {
+    // Posts are public for reads and writes as requested.
+    match /posts/{postId} {
       allow read, write;
     }
   }
