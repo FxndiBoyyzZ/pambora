@@ -3,32 +3,17 @@
 import * as React from 'react';
 import { PostCard } from "@/components/pambora/post-card";
 import { CreatePostForm } from "@/components/pambora/create-post-form";
-import { useQuiz } from '@/services/quiz-service';
 import { db } from '@/services/firebase';
 import { collection, query, orderBy, onSnapshot, DocumentData, Unsubscribe } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PamboraPage() {
-  const { user, loading: authLoading } = useQuiz();
   const [posts, setPosts] = React.useState<DocumentData[]>([]);
   const [dataLoading, setDataLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    // Do not attempt to fetch data if auth is loading or there's no user.
-    if (authLoading) {
-      setDataLoading(true);
-      return;
-    }
-
-    if (!user) {
-      setDataLoading(false);
-      setError("Você precisa estar autenticado para ver o feed. Por favor, reinicie o quiz ou faça login.");
-      return;
-    }
-    
-    // At this point, we have an authenticated user. It's safe to query Firestore.
     setDataLoading(true);
     let unsubscribe: Unsubscribe | undefined;
     
@@ -42,10 +27,10 @@ export default function PamboraPage() {
         });
         setPosts(postsData);
         setDataLoading(false);
-        setError(null); // Clear any previous errors on successful fetch
+        setError(null);
       }, (err) => {
         console.error("Firestore snapshot error:", err);
-        setError("Ocorreu um erro ao carregar o feed. Verifique as permissões do Firestore e sua conexão.");
+        setError("Ocorreu um erro ao carregar o feed. Por favor, tente recarregar a página.");
         setDataLoading(false);
       });
 
@@ -55,13 +40,13 @@ export default function PamboraPage() {
        setDataLoading(false);
     }
 
-    // Cleanup the listener when the component unmounts or dependencies change.
+    // Cleanup the listener when the component unmounts.
     return () => {
       if (unsubscribe) {
         unsubscribe();
       }
     };
-  }, [user, authLoading]);
+  }, []);
 
   const renderContent = () => {
     if (dataLoading) {
@@ -76,7 +61,7 @@ export default function PamboraPage() {
     if (error) {
         return (
              <div className="text-center py-12 bg-destructive/10 text-destructive-foreground rounded-lg border border-destructive p-4">
-                <p className="text-lg font-semibold">Erro de Permissão</p>
+                <p className="text-lg font-semibold">Erro ao Carregar</p>
                 <p className="text-sm">{error}</p>
              </div>
         )

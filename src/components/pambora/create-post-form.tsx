@@ -1,4 +1,3 @@
-
 // src/components/pambora/create-post-form.tsx
 'use client';
 import * as React from 'react';
@@ -11,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { storage, db } from '@/services/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Image as ImageIcon, Loader2, Send, XCircle } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Send, XCircle, User } from 'lucide-react';
 import Image from 'next/image';
 
 export function CreatePostForm() {
@@ -44,14 +43,6 @@ export function CreatePostForm() {
     };
 
     const handlePost = async () => {
-        if (!user) {
-            toast({ 
-                variant: 'destructive', 
-                title: 'Erro de Autenticação', 
-                description: 'Você precisa estar logado para postar.' 
-            });
-            return;
-        }
         if (!text.trim() && !mediaFile) {
             toast({ 
                 variant: 'destructive', 
@@ -68,13 +59,13 @@ export function CreatePostForm() {
 
             // 1. Upload media if it exists
             if (mediaFile) {
-                const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}-${mediaFile.name}`);
+                const storageRef = ref(storage, `posts/${user?.uid || 'anonymous'}/${Date.now()}-${mediaFile.name}`);
                 const snapshot = await uploadBytes(storageRef, mediaFile);
                 mediaUrl = await getDownloadURL(snapshot.ref);
                 mediaType = mediaFile.type.startsWith('video') ? 'video' : 'image';
             }
 
-            // 2. Prepare the post object with all required fields for security rules
+            // 2. Prepare the post object
             const newPost = {
                 text: text,
                 mediaUrl: mediaUrl,
@@ -82,12 +73,12 @@ export function CreatePostForm() {
                 timestamp: serverTimestamp(),
                 likes: 0,
                 commentsCount: 0,
-                // This userId is CRITICAL for the security rules to work
-                userId: user.uid, 
+                // userId is critical for security rules (edit/delete)
+                userId: user?.uid || null, 
                 // Denormalized user data for easy display
                 author: {
-                    name: answers.name || 'Usuário Anônimo',
-                    avatarUrl: answers.profilePictureUrl || null,
+                    name: user ? (answers.name || 'Usuário') : 'Visitante Anônimo',
+                    avatarUrl: user ? (answers.profilePictureUrl || null) : null,
                 },
             };
 
@@ -102,34 +93,32 @@ export function CreatePostForm() {
 
         } catch (error) {
             console.error("Error creating post:", error);
-            const firebaseError = error as { code?: string };
-            
-            let description = 'Não foi possível publicar seu post. Por favor, tente novamente.';
-            if (firebaseError.code === 'permission-denied') {
-                 description = 'Você não tem permissão para publicar. Verifique as regras do Firestore e se você está autenticado.';
-            }
-
             toast({ 
                 variant: 'destructive', 
                 title: 'Erro ao Publicar', 
-                description: description
+                description: 'Não foi possível publicar seu post. Por favor, tente novamente.'
             });
         } finally {
             setIsSubmitting(false);
         }
     };
+    
+    const authorName = user ? (answers.name?.split(' ')[0] || 'Você') : 'Visitante';
+    const authorAvatar = user ? answers.profilePictureUrl : '';
+    const authorFallback = user ? (answers.name?.charAt(0).toUpperCase() || 'U') : <User className="h-5 w-5" />;
+
 
     return (
         <Card>
             <CardContent className="p-4">
                  <div className="flex items-start gap-4">
                     <Avatar>
-                        <AvatarImage src={answers.profilePictureUrl} alt={answers.name} />
-                        <AvatarFallback>{answers.name ? answers.name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
+                        <AvatarImage src={authorAvatar} alt={answers.name} />
+                        <AvatarFallback>{authorFallback}</AvatarFallback>
                     </Avatar>
                     <div className='w-full'>
                         <Textarea
-                            placeholder={`No que você está pensando, ${answers.name?.split(' ')[0] || ''}?`}
+                            placeholder={`No que você está pensando, ${authorName}?`}
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                             className="min-h-[100px] resize-none border-none focus-visible:ring-0 shadow-none p-0"
