@@ -3,8 +3,7 @@
 import * as React from 'react';
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ImageIcon, MessageSquareText } from "lucide-react";
-import { ContentAssistantDialog } from "@/components/pambora/content-assistant-dialog";
+import { ImageIcon } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "@/components/pambora/post-card";
 import { useQuiz } from "@/services/quiz-service";
@@ -44,26 +43,21 @@ export default function PamboraPage() {
 
             {/* Create Post Section */}
             <div className="bg-card border border-border rounded-lg p-4">
-                <div className="flex items-center gap-3" onClick={() => setCreatePostOpen(true)}>
+                <div className="flex items-center gap-3">
                     <Avatar>
                       <AvatarImage src={answers.profilePictureUrl} alt={answers.name} />
                       <AvatarFallback>{answers.name ? answers.name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                     </Avatar>
-                    <div className="flex-grow bg-muted rounded-full h-10 flex items-center px-4 cursor-pointer hover:bg-muted/80">
+                    <div className="flex-grow bg-muted rounded-full h-10 flex items-center px-4 cursor-pointer hover:bg-muted/80" onClick={() => setCreatePostOpen(true)}>
                         <span className="text-muted-foreground">No que você está pensando, {answers.name?.split(' ')[0]}?</span>
                     </div>
                 </div>
                 <hr className="my-4 border-border" />
-                <div className="flex justify-around">
-                    <Button variant="ghost" className="flex-1" onClick={() => setCreatePostOpen(true)}>
-                        <MessageSquareText className="mr-2 text-blue-500" />
-                        Texto
-                    </Button>
+                <div className="flex justify-center">
                     <Button variant="ghost" className="flex-1" onClick={() => setCreatePostOpen(true)}>
                         <ImageIcon className="mr-2 text-green-500" />
                         Foto/Vídeo
                     </Button>
-                    <ContentAssistantDialog />
                 </div>
             </div>
 
