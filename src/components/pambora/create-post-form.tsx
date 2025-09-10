@@ -1,9 +1,9 @@
-// src/components/pambora/create-post-dialog.tsx
+// src/components/pambora/create-post-form.tsx
 'use client';
 import * as React from 'react';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useQuiz } from '@/services/quiz-service';
 import { Image as ImageIcon, Loader2, Send, XCircle } from 'lucide-react';
@@ -11,13 +11,9 @@ import { useToast } from '@/hooks/use-toast';
 import { storage, db } from '@/services/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import Image from 'next/image';
 
-interface CreatePostDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-}
-
-export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) {
+export function CreatePostForm() {
     const { user, answers } = useQuiz();
     const { toast } = useToast();
     const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -82,7 +78,6 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
             toast({ title: 'Sucesso!', description: 'Seu post foi publicado na comunidade #PAMBORA!' });
             setText('');
             clearMedia();
-            onOpenChange(false);
         } catch (error) {
             console.error("Error creating post:", error);
             toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível publicar seu post. Tente novamente.' });
@@ -92,57 +87,49 @@ export function CreatePostDialog({ open, onOpenChange }: CreatePostDialogProps) 
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[525px]">
-                <DialogHeader>
-                    <DialogTitle>Criar Publicação</DialogTitle>
-                     <DialogDescription>
-                        Compartilhe seu progresso com a comunidade #PAMBORA.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                    <div className="flex items-start gap-4">
-                        <Avatar>
-                            <AvatarImage src={answers.profilePictureUrl} alt={answers.name} />
-                            <AvatarFallback>{answers.name ? answers.name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
-                        </Avatar>
-                        <div className='w-full'>
-                            <Textarea
-                                placeholder={`No que você está pensando, ${answers.name?.split(' ')[0]}?`}
-                                value={text}
-                                onChange={(e) => setText(e.target.value)}
-                                className="min-h-[120px] resize-none"
-                            />
-                        </div>
-                    </div>
-                     {mediaPreview && (
-                        <div className="mt-4 relative">
-                            <Image src={mediaPreview} alt="Preview" width={500} height={280} className="rounded-lg object-cover w-full aspect-video" />
-                             <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7 rounded-full" onClick={clearMedia}>
-                                <XCircle className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    )}
-                </div>
-                <DialogFooter className='flex-col-reverse sm:flex-row sm:justify-between items-center w-full'>
-                    <div className='flex items-center gap-2'>
-                         <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
-                            <ImageIcon className="text-green-500 h-6 w-6" />
-                        </Button>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            accept="image/*,video/*"
-                            onChange={handleFileChange}
+        <Card>
+            <CardContent className="p-4">
+                 <div className="flex items-start gap-4">
+                    <Avatar>
+                        <AvatarImage src={answers.profilePictureUrl} alt={answers.name} />
+                        <AvatarFallback>{answers.name ? answers.name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
+                    </Avatar>
+                    <div className='w-full'>
+                        <Textarea
+                            placeholder={`No que você está pensando, ${answers.name?.split(' ')[0]}?`}
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                            className="min-h-[100px] resize-none border-none focus-visible:ring-0 shadow-none p-0"
                         />
                     </div>
-                    <Button onClick={handlePost} disabled={loading} className='w-full sm:w-auto'>
-                        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                        Publicar
+                </div>
+                 {mediaPreview && (
+                    <div className="mt-4 relative">
+                        <Image src={mediaPreview} alt="Preview" width={500} height={280} className="rounded-lg object-cover w-full aspect-video" />
+                         <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7 rounded-full" onClick={clearMedia}>
+                            <XCircle className="h-4 w-4" />
+                        </Button>
+                    </div>
+                )}
+            </CardContent>
+            <CardFooter className='flex-col-reverse sm:flex-row sm:justify-between items-center w-full border-t border-border pt-4'>
+                <div className='flex items-center gap-2 mt-2 sm:mt-0'>
+                     <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} aria-label="Adicionar Foto/Vídeo">
+                        <ImageIcon className="text-green-500 h-6 w-6" />
                     </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept="image/*,video/*"
+                        onChange={handleFileChange}
+                    />
+                </div>
+                <Button onClick={handlePost} disabled={loading} className='w-full sm:w-auto'>
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                    Publicar
+                </Button>
+            </CardFooter>
+        </Card>
     );
 }

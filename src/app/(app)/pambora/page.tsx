@@ -2,18 +2,13 @@
 'use client';
 import * as React from 'react';
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ImageIcon } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "@/components/pambora/post-card";
-import { useQuiz } from "@/services/quiz-service";
-import { CreatePostDialog } from '@/components/pambora/create-post-dialog';
 import { db } from '@/services/firebase';
 import { collection, query, orderBy, onSnapshot, DocumentData } from 'firebase/firestore';
+import { CreatePostForm } from '@/components/pambora/create-post-form';
 
 export default function PamboraPage() {
-  const { answers } = useQuiz();
-  const [isCreatePostOpen, setCreatePostOpen] = React.useState(false);
   const [posts, setPosts] = React.useState<DocumentData[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -39,27 +34,8 @@ export default function PamboraPage() {
       <div className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto">
         <div className="max-w-2xl mx-auto w-full space-y-6">
             
-            <CreatePostDialog open={isCreatePostOpen} onOpenChange={setCreatePostOpen} />
-
-            {/* Create Post Section */}
-            <div className="bg-card border border-border rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage src={answers.profilePictureUrl} alt={answers.name} />
-                      <AvatarFallback>{answers.name ? answers.name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-grow bg-muted rounded-full h-10 flex items-center px-4 cursor-pointer hover:bg-muted/80" onClick={() => setCreatePostOpen(true)}>
-                        <span className="text-muted-foreground">No que você está pensando, {answers.name?.split(' ')[0]}?</span>
-                    </div>
-                </div>
-                <hr className="my-4 border-border" />
-                <div className="flex justify-center">
-                    <Button variant="ghost" className="flex-1" onClick={() => setCreatePostOpen(true)}>
-                        <ImageIcon className="mr-2 text-green-500" />
-                        Foto/Vídeo
-                    </Button>
-                </div>
-            </div>
+            {/* Create Post Form */}
+            <CreatePostForm />
 
             {/* Filter Tabs */}
             <Tabs defaultValue="all" className="w-full">
