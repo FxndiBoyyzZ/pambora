@@ -1,5 +1,4 @@
 
-import { QuizProvider } from "@/services/quiz-service";
 
 export default function AdminLayout({
   children,
@@ -7,8 +6,8 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <QuizProvider>
-        {children}
-    </QuizProvider>
+        <div className="min-h-screen bg-background">
+            {children}
+        </div>
   );
 }

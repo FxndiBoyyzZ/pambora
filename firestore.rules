@@ -1,18 +1,21 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow admin (authenticated anonymously) to read/write config
-    match /config/{docId} {
-      allow read, write: if request.auth != null;
+    
+    // ADMIN RULE: Admin user has full read/write access to the entire database.
+    match /{document=**} {
+      allow read, write: if request.auth.token.email == 'pam@admin.com';
+    }
+    
+    // USER SELF-DATA RULE: Users can read and write to their own document in the 'users' collection.
+    match /users/{userId} {
+      allow read, write: if request.auth.uid == userId;
     }
 
-    // Allow admin (authenticated) to read all user data for the leads page
-    // Allow users to write only to their own document
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+    // CONFIG READ RULE: Authenticated users can read the global configuration files.
+    match /config/{docId} {
+        allow read: if request.auth != null;
     }
   }
 }

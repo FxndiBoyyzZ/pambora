@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { type QuizStep } from "@/app/quiz/quiz-config";
-import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2, Sparkles, LogIn, Dumbbell, Download, Bell, Edit } from 'lucide-react';
+import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2, Sparkles, Dumbbell, Download, Bell, Edit, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { signInAnonymously, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { signInWithEmailAndPassword, onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import Link from 'next/link';
 
 
@@ -163,38 +163,82 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
     }
 }
 
+function LoginForm({ onLogin }: { onLogin: () => void }) {
+    const [email, setEmail] = React.useState('');
+    const [password, setPassword] = React.useState('');
+    const [error, setError] = React.useState('');
+    const [isLoading, setIsLoading] = React.useState(false);
+    const { toast } = useToast();
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError('');
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            onLogin();
+        } catch (err: any) {
+            setError('Falha no login. Verifique suas credenciais.');
+            toast({
+                variant: 'destructive',
+                title: 'Erro de Autenticação',
+                description: 'Email ou senha inválidos.',
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="flex justify-center items-center h-full">
+            <Card className="w-full max-w-sm">
+                <CardHeader>
+                    <CardTitle>Login do Administrador</CardTitle>
+                    <CardDescription>Acesse o painel de controle.</CardDescription>
+                </CardHeader>
+                <form onSubmit={handleLogin}>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Senha</Label>
+                            <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                        </div>
+                        {error && <p className="text-sm text-destructive">{error}</p>}
+                    </CardContent>
+                    <CardFooter>
+                        <Button type="submit" className="w-full" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Entrar
+                        </Button>
+                    </CardFooter>
+                </form>
+            </Card>
+        </div>
+    );
+}
+
 export default function AdminPage() {
     const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
     const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 21 });
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const { toast } = useToast();
-    const [user, setUser] = React.useState<FirebaseUser | null>(null);
+    const [user, setUser] = React.useState<FirebaseUser | null>(auth.currentUser);
 
     React.useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (currentUser) {
-                setUser(currentUser);
-            } else {
-                try {
-                    const userCredential = await signInAnonymously(auth);
-                    setUser(userCredential.user);
-                } catch (error) {
-                    console.error("Erro no login anônimo:", error);
-                    toast({
-                        variant: 'destructive',
-                        title: 'Falha na Autenticação!',
-                        description: 'Não foi possível autenticar o administrador. Verifique as configurações do Firebase.'
-                    });
-                    setIsLoading(false);
-                }
-            }
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            // We set loading to false here, but the content will depend on user state
+            setIsLoading(false);
         });
         return () => unsubscribe();
-    }, [toast]);
+    }, []);
 
     React.useEffect(() => {
-        if (!user) return; // Don't fetch config until user is authenticated
+        if (!user) return; 
 
         const fetchConfig = async () => {
             setIsLoading(true);
@@ -205,7 +249,6 @@ export default function AdminPage() {
                 if(quizConfigDoc.exists()) {
                     setQuizSteps(quizConfigDoc.data().steps);
                 } else {
-                    // Fallback to local config if nothing in Firestore
                     const { quizSteps: initialQuizSteps } = await import('@/app/quiz/quiz-config');
                     setQuizSteps(initialQuizSteps);
                 }
@@ -231,6 +274,11 @@ export default function AdminPage() {
 
         fetchConfig();
     }, [user, toast]);
+    
+    const handleLogout = async () => {
+        await signOut(auth);
+    };
+
 
     const handleStepChange = (index: number, newStep: QuizStep) => {
         if (!quizSteps) return;
@@ -267,8 +315,8 @@ export default function AdminPage() {
         }
     };
   
-    const renderContent = () => {
-        if (isLoading || !user) {
+    const renderDashboard = () => {
+        if (isLoading) {
             return (
                 <div className="flex justify-center items-center h-64">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -393,21 +441,18 @@ export default function AdminPage() {
                     <h1 className="text-2xl font-bold font-headline text-foreground">
                         Admin - Painel de Controle
                     </h1>
-                    <p className="text-muted-foreground">Gerencie o conteúdo e as configurações do aplicativo aqui.</p>
+                     {user && <p className="text-sm text-muted-foreground">Logado como: {user.email}</p>}
                 </div>
+                 {user && (
+                    <Button variant="ghost" size="sm" onClick={handleLogout}>
+                         <LogOut className="mr-2 h-4 w-4" />
+                        Sair
+                    </Button>
+                 )}
             </header>
             <main className="flex-grow p-4 md:p-6 lg:p-8">
-                 <Alert variant="default" className="mb-6 border-primary/50 text-primary">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <AlertTitle>Acesso de Administrador Ativado</AlertTitle>
-                    <AlertDescription>
-                       Você está autenticado como administrador. Lembre-se de proteger esta rota com regras mais rígidas antes de ir para produção.
-                    </AlertDescription>
-                </Alert>
-                {renderContent()}
+                 {user ? renderDashboard() : <LoginForm onLogin={() => setUser(auth.currentUser)} />}
             </main>
         </div>
     );
 }
-
-    
