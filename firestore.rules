@@ -3,25 +3,32 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Default deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
     function isAdmin() {
       return request.auth.token.email == 'pam@admin.com';
     }
 
+    // Allow admin to read/write any document in the 'users' collection
+    // Allow a user to read/write their own document
     match /users/{userId} {
-      // Admin can list all users (needed for the leads page).
-      allow list: if isAdmin();
-      
-      // Admin can read/write any user document.
-      // A regular user can only read/write their own document.
       allow read, write: if isAdmin() || request.auth.uid == userId;
+      allow list: if isAdmin();
     }
 
+    // Allow admin to read/write config documents
+    // Allow any authenticated user to read config documents
     match /config/{docId} {
-      // Admin can write to config.
-      allow write: if isAdmin();
-      
-      // Any authenticated user (including admin) can read config.
       allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // Allow admin to create documents in the 'notifications' collection
+    match /notifications/{notificationId} {
+      allow create: if isAdmin();
     }
   }
 }

@@ -10,12 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadVideo } from './actions';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
-import { sendPushNotification } from '@/ai/flows/notification-sender';
 
 export const dynamic = 'force-dynamic';
 
@@ -245,22 +244,28 @@ function AdminDashboard() {
         }
     };
   
-      const handleSendNotification = async () => {
+    const handleSendNotification = async () => {
         if (!notificationBody) {
             toast({ variant: 'destructive', title: 'Erro', description: 'A mensagem da notificação não pode estar vazia.' });
             return;
         }
         setIsSendingNotification(true);
         try {
-            const result = await sendPushNotification({ title: notificationTitle, body: notificationBody });
+            // This will now be handled by a Cloud Function triggered by this new document.
+            await addDoc(collection(db, "notifications"), {
+                title: notificationTitle,
+                body: notificationBody,
+                createdAt: serverTimestamp(),
+            });
+
             toast({
-                title: 'Sucesso!',
-                description: `${result.successCount} notificações enviadas com sucesso.`,
+                title: 'Notificação na Fila!',
+                description: 'Sua mensagem foi enviada para a fila de processamento e será disparada em breve.',
             });
             setNotificationBody('');
         } catch (error) {
-            console.error('Failed to send notification', error);
-            toast({ variant: 'destructive', title: 'Erro ao Enviar', description: 'Não foi possível enviar as notificações.' });
+            console.error('Error queueing notification', error);
+            toast({ variant: 'destructive', title: 'Erro ao Enfileirar', description: 'Não foi possível enviar a notificação para a fila.' });
         } finally {
             setIsSendingNotification(false);
         }
