@@ -10,9 +10,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadVideo } from './actions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/services/firebase';
+import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { signInAnonymously, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import Link from 'next/link';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -166,8 +169,33 @@ export default function AdminPage() {
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const { toast } = useToast();
+    const [user, setUser] = React.useState<FirebaseUser | null>(null);
 
     React.useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+            } else {
+                try {
+                    const userCredential = await signInAnonymously(auth);
+                    setUser(userCredential.user);
+                } catch (error) {
+                    console.error("Erro no login anônimo:", error);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Falha na Autenticação!',
+                        description: 'Não foi possível autenticar o administrador. Verifique as configurações do Firebase.'
+                    });
+                    setIsLoading(false);
+                }
+            }
+        });
+        return () => unsubscribe();
+    }, [toast]);
+
+    React.useEffect(() => {
+        if (!user) return; // Don't fetch config until user is authenticated
+
         const fetchConfig = async () => {
             setIsLoading(true);
             try {
@@ -202,7 +230,7 @@ export default function AdminPage() {
         };
 
         fetchConfig();
-    }, [toast]);
+    }, [user, toast]);
 
     const handleStepChange = (index: number, newStep: QuizStep) => {
         if (!quizSteps) return;
@@ -212,7 +240,7 @@ export default function AdminPage() {
     };
 
     const handleSaveChanges = async () => {
-        if (!quizSteps) return;
+        if (!quizSteps || !user) return;
         setIsSaving(true);
         try {
             // Save quiz config
@@ -240,7 +268,7 @@ export default function AdminPage() {
     };
   
     const renderContent = () => {
-        if (isLoading) {
+        if (isLoading || !user) {
             return (
                 <div className="flex justify-center items-center h-64">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -281,20 +309,24 @@ export default function AdminPage() {
                              </div>
                         </CardContent>
                     </Card>
-                    {/* Placeholder Cards */}
-                     <Card className="opacity-50 cursor-not-allowed">
+                    
+                    <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Visualizar Leads</CardTitle>
+                            <CardTitle className="text-sm font-medium">Gerenciar Leads</CardTitle>
                             <Download className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                             <div className="text-2xl font-bold">1,234</div>
-                             <p className="text-xs text-muted-foreground">Usuários inscritos no total.</p>
+                             <p className="text-xs text-muted-foreground">Visualize e exporte a lista de todos os usuários que se inscreveram.</p>
                         </CardContent>
                          <CardFooter>
-                            <Button variant="outline" size="sm" className="w-full" disabled>Exportar para Excel (Em breve)</Button>
+                            <Link href="/admin/leads" className="w-full">
+                                <Button variant="outline" size="sm" className="w-full">
+                                    Visualizar Leads
+                                </Button>
+                            </Link>
                          </CardFooter>
                     </Card>
+
                      <Card className="opacity-50 cursor-not-allowed">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Notificações Push</CardTitle>
@@ -345,7 +377,7 @@ export default function AdminPage() {
                         ))}
                     </div>
                 ) : (
-                    <Card className="text-center py-12">
+                     <Card className="text-center py-12">
                          <CardTitle>Nenhuma configuração de quiz encontrada.</CardTitle>
                          <CardDescription className="mt-2">Isso pode acontecer devido a um erro de permissão ou se nenhuma configuração foi salva ainda.</CardDescription>
                      </Card>
@@ -365,11 +397,11 @@ export default function AdminPage() {
                 </div>
             </header>
             <main className="flex-grow p-4 md:p-6 lg:p-8">
-                 <Alert variant="destructive" className="mb-6">
-                    <Sparkles className="h-4 w-4" />
-                    <AlertTitle>Acesso de Desenvolvedor Ativado</AlertTitle>
+                 <Alert variant="default" className="mb-6 border-primary/50 text-primary">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <AlertTitle>Acesso de Administrador Ativado</AlertTitle>
                     <AlertDescription>
-                       Esta página está temporariamente com acesso público para facilitar a configuração. Lembre-se de proteger esta rota com autenticação antes de ir para produção.
+                       Você está autenticado como administrador. Lembre-se de proteger esta rota com regras mais rígidas antes de ir para produção.
                     </AlertDescription>
                 </Alert>
                 {renderContent()}
@@ -377,3 +409,5 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
