@@ -12,7 +12,6 @@ import { uploadVideo } from './actions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { signInWithEmailAndPassword, onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import Link from 'next/link';
 
@@ -163,7 +162,7 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
     }
 }
 
-function LoginForm({ onLogin }: { onLogin: () => void }) {
+function LoginForm({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUser) => void }) {
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
@@ -175,14 +174,18 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
         setIsLoading(true);
         setError('');
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            onLogin();
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            if (userCredential.user.email !== 'pam@admin.com') {
+                await signOut(auth);
+                throw new Error("Not an admin account.");
+            }
+            onLoginSuccess(userCredential.user);
         } catch (err: any) {
-            setError('Falha no login. Verifique suas credenciais.');
+            setError('Falha no login. Verifique suas credenciais e se é uma conta de administrador.');
             toast({
                 variant: 'destructive',
                 title: 'Erro de Autenticação',
-                description: 'Email ou senha inválidos.',
+                description: 'Email ou senha inválidos, ou a conta não é de administrador.',
             });
         } finally {
             setIsLoading(false);
@@ -200,7 +203,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+                            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="pam@admin.com"/>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password">Senha</Label>
@@ -230,8 +233,11 @@ export default function AdminPage() {
 
     React.useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-            // We set loading to false here, but the content will depend on user state
+            if (currentUser && currentUser.email === 'pam@admin.com') {
+                setUser(currentUser);
+            } else {
+                setUser(null);
+            }
             setIsLoading(false);
         });
         return () => unsubscribe();
@@ -264,7 +270,7 @@ export default function AdminPage() {
                 console.error("Erro ao buscar configuração:", error);
                 toast({
                     variant: 'destructive',
-                    title: 'Erro de Permissão!',
+                    title: 'Erro ao Carregar Dados!',
                     description: 'Não foi possível carregar a configuração. Verifique as regras de segurança do Firestore.'
                 });
             } finally {
@@ -277,6 +283,7 @@ export default function AdminPage() {
     
     const handleLogout = async () => {
         await signOut(auth);
+        setUser(null);
     };
 
 
@@ -316,7 +323,7 @@ export default function AdminPage() {
     };
   
     const renderDashboard = () => {
-        if (isLoading) {
+        if (isLoading || !quizSteps) {
             return (
                 <div className="flex justify-center items-center h-64">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -434,6 +441,14 @@ export default function AdminPage() {
         );
     };
 
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center h-screen bg-muted/30">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col min-h-screen bg-muted/30">
             <header className="flex justify-between items-center p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
@@ -451,7 +466,7 @@ export default function AdminPage() {
                  )}
             </header>
             <main className="flex-grow p-4 md:p-6 lg:p-8">
-                 {user ? renderDashboard() : <LoginForm onLogin={() => setUser(auth.currentUser)} />}
+                 {user ? renderDashboard() : <LoginForm onLoginSuccess={setUser} />}
             </main>
         </div>
     );
