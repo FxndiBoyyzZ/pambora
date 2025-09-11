@@ -1,13 +1,28 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // WARNING: This is a temporary rule for launch.
-    // It makes your database completely public.
-    // ANYONE can read, write, and delete your data.
-    // You MUST secure this before going into full production.
+    
+    function isAdmin() {
+      return request.auth.token.email == 'pam@admin.com';
+    }
+
+    // Rule 1: Admin has full access to everything.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
+    }
+
+    // Rule 2: Non-admin users have specific permissions.
+    // These are only checked if the user is NOT the admin.
+    match /users/{userId} {
+      // A user can read/write their own data.
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    match /config/{docId} {
+      // Any authenticated user can read the config (e.g., quiz steps).
+      allow read: if request.auth != null;
     }
   }
 }

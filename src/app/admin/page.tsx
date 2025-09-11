@@ -1,3 +1,4 @@
+
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
@@ -10,9 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadVideo } from './actions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/services/firebase';
+import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -357,7 +359,113 @@ function AdminDashboard() {
     );
 }
 
+function AdminLoginPage({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUser) => void }) {
+    const [email, setEmail] = React.useState('');
+    const [password, setPassword] = React.useState('');
+    const [error, setError] = React.useState('');
+    const [isLoading, setIsLoading] = React.useState(false);
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setIsLoading(true);
+
+        if (email !== 'pam@admin.com') {
+            setError('Acesso permitido apenas para a conta de administrador.');
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            onLoginSuccess(userCredential.user);
+        } catch (err) {
+            setError('Email ou senha inválidos. Por favor, tente novamente.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-muted/40">
+            <Card className="w-full max-w-md mx-4">
+                <CardHeader>
+                    <CardTitle className="text-2xl font-headline tracking-wider text-center">Acesso Restrito</CardTitle>
+                    <CardDescription className="text-center">
+                        Faça login para gerenciar o aplicativo.
+                    </CardDescription>
+                </CardHeader>
+                <form onSubmit={handleLogin}>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input 
+                                id="email" 
+                                type="email" 
+                                placeholder="pam@admin.com" 
+                                value={email} 
+                                onChange={(e) => setEmail(e.target.value)}
+                                required 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Senha</Label>
+                            <Input 
+                                id="password" 
+                                type="password" 
+                                value={password} 
+                                onChange={(e) => setPassword(e.target.value)}
+                                required 
+                            />
+                        </div>
+                        {error && <p className="text-sm text-destructive">{error}</p>}
+                    </CardContent>
+                    <CardFooter>
+                        <Button type="submit" className="w-full" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Entrar
+                        </Button>
+                    </CardFooter>
+                </form>
+            </Card>
+        </div>
+    );
+}
+
 export default function AdminPage() {
+    const [user, setUser] = React.useState<FirebaseUser | null>(null);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            if (currentUser && currentUser.email === 'pam@admin.com') {
+                setUser(currentUser);
+            } else {
+                setUser(null);
+            }
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    const handleLogout = async () => {
+        await firebaseSignOut(auth);
+        setUser(null);
+    };
+
+    if (loading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-background">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+    
+    if (!user) {
+        return <AdminLoginPage onLoginSuccess={setUser} />;
+    }
+
     return (
         <div className="flex flex-col min-h-screen bg-muted/30">
              <header className="flex justify-between items-center p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
@@ -365,8 +473,12 @@ export default function AdminPage() {
                     <h1 className="text-2xl font-bold font-headline text-foreground">
                         Admin - Painel de Controle
                     </h1>
-                     <p className="text-sm text-muted-foreground">Acesso direto para lançamento. Lembre-se de reativar a segurança.</p>
+                     <p className="text-sm text-muted-foreground">Logado como {user.email}</p>
                 </div>
+                <Button variant="destructive" onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                </Button>
             </header>
             <main className="flex-grow p-4 md:p-6 lg:p-8">
                  <AdminDashboard />
