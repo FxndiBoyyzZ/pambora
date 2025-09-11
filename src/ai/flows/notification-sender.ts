@@ -9,22 +9,6 @@ import * as admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 
-// Initialize Firebase Admin SDK if not already initialized
-if (!admin.apps.length) {
-    // Check if the environment variable is set
-    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
-        console.warn('GOOGLE_APPLICATION_CREDENTIALS_JSON is not set. Using default credentials. This may not work in all environments.');
-        admin.initializeApp();
-    } else {
-         admin.initializeApp({
-            credential: admin.credential.cert(JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON)),
-        });
-    }
-}
-
-const db = getFirestore();
-const messaging = getMessaging();
-
 const NotificationInputSchema = z.object({
   title: z.string().describe('The title of the push notification.'),
   body: z.string().describe('The main content (body) of the push notification.'),
@@ -42,6 +26,19 @@ export async function sendPushNotification(input: NotificationInput): Promise<No
     return sendPushNotificationFlow(input);
 }
 
+const initializeFirebaseAdmin = () => {
+  if (admin.apps.length === 0) {
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+        admin.initializeApp({
+            credential: admin.credential.cert(JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON)),
+        });
+    } else {
+        // This will use the default credentials on App Hosting.
+        admin.initializeApp();
+    }
+  }
+};
+
 const sendPushNotificationFlow = ai.defineFlow(
   {
     name: 'sendPushNotificationFlow',
@@ -50,6 +47,10 @@ const sendPushNotificationFlow = ai.defineFlow(
   },
   async (payload) => {
     try {
+      initializeFirebaseAdmin();
+      const db = getFirestore();
+      const messaging = getMessaging();
+
       console.log('Fetching user tokens from Firestore...');
       const usersSnapshot = await db.collection('users').get();
       
