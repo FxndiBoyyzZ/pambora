@@ -26,22 +26,22 @@ export async function sendPushNotification(input: NotificationInput): Promise<No
     return sendPushNotificationFlow(input);
 }
 
-const initializeFirebaseAdmin = () => {
-  // Prevent re-initialization in hot-reload environments
-  if (!admin.apps.length) {
-    if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
-        admin.initializeApp({
-            credential: admin.credential.cert(JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON)),
-        });
-    } else {
-        // This will use the default credentials on App Hosting.
-        admin.initializeApp();
-    }
+// Helper function to initialize Firebase Admin SDK safely.
+function getFirebaseAdminApp() {
+  if (admin.apps.length > 0) {
+    return admin.apps[0]!;
   }
-};
+  
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+      return admin.initializeApp({
+          credential: admin.credential.cert(JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON)),
+      });
+  }
+  
+  // This will use the default credentials on App Hosting.
+  return admin.initializeApp();
+}
 
-// Initialize Firebase Admin SDK when the module is loaded.
-initializeFirebaseAdmin();
 
 const sendPushNotificationFlow = ai.defineFlow(
   {
@@ -51,8 +51,9 @@ const sendPushNotificationFlow = ai.defineFlow(
   },
   async (payload) => {
     try {
-      const db = getFirestore();
-      const messaging = getMessaging();
+      const app = getFirebaseAdminApp();
+      const db = getFirestore(app);
+      const messaging = getMessaging(app);
 
       console.log('Fetching user tokens from Firestore...');
       const usersSnapshot = await db.collection('users').get();
