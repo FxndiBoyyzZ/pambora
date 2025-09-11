@@ -11,6 +11,7 @@ import { Loader2, Download, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface UserData {
   uid: string;
@@ -31,13 +32,18 @@ export default function LeadsPage() {
   const [loading, setLoading] = React.useState(true);
   const [user, setUser] = React.useState<FirebaseUser | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, currentUser => {
-      setUser(currentUser);
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        router.push('/admin'); // Redirect to admin login if not authenticated
+      }
     });
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
   React.useEffect(() => {
     if (!user) return; // Wait for user to be authenticated
@@ -72,9 +78,7 @@ export default function LeadsPage() {
       return '""';
     }
     const stringField = String(field);
-    // If the field contains a comma, a quote, or a newline, wrap it in double quotes.
     if (/[",\r\n]/.test(stringField)) {
-      // Also, double up any existing double quotes.
       return `"${stringField.replace(/"/g, '""')}"`;
     }
     return `"${stringField}"`;
@@ -105,6 +109,14 @@ export default function LeadsPage() {
     link.click();
     document.body.removeChild(link);
   };
+
+  if (!user) {
+    return (
+        <div className="flex h-screen items-center justify-center bg-muted/30">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-muted/30">
@@ -179,5 +191,3 @@ export default function LeadsPage() {
     </div>
   );
 }
-
-    

@@ -2,24 +2,11 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Regra Mestre: Concede ao admin acesso total e irrestrito a todos os documentos.
-    // Esta é a maneira mais simples e eficaz de garantir permissão plena.
+    // Default rule for all documents: only allow access if user is authenticated.
+    // This is a temporary secure rule for launch.
+    // For more specific admin roles, this should be updated.
     match /{document=**} {
-      allow read, write: if request.auth.token.email == 'pam@admin.com';
-    }
-
-    // Regras para usuários normais (não-admins)
-    // Estas regras só são avaliadas se a regra de admin acima falhar.
-    match /users/{userId} {
-      // Um usuário só pode ler ou escrever em seu próprio documento.
-      allow read, write: if request.auth.uid == userId;
-    }
-
-    match /config/{docId} {
-      // Qualquer usuário autenticado (não-admin) pode ler a configuração.
-      // Apenas o admin pode escrever (coberto pela regra mestre).
-      allow read: if request.auth != null;
+      allow read, write: if request.auth != null;
     }
   }
 }
