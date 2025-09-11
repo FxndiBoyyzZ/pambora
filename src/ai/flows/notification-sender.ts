@@ -29,7 +29,7 @@ export async function sendPushNotification(input: NotificationInput): Promise<No
 // Helper function to initialize Firebase Admin SDK safely.
 function getFirebaseAdminApp() {
   if (admin.apps.length > 0) {
-    return admin.apps[0]!;
+    return admin.app();
   }
   
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
