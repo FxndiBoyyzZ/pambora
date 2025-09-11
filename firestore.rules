@@ -7,18 +7,20 @@ service cloud.firestore {
       return request.auth.token.email == 'pam@admin.com';
     }
 
-    // Admin has full access to everything.
-    match /{document=**} {
-      allow read, write: if isAdmin();
-    }
-    
-    // User-specific rules for non-admins.
     match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
+      // Admin can list all users (needed for the leads page).
+      allow list: if isAdmin();
+      
+      // Admin can read/write any user document.
+      // A regular user can only read/write their own document.
+      allow read, write: if isAdmin() || request.auth.uid == userId;
     }
 
     match /config/{docId} {
-      // Any authenticated user can read the config.
+      // Admin can write to config.
+      allow write: if isAdmin();
+      
+      // Any authenticated user (including admin) can read config.
       allow read: if request.auth != null;
     }
   }

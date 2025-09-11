@@ -39,6 +39,8 @@ export default function LeadsPage() {
       if (currentUser && currentUser.email === 'pam@admin.com') {
         setUser(currentUser);
       } else {
+        // If not the admin, redirect to admin login page.
+        // This also handles the case where the user logs out.
         router.push('/admin');
       }
     });
@@ -46,6 +48,7 @@ export default function LeadsPage() {
   }, [router]);
 
   React.useEffect(() => {
+    // Only fetch leads if we have confirmed the user is the admin.
     if (!user) return; 
 
     const fetchLeads = async () => {
@@ -111,7 +114,8 @@ export default function LeadsPage() {
     document.body.removeChild(link);
   };
 
-  if (!user || loading) {
+  // Show a loading spinner while we verify the user's auth state.
+  if (!user) {
     return (
         <div className="flex h-screen items-center justify-center bg-muted/30">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -150,36 +154,42 @@ export default function LeadsPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>WhatsApp</TableHead>
-                      <TableHead>Data de Inscrição</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {leads.length > 0 ? leads.map(lead => (
-                      <TableRow key={lead.uid}>
-                        <TableCell className="font-medium">{lead.name || 'N/A'}</TableCell>
-                        <TableCell>{lead.email || 'N/A'}</TableCell>
-                        <TableCell>{lead.whatsapp || 'N/A'}</TableCell>
-                        <TableCell>
-                          {lead.createdAt ? format(new Date(lead.createdAt.seconds * 1000), 'dd/MM/yyyy') : 'N/A'}
-                        </TableCell>
-                      </TableRow>
-                    )) : (
-                      <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
-                          Nenhum lead encontrado.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+            {loading ? (
+                 <div className="flex h-64 items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            ) : (
+                <div className="border rounded-md">
+                    <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>WhatsApp</TableHead>
+                        <TableHead>Data de Inscrição</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {leads.length > 0 ? leads.map(lead => (
+                        <TableRow key={lead.uid}>
+                            <TableCell className="font-medium">{lead.name || 'N/A'}</TableCell>
+                            <TableCell>{lead.email || 'N/A'}</TableCell>
+                            <TableCell>{lead.whatsapp || 'N/A'}</TableCell>
+                            <TableCell>
+                            {lead.createdAt ? format(new Date(lead.createdAt.seconds * 1000), 'dd/MM/yyyy') : 'N/A'}
+                            </TableCell>
+                        </TableRow>
+                        )) : (
+                        <TableRow>
+                            <TableCell colSpan={4} className="h-24 text-center">
+                            Nenhum lead encontrado.
+                            </TableCell>
+                        </TableRow>
+                        )}
+                    </TableBody>
+                    </Table>
+                </div>
+            )}
           </CardContent>
         </Card>
       </main>
