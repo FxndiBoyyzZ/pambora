@@ -1,10 +1,12 @@
-
+// src/ai/flows/notification-sender.ts
 'use server';
+
 /**
  * @fileOverview A Genkit flow for sending push notifications to all users.
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+// Importa os serviços já inicializados de forma segura.
 import { db, messaging } from '@/services/firebase-admin';
 
 const NotificationInputSchema = z.object({
