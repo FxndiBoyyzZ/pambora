@@ -10,11 +10,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadVideo } from './actions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/services/firebase';
+import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { useQuiz } from '@/services/quiz-service';
+import { signInAnonymously } from 'firebase/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -183,213 +184,142 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
     }
 }
 
-function LoginPage({ onLogin }: { onLogin: () => void }) {
-    const [username, setUsername] = React.useState('');
-    const [password, setPassword] = React.useState('');
-    const [error, setError] = React.useState('');
+export default function AdminPage() {
+    const { user } = useQuiz();
+    const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [isSaving, setIsSaving] = React.useState(false);
+    const { toast } = useToast();
 
-    const handleLogin = () => {
-        if (username === 'admin' && password === '1234') {
-            onLogin();
-        } else {
-            setError('Usuário ou senha inválidos.');
-        }
+    React.useEffect(() => {
+        const ensureAdminAuthAndFetch = async () => {
+            setIsLoading(true);
+            try {
+                // Ensure we have an authenticated user (anonymous is fine for admin)
+                if (!auth.currentUser) {
+                    await signInAnonymously(auth);
+                }
+                
+                // Now fetch the config
+                const configDocRef = doc(db, 'config', 'quiz');
+                const configDoc = await getDoc(configDocRef);
+                if(configDoc.exists()) {
+                    setQuizSteps(configDoc.data().steps);
+                } else {
+                    const { quizSteps: initialQuizSteps } = await import('@/app/quiz/quiz-config');
+                    setQuizSteps(initialQuizSteps);
+                }
+            } catch (error) {
+                console.error("Erro ao autenticar ou buscar configuração:", error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Erro!',
+                    description: 'Não foi possível carregar a configuração do quiz. Verifique as regras de segurança do Firestore.'
+                });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        ensureAdminAuthAndFetch();
+    }, [toast]);
+
+
+    const handleStepChange = (index: number, newStep: QuizStep) => {
+        if (!quizSteps) return;
+        const newQuizSteps = [...quizSteps];
+        newQuizSteps[index] = newStep;
+        setQuizSteps(newQuizSteps);
     };
 
-    return (
-        <div className="flex items-center justify-center min-h-[80vh]">
-            <Card className="w-full max-w-sm">
-                <CardHeader>
-                    <CardTitle className="text-2xl text-center">Acesso Restrito</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4">
-                    <Alert variant="destructive">
-                      <Terminal className="h-4 w-4" />
-                      <AlertTitle>Atenção</AlertTitle>
-                      <AlertDescription>
-                        Esta área é para desenvolvimento. Não use em produção com estas credenciais.
-                      </AlertDescription>
-                    </Alert>
-                    <div className="grid gap-2">
-                        <Label htmlFor="username">Usuário</Label>
-                        <Input
-                            id="username"
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            required
-                        />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="password">Senha</Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                            required
-                        />
-                    </div>
-                    {error && <p className="text-destructive text-sm text-center">{error}</p>}
-                </CardContent>
-                <CardFooter>
-                    <Button className="w-full" onClick={handleLogin}>
-                        <LogIn className="mr-2" />
-                        Entrar
-                    </Button>
-                </CardFooter>
-            </Card>
-        </div>
-    );
-}
-
-function AdminDashboardContent() {
-  const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isSaving, setIsSaving] = React.useState(false);
-  const { toast } = useToast();
-
-  React.useEffect(() => {
-    const fetchQuizConfig = async () => {
-        setIsLoading(true);
+    const handleSaveChanges = async () => {
+        if (!quizSteps) return;
+        setIsSaving(true);
         try {
             const configDocRef = doc(db, 'config', 'quiz');
-            const configDoc = await getDoc(configDocRef);
-            if(configDoc.exists()) {
-                setQuizSteps(configDoc.data().steps);
-            } else {
-                // If no config in firestore, load local one to bootstrap.
-                const { quizSteps: initialQuizSteps } = await import('@/app/quiz/quiz-config');
-                setQuizSteps(initialQuizSteps);
-            }
+            await setDoc(configDocRef, { steps: quizSteps });
+            toast({
+                title: 'Sucesso!',
+                description: 'Configuração do quiz salva com sucesso.'
+            });
         } catch (error) {
-            console.error("Erro ao buscar configuração do quiz:", error);
+            console.error("Erro ao salvar configuração do quiz:", error);
             toast({
                 variant: 'destructive',
                 title: 'Erro!',
-                description: 'Não foi possível carregar a configuração do quiz. Verifique as regras de segurança do Firestore.'
+                description: 'Não foi possível salvar a configuração. Verifique as regras do Firestore.'
             });
         } finally {
-            setIsLoading(false);
+            setIsSaving(false);
         }
     };
-    
-    fetchQuizConfig();
-  }, [toast]);
-
-
-  const handleStepChange = (index: number, newStep: QuizStep) => {
-    if (!quizSteps) return;
-    const newQuizSteps = [...quizSteps];
-    newQuizSteps[index] = newStep;
-    setQuizSteps(newQuizSteps);
-  }
-
-  const handleSaveChanges = async () => {
-    if (!quizSteps) return;
-    setIsSaving(true);
-    try {
-        const configDocRef = doc(db, 'config', 'quiz');
-        await setDoc(configDocRef, { steps: quizSteps });
-        toast({
-            title: 'Sucesso!',
-            description: 'Configuração do quiz salva com sucesso.'
-        });
-    } catch (error) {
-        console.error("Erro ao salvar configuração do quiz:", error);
-         toast({
-            variant: 'destructive',
-            title: 'Erro!',
-            description: 'Não foi possível salvar a configuração. Verifique as regras do Firestore.'
-        });
-    } finally {
-        setIsSaving(false);
-    }
-  }
   
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  if (quizSteps && quizSteps.length > 0) {
-    return (
-      <>
-        <div className="flex justify-end mb-4">
-             <Button onClick={handleSaveChanges} disabled={isSaving || isLoading}>
-                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Salvar Alterações
-            </Button>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {quizSteps.map((step, index) => (
-            <Card key={index} className="flex flex-col">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
-                    <CardTitle className="text-lg">Etapa {index + 1}: {step.type.charAt(0).toUpperCase() + step.type.slice(1)}</CardTitle>
-                  </div>
-                  {getIcon(step.type)}
+    const renderContent = () => {
+        if (isLoading) {
+            return (
+                <div className="flex justify-center items-center h-64">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <StepContentEditor step={step} index={index} onStepChange={handleStepChange} />
-              </CardContent>
-              <CardFooter>
-                <Button variant="destructive" size="sm" className="w-full" onClick={() => alert('Funcionalidade de remover ainda não implementada.')}>
-                  Remover Etapa
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      </>
-    );
-  }
+            );
+        }
 
-  return (
-    <div className="text-center py-12 text-muted-foreground">
-      <p className="text-lg font-semibold">Nenhuma configuração de quiz encontrada.</p>
-      <p>Isso pode acontecer devido a um erro de permissão ou se nenhuma configuração foi salva ainda.</p>
-    </div>
-  );
-}
+        if (quizSteps && quizSteps.length > 0) {
+            return (
+                <>
+                    <div className="flex justify-end mb-4">
+                        <Button onClick={handleSaveChanges} disabled={isSaving || isLoading}>
+                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Salvar Alterações
+                        </Button>
+                    </div>
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {quizSteps.map((step, index) => (
+                            <Card key={index} className="flex flex-col">
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+                                            <CardTitle className="text-lg">Etapa {index + 1}: {step.type.charAt(0).toUpperCase() + step.type.slice(1)}</CardTitle>
+                                        </div>
+                                        {getIcon(step.type)}
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="flex-grow">
+                                    <StepContentEditor step={step} index={index} onStepChange={handleStepChange} />
+                                </CardContent>
+                                <CardFooter>
+                                    <Button variant="destructive" size="sm" className="w-full" onClick={() => alert('Funcionalidade de remover ainda não implementada.')}>
+                                    Remover Etapa
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        ))}
+                    </div>
+                </>
+            );
+        }
 
-
-export default function AdminPage() {
-    const [isAuthenticated, setIsAuthenticated] = React.useState(false);
-    const { loading: userLoading } = useQuiz();
-
-    if(userLoading) {
         return (
-             <div className="flex justify-center items-center h-screen bg-background">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="text-center py-12 text-muted-foreground">
+                <p className="text-lg font-semibold">Nenhuma configuração de quiz encontrada.</p>
+                <p>Isso pode acontecer devido a um erro de permissão ou se nenhuma configuração foi salva ainda.</p>
             </div>
-        )
-    }
-    
+        );
+    };
+
     return (
-         <div className="flex flex-col min-h-screen bg-background">
+        <div className="flex flex-col min-h-screen bg-background">
             <header className="flex justify-between items-center p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
                 <div>
                     <h1 className="text-2xl font-bold font-headline text-foreground">
-                    Admin - Configuração do Quiz
+                        Admin - Configuração do Quiz
                     </h1>
                     <p className="text-muted-foreground">Arraste e solte para reordenar as etapas (funcionalidade em breve).</p>
                 </div>
             </header>
-             <main className="flex-grow p-4 md:p-6 lg:p-8">
-                {!isAuthenticated ? (
-                    <LoginPage onLogin={() => setIsAuthenticated(true)} />
-                ) : (
-                    <AdminDashboardContent />
-                )}
+            <main className="flex-grow p-4 md:p-6 lg:p-8">
+                {renderContent()}
             </main>
         </div>
-    )
+    );
 }
