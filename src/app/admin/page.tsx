@@ -1,4 +1,3 @@
-
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
@@ -222,13 +221,13 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUser) =>
 function AdminDashboard() {
     const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
     const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 21 });
-    const [isLoading, setIsLoading] = React.useState(true);
+    const [isLoadingData, setIsLoadingData] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const { toast } = useToast();
 
      React.useEffect(() => {
         const fetchConfig = async () => {
-            setIsLoading(true);
+            setIsLoadingData(true);
             try {
                 // Fetch Quiz Config
                 const quizConfigDocRef = doc(db, 'config', 'quiz');
@@ -256,7 +255,7 @@ function AdminDashboard() {
                     description: 'Não foi possível carregar a configuração. Verifique as regras de segurança do Firestore.'
                 });
             } finally {
-                setIsLoading(false);
+                setIsLoadingData(false);
             }
         };
 
@@ -298,7 +297,7 @@ function AdminDashboard() {
         }
     };
   
-    if (isLoading) {
+    if (isLoadingData) {
         return (
             <div className="flex justify-center items-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -312,7 +311,7 @@ function AdminDashboard() {
                 <h2 className="text-xl font-bold font-headline text-foreground tracking-wide">
                     Painel de Controle Geral
                 </h2>
-                <Button onClick={handleSaveChanges} disabled={isSaving || isLoading}>
+                <Button onClick={handleSaveChanges} disabled={isSaving || isLoadingData}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Salvar Alterações
                 </Button>
@@ -470,5 +469,3 @@ export default function AdminPage() {
         </div>
     );
 }
-
-    
