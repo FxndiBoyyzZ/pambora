@@ -10,15 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadVideo } from './actions';
-import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Badge } from '@/components/ui/badge';
+import { sendPushNotification } from '@/ai/flows/notification-sender';
 
 export const dynamic = 'force-dynamic';
 
@@ -166,126 +163,6 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
     }
 }
 
-interface Notification {
-    id: string;
-    title: string;
-    body: string;
-    createdAt: Timestamp;
-    status: 'queued' | 'processing' | 'completed' | 'failed';
-    stats?: {
-        successCount: number;
-        failureCount: number;
-    };
-    error?: string;
-}
-
-const getStatusVariant = (status: Notification['status']) => {
-    switch (status) {        
-        case 'processing': return 'secondary';
-        case 'completed': return 'default';
-        case 'failed': return 'destructive';
-        case 'queued':
-        default:
-            return 'outline';
-    }
-}
-const getStatusIcon = (status: Notification['status']) => {
-    switch (status) {
-        case 'queued': return <Clock className="h-4 w-4" />;
-        case 'processing': return <Loader2 className="h-4 w-4 animate-spin" />;
-        case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />;
-        case 'failed': return <AlertCircle className="h-4 w-4 text-destructive" />;
-        default: return null;
-    }
-}
-
-const getStatusText = (status: Notification['status']) => {
-    switch(status) {
-        case 'queued': return 'Na Fila';
-        case 'processing': return 'Processando';
-        case 'completed': return 'Concluído';
-        case 'failed': return 'Falhou';
-        default: return status;
-    }
-}
-
-function NotificationQueueReport() {
-    const [notifications, setNotifications] = React.useState<Notification[]>([]);
-    const [loading, setLoading] = React.useState(true);
-
-    React.useEffect(() => {
-        const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
-        
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const newNotifications: Notification[] = [];
-            querySnapshot.forEach((doc) => {
-                newNotifications.push({ id: doc.id, ...doc.data() } as Notification);
-            });
-            setNotifications(newNotifications);
-            setLoading(false);
-        }, (error) => {
-            console.error("Erro ao buscar notificações: ", error);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, []);
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Histórico de Notificações</CardTitle>
-                <CardDescription>Status das últimas notificações enviadas.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {loading ? (
-                    <div className="flex justify-center items-center h-32">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    </div>
-                ) : (
-                    <div className="border rounded-md">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Data</TableHead>
-                                    <TableHead>Título</TableHead>
-                                    <TableHead>Mensagem</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Resultado</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {notifications.length > 0 ? notifications.map(notif => (
-                                    <TableRow key={notif.id}>
-                                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                                            {notif.createdAt ? format(notif.createdAt.toDate(), 'dd/MM/yy HH:mm', { locale: ptBR }) : 'N/A'}
-                                        </TableCell>
-                                        <TableCell className="font-medium max-w-xs truncate">{notif.title}</TableCell>
-                                        <TableCell className="max-w-xs truncate">{notif.body}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={getStatusVariant(notif.status)} className="gap-1.5">
-                                                {getStatusIcon(notif.status)}
-                                                {getStatusText(notif.status)}
-                                            </Badge>
-                                        </TableCell>
-                                         <TableCell className="text-xs">
-                                            {notif.status === 'completed' && `✅ ${notif.stats?.successCount || 0}   ❌ ${notif.stats?.failureCount || 0}`}
-                                            {notif.status === 'failed' && <span className="text-destructive">{notif.error || 'Erro desconhecido'}</span>}
-                                        </TableCell>
-                                    </TableRow>
-                                )) : (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center">Nenhuma notificação enviada ainda.</TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-    );
-}
 
 function AdminDashboard() {
     const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
@@ -376,21 +253,19 @@ function AdminDashboard() {
         }
         setIsSendingNotification(true);
         try {
-            await addDoc(collection(db, "notifications"), {
+            const result = await sendPushNotification({
                 title: notificationTitle,
                 body: notificationBody,
-                createdAt: serverTimestamp(),
-                status: 'queued', // Novo campo de status
             });
 
             toast({
-                title: 'Notificação na Fila!',
-                description: 'Sua mensagem foi enviada para a fila de processamento. Acompanhe o status abaixo.',
+                title: 'Envio Concluído!',
+                description: `✅ ${result.successCount} enviadas com sucesso. ❌ ${result.failureCount} falharam.`,
             });
             setNotificationBody('');
         } catch (error) {
-            console.error('Error queueing notification', error);
-             toast({ variant: 'destructive', title: 'Erro ao Enfileirar', description: 'Não foi possível enviar a notificação para a fila. Verifique as permissões do Firestore.' });
+            console.error('Error sending notification', error);
+             toast({ variant: 'destructive', title: 'Erro ao Enviar', description: 'Não foi possível enviar as notificações. Verifique o console para mais detalhes.' });
         } finally {
             setIsSendingNotification(false);
         }
@@ -488,13 +363,11 @@ function AdminDashboard() {
                     <CardFooter>
                         <Button size="sm" className="w-full" onClick={handleSendNotification} disabled={isSendingNotification}>
                             {isSendingNotification && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Enfileirar Notificação para Envio
+                            Enviar Notificação Imediatamente
                         </Button>
                     </CardFooter>
                 </Card>
             </div>
-
-            <NotificationQueueReport />
 
             <div>
                  <h2 className="text-xl font-bold font-headline text-foreground mb-4 mt-12">
@@ -619,6 +492,8 @@ export default function AdminPage() {
         setUser(null);
     };
 
+
+
     if (loading) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -651,5 +526,3 @@ export default function AdminPage() {
         </div>
     );
 }
-
-    
