@@ -5,9 +5,7 @@
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import * as admin from 'firebase-admin';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getMessaging } from 'firebase-admin/messaging';
+import { db, messaging } from '@/services/firebase-admin';
 
 const NotificationInputSchema = z.object({
   title: z.string().describe('The title of the push notification.'),
@@ -26,23 +24,6 @@ export async function sendPushNotification(input: NotificationInput): Promise<No
     return sendPushNotificationFlow(input);
 }
 
-// Helper function to initialize Firebase Admin SDK safely.
-function getFirebaseAdminApp() {
-  if (admin.apps.length > 0) {
-    return admin.app();
-  }
-  
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
-      return admin.initializeApp({
-          credential: admin.credential.cert(JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON)),
-      });
-  }
-  
-  // This will use the default credentials on App Hosting.
-  return admin.initializeApp();
-}
-
-
 const sendPushNotificationFlow = ai.defineFlow(
   {
     name: 'sendPushNotificationFlow',
@@ -51,10 +32,6 @@ const sendPushNotificationFlow = ai.defineFlow(
   },
   async (payload) => {
     try {
-      const app = getFirebaseAdminApp();
-      const db = getFirestore(app);
-      const messaging = getMessaging(app);
-
       console.log('Fetching user tokens from Firestore...');
       const usersSnapshot = await db.collection('users').get();
       
@@ -110,4 +87,3 @@ const sendPushNotificationFlow = ai.defineFlow(
     }
   }
 );
-
