@@ -10,16 +10,12 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { StoryLayout } from '@/components/quiz/story-layout';
 import { useQuiz } from '@/services/quiz-service';
 import { Loader2, VolumeX } from 'lucide-react';
-import { quizSteps as localQuizSteps, type QuizStep } from './quiz-config';
+import { quizSteps, type QuizStep } from './quiz-config';
 import { VitalsStep } from '@/components/quiz/vitals-step';
-import { ScratchCardStep } from '@/components/quiz/scratch-card-step';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import Player from '@vimeo/player';
 import { motion, AnimatePresence } from 'framer-motion';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/services/firebase';
-
 
 function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -113,35 +109,12 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
 
 export default function QuizPage() {
   const router = useRouter();
-  const [quizSteps, setQuizSteps] = useState<QuizStep[] | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const { answers, setAnswer, signUp, user, loading: authLoading } = useQuiz();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingConfig, setIsLoadingConfig] = useState(true);
   
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>(answers.allergies?.split(', ')[0].split(',') || []);
   const [otherAllergyText, setOtherAllergyText] = useState(answers.allergies?.split('; ')[1] || '');
-
-  useEffect(() => {
-    const fetchQuizConfig = async () => {
-        setIsLoadingConfig(true);
-        try {
-            const configDocRef = doc(db, 'config', 'quiz');
-            const configDoc = await getDoc(configDocRef);
-            if(configDoc.exists()) {
-                setQuizSteps(configDoc.data().steps);
-            } else {
-                setQuizSteps(localQuizSteps);
-            }
-        } catch (error) {
-            console.error("Erro ao buscar configuração do quiz:", error);
-            setQuizSteps(localQuizSteps); // Fallback to local config on error
-        } finally {
-            setIsLoadingConfig(false);
-        }
-    };
-    fetchQuizConfig();
-  }, []);
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -150,7 +123,7 @@ export default function QuizPage() {
   }, [user, authLoading, router]);
   
   const handleNext = useCallback(async () => {
-    if (!quizSteps || quizSteps.length === 0) return;
+    if (quizSteps.length === 0) return;
     
     const currentStep = quizSteps[currentStepIndex];
     if (currentStep.type === 'question' && currentStep.content.questionType === 'multiple-select-plus-text') {
@@ -173,7 +146,7 @@ export default function QuizPage() {
     }
   }, [quizSteps, currentStepIndex, signUp, answers, router, selectedAllergies, otherAllergyText, setAnswer]);
 
-  const currentStep = quizSteps ? quizSteps[currentStepIndex] : null;
+  const currentStep = quizSteps[currentStepIndex];
 
   const handleAllergyChange = (allergy: string, checked: boolean) => {
     setSelectedAllergies(prev => 
@@ -308,7 +281,7 @@ export default function QuizPage() {
   };
 
 
-  if (authLoading || isSubmitting || isLoadingConfig) {
+  if (authLoading || isSubmitting) {
     return (
         <div className="flex justify-center items-center h-screen bg-background">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />

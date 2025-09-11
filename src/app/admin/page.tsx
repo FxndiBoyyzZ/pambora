@@ -2,13 +2,10 @@
 'use client';
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { type QuizStep } from "@/app/quiz/quiz-config";
-import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2, Sparkles, Dumbbell, Download, Edit, LogOut } from 'lucide-react';
+import { Loader2, Dumbbell, Download, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { uploadVideo } from './actions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -17,152 +14,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSign
 
 export const dynamic = 'force-dynamic';
 
-const getIcon = (type: string) => {
-    switch (type) {
-        case 'video': return <Film className="h-6 w-6 text-primary" />;
-        case 'form': return <User className="h-6 w-6 text-primary" />;
-        case 'question': return <HelpCircle className="h-6 w-6 text-primary" />;
-        case 'chat': return <MessageSquare className="h-6 w-6 text-primary" />;
-        case 'scratch': return <Sparkles className="h-6 w-6 text-primary" />;
-        default: return <ListChecks className="h-6 w-6 text-primary" />;
-    }
-}
-
-const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: number, onStepChange: (index: number, newContent: any) => void }) => {
-    const [stepData, setStepData] = React.useState(step.content);
-    const [isUploading, setIsUploading] = React.useState(false);
-
-    const handleChange = (field: string, value: any) => {
-        const newStepData = { ...stepData, [field]: value };
-        setStepData(newStepData);
-        onStepChange(index, { ...step, content: newStepData });
-    }
-
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        setIsUploading(true);
-        try {
-            const formData = new FormData();
-            formData.append('video', file);
-            const result = await uploadVideo(formData);
-            if (result.success && result.url) {
-                handleChange('videoUrl', result.url);
-            } else {
-                 alert('Falha no upload do vídeo: ' + result.error);
-            }
-        } catch (error) {
-            console.error(error);
-            alert('Ocorreu um erro durante o upload.');
-        } finally {
-            setIsUploading(false);
-        }
-    }
-
-
-    switch (step.type) {
-        case 'video':
-            return (
-                <div className="space-y-4">
-                    <div>
-                        <Label htmlFor={`videoUrl-${index}`}>URL do Vídeo (Vimeo)</Label>
-                        <Input id={`videoUrl-${index}`} value={stepData.videoUrl} onChange={(e) => handleChange('videoUrl', e.target.value)} placeholder="https://vimeo.com/..." />
-                    </div>
-                    <div className="text-center text-xs text-muted-foreground">OU</div>
-                    <div>
-                         <Label htmlFor={`videoUpload-${index}`}>Fazer Upload (Firebase Storage)</Label>
-                         <div className="flex items-center gap-2 rounded-md border border-dashed p-2">
-                             {isUploading ? <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" /> : <UploadCloud className="h-5 w-5 text-muted-foreground" />}
-                            <Input 
-                                id={`videoUpload-${index}`} 
-                                type="file" 
-                                accept="video/*" 
-                                className="border-none text-xs h-auto p-0 file:mr-2 file:text-primary file:font-semibold"
-                                onChange={handleFileChange}
-                                disabled={isUploading}
-                             />
-                         </div>
-                    </div>
-                </div>
-            )
-        case 'form':
-            return (
-                 <div className="space-y-4">
-                    <div>
-                        <Label htmlFor={`form-title-${index}`}>Título</Label>
-                        <Input id={`form-title-${index}`} value={stepData.title} onChange={(e) => handleChange('title', e.target.value)} />
-                    </div>
-                    <div>
-                        <Label htmlFor={`form-desc-${index}`}>Descrição</Label>
-                        <Textarea id={`form-desc-${index}`} value={stepData.description} onChange={(e) => handleChange('description', e.target.value)} />
-                    </div>
-                     <div>
-                        <Label htmlFor={`form-bg-${index}`}>URL da Imagem de Fundo</Label>
-                        <Input id={`form-bg-${index}`} value={stepData.backgroundUrl} onChange={(e) => handleChange('backgroundUrl', e.target.value)} />
-                    </div>
-                </div>
-            )
-        case 'question':
-             return (
-                 <div className="space-y-4">
-                    <div>
-                        <Label htmlFor={`q-title-${index}`}>Título</Label>
-                        <Input id={`q-title-${index}`} value={stepData.title} onChange={(e) => handleChange('title', e.target.value)} />
-                    </div>
-                    {stepData.description && (
-                        <div>
-                            <Label htmlFor={`q-desc-${index}`}>Descrição</Label>
-                            <Textarea id={`q-desc-${index}`} value={stepData.description} onChange={(e) => handleChange('description', e.target.value)} />
-                        </div>
-                    )}
-                    {stepData.questionType === 'multiple-choice' && (
-                         <div>
-                            <Label>Opções (uma por linha)</Label>
-                            <Textarea 
-                                value={stepData.options.map((o: any) => o.label).join('\n')}
-                                onChange={(e) => {
-                                    const labels = e.target.value.split('\n');
-                                    const newOptions = labels.map((label, i) => ({
-                                        id: stepData.options[i]?.id || label.toLowerCase().replace(/\s+/g, '-'),
-                                        label
-                                    }));
-                                    handleChange('options', newOptions);
-                                }}
-                                rows={stepData.options.length || 2}
-                            />
-                        </div>
-                    )}
-                     <div>
-                        <Label htmlFor={`q-bg-${index}`}>URL da Imagem de Fundo</Label>
-                        <Input id={`q-bg-${index}`} value={stepData.backgroundUrl} onChange={(e) => handleChange('backgroundUrl', e.target.value)} />
-                    </div>
-                </div>
-             )
-        case 'vitals':
-             return (
-                 <div className="space-y-4">
-                    <div>
-                        <Label htmlFor={`vitals-title-${index}`}>Título</Label>
-                        <Input id={`vitals-title-${index}`} value={stepData.title} onChange={(e) => handleChange('title', e.target.value)} />
-                    </div>
-                     <div>
-                        <Label htmlFor={`vitals-desc-${index}`}>Descrição</Label>
-                        <Textarea id={`vitals-desc-${index}`} value={stepData.description} onChange={(e) => handleChange('description', e.target.value)} />
-                    </div>
-                     <div>
-                        <Label htmlFor={`vitals-bg-${index}`}>URL da Imagem de Fundo</Label>
-                        <Input id={`vitals-bg-${index}`} value={stepData.backgroundUrl} onChange={(e) => handleChange('backgroundUrl', e.target.value)} />
-                    </div>
-                </div>
-             )
-        default:
-            return <p className="text-sm text-muted-foreground">Este tipo de etapa não possui conteúdo editável.</p>;
-    }
-}
-
 function AdminDashboard() {
-    const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
     const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 21 });
     const [isLoadingData, setIsLoadingData] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
@@ -172,17 +24,6 @@ function AdminDashboard() {
         const fetchConfig = async () => {
             setIsLoadingData(true);
             try {
-                // Fetch Quiz Config
-                const quizConfigDocRef = doc(db, 'config', 'quiz');
-                const quizConfigDoc = await getDoc(quizConfigDocRef);
-                if(quizConfigDoc.exists()) {
-                    setQuizSteps(quizConfigDoc.data().steps);
-                } else {
-                    // If no config in DB, load local one.
-                    const { quizSteps: initialQuizSteps } = await import('@/app/quiz/quiz-config');
-                    setQuizSteps(initialQuizSteps);
-                }
-
                 // Fetch Workout Controls
                 const workoutConfigDocRef = doc(db, 'config', 'workoutControls');
                 const workoutConfigDoc = await getDoc(workoutConfigDocRef);
@@ -204,22 +45,10 @@ function AdminDashboard() {
 
         fetchConfig();
     }, [toast]);
-    
-    const handleStepChange = (index: number, newStep: QuizStep) => {
-        if (!quizSteps) return;
-        const newQuizSteps = [...quizSteps];
-        newQuizSteps[index] = newStep;
-        setQuizSteps(newQuizSteps);
-    };
 
     const handleSaveChanges = async () => {
-        if (!quizSteps) return;
         setIsSaving(true);
         try {
-            // Save quiz config
-            const quizConfigDocRef = doc(db, 'config', 'quiz');
-            await setDoc(quizConfigDocRef, { steps: quizSteps });
-
             // Save workout controls
             const workoutConfigDocRef = doc(db, 'config', 'workoutControls');
             await setDoc(workoutConfigDocRef, workoutControls);
@@ -298,37 +127,6 @@ function AdminDashboard() {
                         </Link>
                         </CardFooter>
                 </Card>
-            </div>
-
-            <div>
-                 <h2 className="text-xl font-bold font-headline text-foreground mb-4 mt-12">
-                    Editor de Etapas do Quiz
-                </h2>
-                {quizSteps && quizSteps.length > 0 ? (
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {quizSteps.map((step, index) => (
-                            <Card key={index} className="flex flex-col">
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
-                                            <CardTitle className="text-lg">Etapa {index + 1}: {step.type.charAt(0).toUpperCase() + step.type.slice(1)}</CardTitle>
-                                        </div>
-                                        {getIcon(step.type)}
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="flex-grow">
-                                    <StepContentEditor step={step} index={index} onStepChange={handleStepChange} />
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                ) : (
-                        <Card className="text-center py-12">
-                            <CardTitle>Nenhuma configuração de quiz encontrada.</CardTitle>
-                            <CardDescription className="mt-2">Isso pode acontecer devido a um erro de permissão ou se nenhuma configuração foi salva ainda.</CardDescription>
-                        </Card>
-                )}
             </div>
         </div>
     );
