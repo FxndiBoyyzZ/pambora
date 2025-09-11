@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import { Inter, Bebas_Neue } from 'next/font/google';
 import './globals.css';
@@ -14,6 +15,7 @@ const bebasNeue = Bebas_Neue({
 export const metadata: Metadata = {
   title: 'Pam Fit - Desafio PAMBORA!',
   description: 'Um aplicativo para o desafio fitness de 21 dias #PAMBORA.',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({

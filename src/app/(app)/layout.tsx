@@ -12,6 +12,7 @@ import { QuizProvider, useQuiz } from '@/services/quiz-service';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { PwaInstallDialog } from '@/components/pwa-install-dialog';
+import { initializeMessaging, requestNotificationPermission } from '@/services/notification-service';
 
 const navItems = [
   { href: '/treinos', label: 'Treinos', icon: Dumbbell },
@@ -84,7 +85,7 @@ function MobileBottomNav() {
 }
 
 function AppLayoutContent({ children }: { children: ReactNode }) {
-  const { user, loading } = useQuiz();
+  const { user, loading, setAnswer } = useQuiz();
   const router = useRouter();
   const [showInstallDialog, setShowInstallDialog] = useState(false);
 
@@ -101,6 +102,20 @@ function AppLayoutContent({ children }: { children: ReactNode }) {
         setShowInstallDialog(true);
     }
   }, [user, loading]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && user && !user.isAnonymous) {
+      const setupNotifications = async () => {
+        await initializeMessaging();
+        const token = await requestNotificationPermission();
+        if (token) {
+          console.log("FCM Token:", token);
+          setAnswer('fcmToken', token);
+        }
+      };
+      setupNotifications();
+    }
+  }, [user, setAnswer]);
 
   const handleInstallDialogClose = () => {
     localStorage.setItem('hasSeenPwaInstallTutorial', 'true');

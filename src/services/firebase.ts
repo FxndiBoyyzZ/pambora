@@ -1,8 +1,10 @@
+
 // src/services/firebase.ts
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getMessaging } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
@@ -24,5 +26,7 @@ if (!getApps().length) {
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+// Conditionally initialize messaging only on the client-side
+const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
 
-export { app, auth, db, storage };
+export { app, auth, db, storage, messaging };

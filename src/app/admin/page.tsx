@@ -1,3 +1,4 @@
+
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
@@ -14,6 +15,7 @@ import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
+import { sendPushNotification } from '@/ai/flows/notification-sender';
 
 export const dynamic = 'force-dynamic';
 
@@ -166,6 +168,9 @@ function AdminDashboard() {
     const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 21 });
     const [isLoadingData, setIsLoadingData] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
+    const [notificationTitle, setNotificationTitle] = React.useState('Nova Mensagem de Pam');
+    const [notificationBody, setNotificationBody] = React.useState('');
+    const [isSendingNotification, setIsSendingNotification] = React.useState(false);
     const { toast } = useToast();
 
      React.useEffect(() => {
@@ -240,6 +245,27 @@ function AdminDashboard() {
         }
     };
   
+      const handleSendNotification = async () => {
+        if (!notificationBody) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'A mensagem da notificação não pode estar vazia.' });
+            return;
+        }
+        setIsSendingNotification(true);
+        try {
+            const result = await sendPushNotification({ title: notificationTitle, body: notificationBody });
+            toast({
+                title: 'Sucesso!',
+                description: `${result.successCount} notificações enviadas com sucesso.`,
+            });
+            setNotificationBody('');
+        } catch (error) {
+            console.error('Failed to send notification', error);
+            toast({ variant: 'destructive', title: 'Erro ao Enviar', description: 'Não foi possível enviar as notificações.' });
+        } finally {
+            setIsSendingNotification(false);
+        }
+    };
+
     if (isLoadingData) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -299,20 +325,38 @@ function AdminDashboard() {
                         </CardFooter>
                 </Card>
 
-                    <Card className="opacity-50 cursor-not-allowed">
+                <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Notificações Push</CardTitle>
                         <Bell className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent>
-                            <p className="text-xs text-muted-foreground">Envie uma mensagem para todos os usuários que instalaram o app.</p>
-                            <Textarea placeholder="Sua mensagem..." className="mt-2" disabled/>
+                    <CardContent className="space-y-2">
+                        <p className="text-xs text-muted-foreground">Envie uma mensagem para todos os usuários que instalaram o app.</p>
+                        <Label htmlFor="notification-title" className="sr-only">Título</Label>
+                        <Input 
+                            id="notification-title"
+                            value={notificationTitle}
+                            onChange={(e) => setNotificationTitle(e.target.value)}
+                            placeholder="Título da notificação"
+                        />
+                        <Label htmlFor="notification-body" className="sr-only">Mensagem</Label>
+                        <Textarea 
+                            id="notification-body"
+                            placeholder="Sua mensagem..." 
+                            className="mt-2" 
+                            value={notificationBody}
+                            onChange={(e) => setNotificationBody(e.target.value)}
+                        />
                     </CardContent>
-                        <CardFooter>
-                        <Button size="sm" className="w-full" disabled>Enviar Notificação (Em breve)</Button>
-                        </CardFooter>
+                    <CardFooter>
+                        <Button size="sm" className="w-full" onClick={handleSendNotification} disabled={isSendingNotification}>
+                            {isSendingNotification && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Enviar Notificação
+                        </Button>
+                    </CardFooter>
                 </Card>
-                    <Card className="opacity-50 cursor-not-allowed">
+                
+                <Card className="opacity-50 cursor-not-allowed">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Editar Usuários</CardTitle>
                         <Edit className="h-4 w-4 text-muted-foreground" />
