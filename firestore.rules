@@ -3,27 +3,35 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Função helper para verificar se o usuário logado é o administrador.
     function isAdmin() {
+      // O email deve corresponder exatamente ao email de login do admin.
       return request.auth.token.email == 'pam@admin.com';
     }
 
+    // Regras para a coleção 'users'
     match /users/{userId} {
+      // O admin pode listar todos os usuários (necessário para a página de leads).
       allow list: if isAdmin();
+      
+      // O admin pode ler/escrever qualquer perfil.
+      // Um usuário normal só pode ler/escrever o seu próprio perfil.
       allow read, write: if isAdmin() || request.auth.uid == userId;
     }
 
+    // Regras para a coleção 'config'
     match /config/{docId} {
+      // O admin pode escrever (salvar) as configurações do quiz e dos treinos.
       allow write: if isAdmin();
+      
+      // Qualquer usuário autenticado pode ler as configurações (para o app funcionar).
       allow read: if request.auth != null;
     }
 
     // Regras para a coleção 'notifications'
     match /notifications/{notificationId} {
-      // Permite que o admin CRIE (enfileire) novas notificações.
-      allow create: if isAdmin();
-      
-      // Permite que o admin LEIA as notificações para exibir o relatório de status.
-      allow read, list: if isAdmin();
+      // Permite que o admin crie (enfileire) e leia (para o relatório) as notificações.
+      allow create, read, list: if isAdmin();
     }
   }
 }
