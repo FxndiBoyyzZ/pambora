@@ -45,10 +45,8 @@ export const quizSteps: QuizStep[] = [
             questionType: 'multiple-choice',
             answerKey: 'goal',
             options: [
-                { id: 'perder-peso', label: 'Perder Peso' },
-                { id: 'ganhar-massa', label: 'Ganhar Massa Muscular' },
-                { id: 'manter-forma', label: 'Manter a Forma' },
-                { id: 'melhorar-saude', label: 'Melhorar a Saúde Geral' },
+                { id: 'Perder Peso', label: 'Perder Peso' },
+                { id: 'Ganhar Massa Muscular', label: 'Ganhar Massa Muscular' },
             ],
             backgroundUrl: '/fundo1p.png',
         }
@@ -68,21 +66,6 @@ export const quizSteps: QuizStep[] = [
                 { id: 'amendoim', label: 'Alergia a Amendoim' },
             ],
             textPlaceholder: "Ex: Tenho alergia a nozes e não como carne de porco.",
-            backgroundUrl: '/fundo1p.png',
-        }
-    },
-    {
-        type: 'question',
-        content: {
-            title: 'Você tem alguma preferência de dieta?',
-            questionType: 'multiple-choice',
-            answerKey: 'diet',
-            options: [
-                { id: 'sem-restricao', label: 'Sem Restrições' },
-                { id: 'vegetariana', label: 'Vegetariana' },
-                { id: 'vegana', label: 'Vegana' },
-                { id: 'low-carb', label: 'Low-Carb' },
-            ],
             backgroundUrl: '/fundo1p.png',
         }
     },

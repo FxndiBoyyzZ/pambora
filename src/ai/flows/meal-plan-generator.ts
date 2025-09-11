@@ -50,21 +50,112 @@ const mealPlanPrompt = ai.definePrompt({
   name: 'mealPlanPrompt',
   input: {schema: MealPlanInputSchema},
   output: {schema: MealPlanOutputSchema},
-  prompt: `Você é um nutricionista especialista em criar planos alimentares para frequentadores de academia no Brasil.
+  prompt: `Você é um assistente de nutrição. Sua tarefa é adaptar um dos dois cardápios base abaixo de acordo com as restrições alimentares do usuário.
 
-Crie um plano alimentar de 7 dias (Segunda a Domingo) focado em comida brasileira, que seja saudável, balanceado e delicioso.
-O plano deve ser totalmente personalizado de acordo com as seguintes informações do usuário:
-
+**Informações do Usuário:**
 - **Objetivo Principal:** {{{goal}}}
-- **Preferência de Dieta:** {{{diet}}}
-- **Alergias e Restrições:** {{{allergies}}}
+- **Restrições Alimentares:** {{{allergies}}}
 
 **Instruções:**
-1.  **Estrutura:** Para cada dia, forneça 4 refeições: Café da Manhã, Almoço, Lanche e Jantar.
-2.  **Conteúdo:** Cada refeição deve conter uma lista de itens alimentares. Seja específico (ex: "1 fatia de pão integral" em vez de "pão").
-3.  **Personalização:** Adapte estritamente as sugestões para atender ao objetivo, dieta e alergias do usuário. Se o usuário for vegetariano, não inclua carne ou peixe. Se tiver alergia a glúten, evite trigo, cevada e centeio.
-4.  **Idioma:** A resposta DEVE ser em Português do Brasil.
-5.  **Formato:** A saída deve ser um objeto JSON estruturado, conforme o schema definido. Não adicione texto ou explicações fora do JSON.
+1.  **Selecione o Cardápio Base:**
+    - Se o objetivo for "Perder Peso", use o "Cardápio Semanal – 1.300 kcal".
+    - Se o objetivo for "Ganhar Massa Muscular", use o "Cardápio Semanal – 2.300 kcal".
+
+2.  **Adapte o Cardápio:**
+    - Analise as restrições alimentares do usuário.
+    - Faça as substituições **mínimas e mais simples possíveis** no cardápio base para evitar os alérgenos.
+    - **Exemplos de Adaptações:**
+        - Se a restrição for "lactose": substitua "iogurte" por "iogurte sem lactose", "leite" por "leite sem lactose", "queijo" por "queijo sem lactose".
+        - Se a restrição for "glúten": substitua "pão integral" por "pão sem glúten", "aveia" por "aveia sem glúten", "macarrão integral" por "macarrão sem glúten".
+        - Se a restrição for "amendoim": substitua "pasta de amendoim" por "pasta de castanha de caju".
+    - **NÃO altere as quantidades ou a estrutura geral do cardápio.** Apenas substitua os itens problemáticos. Se um item não puder ser substituído (ex: alergia a frango), mantenha o item e confie que o usuário saberá não consumi-lo.
+    - Se o usuário indicar "Não possuo restrições" ou algo similar, retorne o cardápio base escolhido sem nenhuma alteração.
+
+3.  **Formato da Saída:**
+    - A saída DEVE ser um objeto JSON estruturado, conforme o schema definido.
+    - NÃO adicione texto, introduções ou explicações fora do JSON.
+    - O lanche da manhã não deve ser incluído no resultado final.
+
+---
+
+**CARDÁPIOS BASE:**
+
+**Cardápio Semanal – 1.300 kcal (Objetivo: Perder Peso)**
+
+*   **Segunda-feira:**
+    *   Café da manhã: 1 fatia de pão integral + 1 ovo mexido + 1 fatia de queijo branco + 1 banana pequena
+    *   Almoço: 3 col. sopa de arroz integral + 1 concha feijão + peito de frango grelhado + salada de folhas + 1 maçã
+    *   Lanche tarde: 1 fatia de pão integral com pasta de ricota + 3 castanhas-do-pará
+    *   Jantar: Omelete com 2 claras + 1 ovo inteiro + espinafre e tomate + salada
+*   **Terça-feira:**
+    *   Café da manhã: 2 torradas integrais + 1 colher de sopa de requeijão light + 1 fatia de mamão
+    *   Almoço: 3 col. sopa de batata doce amassada + filé de peixe grelhado + brócolis no vapor + 1 mexerica
+    *   Lanche tarde: 1 iogurte grego light + 5 amêndoas
+    *   Jantar: Sopa de legumes (abobrinha, cenoura, chuchu) com 1 filé de frango desfiado + salada
+*   **Quarta-feira:**
+    *   Café da manhã: 1 fatia de pão integral + 2 claras mexidas + 1 fatia de queijo minas + 1 laranja pequena
+    *   Almoço: 3 col. sopa de arroz integral + 1 concha feijão + carne moída magra + salada colorida + 1 fatia de melancia
+    *   Lanche tarde: 1 fatia de pão integral com pasta de cottage + 3 nozes
+    *   Jantar: Omelete de legumes (2 ovos) + salada verde
+*   **Quinta-feira:**
+    *   Café da manhã: 1 tapioca pequena com queijo branco + café sem açúcar + 1 fatia de manga
+    *   Almoço: 3 col. sopa de purê de batata doce + peito de frango + abobrinha grelhada + salada de folhas + 1 fatia de abacaxi
+    *   Lanche tarde: 1 iogurte grego light + 6 amêndoas
+    *   Jantar: Sopa de abóbora com carne desfiada + salada verde
+*   **Sexta-feira:**
+    *   Café da manhã: 1 fatia de pão integral + 1 ovo mexido + 1 fatia de queijo cottage + 1 fatia de mamão
+    *   Almoço: 3 col. sopa de arroz integral + 1 concha feijão + filé de tilápia + brócolis e couve refogados + 1 pera pequena
+    *   Lanche tarde: 1 fatia de pão integral com requeijão light + 3 castanhas-do-pará
+    *   Jantar: Omelete de 2 ovos + espinafre + salada verde
+*   **Sábado:**
+    *   Café da manhã: 2 torradas integrais + 1 colher de sopa de ricota + 1 fatia de melancia
+    *   Almoço: 3 col. sopa de arroz integral + peito de frango grelhado + legumes cozidos + 1 fatia de abacaxi
+    *   Lanche tarde: 1 iogurte grego light + 5 nozes
+    *   Jantar: Sopa de legumes com carne magra desfiada + salada de folhas
+*   **Domingo:**
+    *   Café da manhã: 1 tapioca pequena com queijo branco + 1 fatia de mamão + café sem açúcar
+    *   Almoço: 3 col. sopa de batata doce amassada + peito de frango grelhado + salada colorida + 1 laranja pequena
+    *   Lanche tarde: 1 fatia de pão integral com pasta de ricota + 6 amêndoas
+    *   Jantar: Omelete de legumes (2 ovos) + salada verde
+
+**Cardápio Semanal – 2.300 kcal (Objetivo: Ganhar Massa Muscular)**
+
+*   **Segunda-feira:**
+    *   Café da manhã: 2 fatias de pão integral + 2 ovos mexidos + 1 fatia de queijo minas + 1 banana grande + 1 colher de sopa de pasta de amendoim
+    *   Almoço: 5 col. sopa de arroz integral + 1 concha feijão + peito de frango grande grelhado + salada com azeite + batata-doce média + fatia de melancia
+    *   Lanche tarde: Sanduíche natural (pão integral, peito de peru, ricota, tomate, folhas) + 30 g de castanhas
+    *   Jantar: 4 col. sopa de arroz integral + salmão grelhado + legumes refogados no azeite + salada de folhas com azeite
+*   **Terça-feira:**
+    *   Café da manhã: 1 tapioca média com queijo minas + 2 ovos mexidos + 1 fatia de mamão + 1 colher de sopa de pasta de amendoim
+    *   Almoço: 5 col. sopa de purê de batata doce + filé grande de peixe grelhado + brócolis no vapor + salada com azeite + 1 mexerica
+    *   Lanche tarde: 1 pão integral com atum e requeijão light + 20 g de amêndoas
+    *   Jantar: Macarrão integral (1 prato pequeno) com peito de frango desfiado + molho de tomate caseiro + salada verde
+*   **Quarta-feira:**
+    *   Café da manhã: 2 fatias de pão integral + 2 claras + 1 ovo inteiro + queijo cottage + 1 laranja + 1 colher de sopa de pasta de amendoim
+    *   Almoço: 5 col. sopa de arroz integral + 1 concha feijão + carne moída magra + salada colorida com azeite + fatia de melancia
+    *   Lanche tarde: 1 wrap integral de frango + folhas + 1 colher de sopa de homus + 20 g de castanhas
+    *   Jantar: Omelete de 3 ovos com legumes + 1 fatia de pão integral + salada verde
+*   **Quinta-feira:**
+    *   Café da manhã: 1 tapioca média com queijo branco + 2 ovos mexidos + 1 fatia de manga + 1 colher de sopa de pasta de amendoim
+    *   Almoço: 5 col. sopa de purê de batata doce + peito de frango grelhado grande + abobrinha grelhada + salada de folhas com azeite + fatia de abacaxi
+    *   Lanche tarde: 1 iogurte grego light + 2 col. de granola + 1 colher de mel
+    *   Jantar: Risoto integral de frango com legumes (1 prato pequeno) + salada verde
+*   **Sexta-feira:**
+    *   Café da manhã: 2 fatias de pão integral + 2 ovos mexidos + queijo cottage + mamão + 1 colher de sopa de pasta de amendoim
+    *   Almoço: 5 col. sopa de arroz integral + 1 concha feijão + filé de tilápia grande + brócolis refogado + salada de folhas com azeite + pera pequena
+    *   Lanche tarde: Sanduíche integral de peito de peru + ricota + tomate + 30 g de castanhas
+    *   Jantar: Omelete de 3 ovos + espinafre + salada verde + 1 fatia de pão integral
+*   **Sábado:**
+    *   Café da manhã: 2 torradas integrais + 1 colher de sopa de ricota + 2 ovos mexidos + melancia + 1 colher de sopa de pasta de amendoim
+    *   Almoço: 5 col. sopa de arroz integral + peito de frango grande grelhado + legumes cozidos + salada com azeite + 1 fatia de abacaxi
+    *   Lanche tarde: 1 wrap integral com atum, ricota e folhas + 20 g de nozes
+    *   Jantar: Lasanha de berinjela com frango (1 prato médio) + salada verde
+*   **Domingo:**
+    *   Café da manhã: 1 tapioca média com queijo minas + 2 ovos mexidos + 1 fatia de mamão + 1 colher de sopa de pasta de amendoim
+    *   Almoço: 5 col. sopa de batata doce + peito de frango grande grelhado + salada colorida com azeite + 1 laranja
+    *   Lanche tarde: 1 pão integral com pasta de ricota + peito de peru + 30 g de castanhas
+    *   Jantar: Omelete de 3 ovos com legumes + 1 fatia de pão integral + salada verde
+
 `,
 });
 
@@ -75,7 +166,17 @@ const mealPlanFlow = ai.defineFlow(
     outputSchema: MealPlanOutputSchema,
   },
   async input => {
+    // Adicionar "Lanche" vazio ao input para garantir que o schema de output seja satisfeito.
+    // A IA foi instruída a não gerar lanches da manhã, mas o schema de output espera o campo.
     const {output} = await mealPlanPrompt(input);
+    if (output) {
+        for (const day of Object.keys(output.mealPlan)) {
+            const dayPlan = output.mealPlan[day as keyof typeof output.mealPlan];
+            if (!dayPlan.Lanche) {
+               (dayPlan as any).Lanche = (dayPlan as any)["Lanche tarde"] || [];
+            }
+        }
+    }
     return output!;
   }
 );
