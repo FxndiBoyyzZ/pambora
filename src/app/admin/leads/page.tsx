@@ -1,9 +1,8 @@
 // src/app/admin/leads/page.tsx
 'use client';
 import * as React from 'react';
-import { db, auth } from '@/services/firebase';
+import { db } from '@/services/firebase';
 import { collection, getDocs } from 'firebase/firestore';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,6 @@ import { Loader2, Download, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 interface UserData {
   uid: string;
@@ -30,24 +28,9 @@ interface UserData {
 export default function LeadsPage() {
   const [leads, setLeads] = React.useState<UserData[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [user, setUser] = React.useState<FirebaseUser | null>(null);
   const { toast } = useToast();
-  const router = useRouter();
 
   React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, currentUser => {
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        router.push('/admin'); // Redirect to admin login if not authenticated
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
-
-  React.useEffect(() => {
-    if (!user) return; // Wait for user to be authenticated
-
     const fetchLeads = async () => {
       setLoading(true);
       try {
@@ -71,7 +54,7 @@ export default function LeadsPage() {
     };
 
     fetchLeads();
-  }, [user, toast]);
+  }, [toast]);
 
   const escapeCsvField = (field: any) => {
     if (field === null || field === undefined) {
@@ -110,7 +93,7 @@ export default function LeadsPage() {
     document.body.removeChild(link);
   };
 
-  if (!user || loading) {
+  if (loading) {
     return (
         <div className="flex h-screen items-center justify-center bg-muted/30">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -149,12 +132,7 @@ export default function LeadsPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <div className="border rounded-md">
+            <div className="border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -184,7 +162,6 @@ export default function LeadsPage() {
                   </TableBody>
                 </Table>
               </div>
-            )}
           </CardContent>
         </Card>
       </main>

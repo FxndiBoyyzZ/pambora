@@ -10,9 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadVideo } from './actions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db, auth } from '@/services/firebase';
+import { db } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithEmailAndPassword, onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -159,63 +158,6 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
         default:
             return <p className="text-sm text-muted-foreground">Este tipo de etapa não possui conteúdo editável.</p>;
     }
-}
-
-function LoginForm({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUser) => void }) {
-    const [email, setEmail] = React.useState('pam@admin.com');
-    const [password, setPassword] = React.useState('');
-    const [error, setError] = React.useState('');
-    const [isLoading, setIsLoading] = React.useState(false);
-    const { toast } = useToast();
-
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setError('');
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            onLoginSuccess(userCredential.user);
-        } catch (err: any) {
-            setError('Falha no login. Verifique suas credenciais.');
-             toast({
-                variant: 'destructive',
-                title: 'Erro de Autenticação',
-                description: 'Email ou senha inválidos.',
-            });
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return (
-        <div className="flex items-center justify-center h-full">
-            <Card className="w-full max-w-sm">
-                <CardHeader>
-                    <CardTitle>Login do Administrador</CardTitle>
-                    <CardDescription>Acesse o painel de controle.</CardDescription>
-                </CardHeader>
-                <form onSubmit={handleLogin}>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="pam@admin.com"/>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="password">Senha</Label>
-                            <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-                        </div>
-                        {error && <p className="text-sm text-destructive">{error}</p>}
-                    </CardContent>
-                    <CardFooter>
-                        <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Entrar
-                        </Button>
-                    </CardFooter>
-                </form>
-            </Card>
-        </div>
-    );
 }
 
 function AdminDashboard() {
@@ -416,30 +358,6 @@ function AdminDashboard() {
 }
 
 export default function AdminPage() {
-    const [user, setUser] = React.useState<FirebaseUser | null>(null);
-    const [isLoading, setIsLoading] = React.useState(true);
-
-    React.useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-            setIsLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
-
-    const handleLogout = async () => {
-        await signOut(auth);
-        setUser(null);
-    };
-
-    if (isLoading) {
-        return (
-            <div className="flex h-screen items-center justify-center bg-muted/30">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        );
-    }
-    
     return (
         <div className="flex flex-col min-h-screen bg-muted/30">
              <header className="flex justify-between items-center p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
@@ -447,17 +365,11 @@ export default function AdminPage() {
                     <h1 className="text-2xl font-bold font-headline text-foreground">
                         Admin - Painel de Controle
                     </h1>
-                     {user && <p className="text-sm text-muted-foreground">Logado como: {user.email}</p>}
+                     <p className="text-sm text-muted-foreground">Acesso direto para lançamento. Lembre-se de reativar a segurança.</p>
                 </div>
-                 {user && (
-                    <Button variant="ghost" size="sm" onClick={handleLogout}>
-                         <LogOut className="mr-2 h-4 w-4" />
-                        Sair
-                    </Button>
-                 )}
             </header>
             <main className="flex-grow p-4 md:p-6 lg:p-8">
-                 {user ? <AdminDashboard /> : <LoginForm onLoginSuccess={setUser} />}
+                 <AdminDashboard />
             </main>
         </div>
     );
