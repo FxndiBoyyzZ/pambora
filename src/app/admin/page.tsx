@@ -4,17 +4,21 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { type QuizStep } from "@/app/quiz/quiz-config";
-import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2, Sparkles, Dumbbell, Download, Bell, Edit, LogOut } from 'lucide-react';
+import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2, Sparkles, Dumbbell, Download, Bell, Edit, LogOut, CheckCircle, AlertCircle, Send, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadVideo } from './actions';
-import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
 
 export const dynamic = 'force-dynamic';
 
@@ -162,6 +166,127 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
     }
 }
 
+interface Notification {
+    id: string;
+    title: string;
+    body: string;
+    createdAt: Timestamp;
+    status: 'queued' | 'processing' | 'completed' | 'failed';
+    stats?: {
+        successCount: number;
+        failureCount: number;
+    };
+    error?: string;
+}
+
+const getStatusVariant = (status: Notification['status']) => {
+    switch (status) {        
+        case 'processing': return 'secondary';
+        case 'completed': return 'default';
+        case 'failed': return 'destructive';
+        case 'queued':
+        default:
+            return 'outline';
+    }
+}
+const getStatusIcon = (status: Notification['status']) => {
+    switch (status) {
+        case 'queued': return <Clock className="h-4 w-4" />;
+        case 'processing': return <Loader2 className="h-4 w-4 animate-spin" />;
+        case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />;
+        case 'failed': return <AlertCircle className="h-4 w-4 text-destructive" />;
+        default: return null;
+    }
+}
+
+const getStatusText = (status: Notification['status']) => {
+    switch(status) {
+        case 'queued': return 'Na Fila';
+        case 'processing': return 'Processando';
+        case 'completed': return 'Concluído';
+        case 'failed': return 'Falhou';
+        default: return status;
+    }
+}
+
+function NotificationQueueReport() {
+    const [notifications, setNotifications] = React.useState<Notification[]>([]);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
+        
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const newNotifications: Notification[] = [];
+            querySnapshot.forEach((doc) => {
+                newNotifications.push({ id: doc.id, ...doc.data() } as Notification);
+            });
+            setNotifications(newNotifications);
+            setLoading(false);
+        }, (error) => {
+            console.error("Erro ao buscar notificações: ", error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Histórico de Notificações</CardTitle>
+                <CardDescription>Status das últimas notificações enviadas.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {loading ? (
+                    <div className="flex justify-center items-center h-32">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                ) : (
+                    <div className="border rounded-md">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Data</TableHead>
+                                    <TableHead>Título</TableHead>
+                                    <TableHead>Mensagem</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Resultado</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {notifications.length > 0 ? notifications.map(notif => (
+                                    <TableRow key={notif.id}>
+                                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                                            {notif.createdAt ? format(notif.createdAt.toDate(), 'dd/MM/yy HH:mm', { locale: ptBR }) : 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="font-medium max-w-xs truncate">{notif.title}</TableCell>
+                                        <TableCell className="max-w-xs truncate">{notif.body}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={getStatusVariant(notif.status)} className="gap-1.5">
+                                                {getStatusIcon(notif.status)}
+                                                {getStatusText(notif.status)}
+                                            </Badge>
+                                        </TableCell>
+                                         <TableCell className="text-xs">
+                                            {notif.status === 'completed' && `✅ ${notif.stats?.successCount || 0}   ❌ ${notif.stats?.failureCount || 0}`}
+                                            {notif.status === 'failed' && <span className="text-destructive">{notif.error || 'Erro desconhecido'}</span>}
+                                        </TableCell>
+                                    </TableRow>
+                                )) : (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="h-24 text-center">Nenhuma notificação enviada ainda.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
 function AdminDashboard() {
     const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
     const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 21 });
@@ -251,21 +376,21 @@ function AdminDashboard() {
         }
         setIsSendingNotification(true);
         try {
-            // This will now be handled by a Cloud Function triggered by this new document.
             await addDoc(collection(db, "notifications"), {
                 title: notificationTitle,
                 body: notificationBody,
                 createdAt: serverTimestamp(),
+                status: 'queued', // Novo campo de status
             });
 
             toast({
                 title: 'Notificação na Fila!',
-                description: 'Sua mensagem foi enviada para a fila de processamento e será disparada em breve.',
+                description: 'Sua mensagem foi enviada para a fila de processamento. Acompanhe o status abaixo.',
             });
             setNotificationBody('');
         } catch (error) {
             console.error('Error queueing notification', error);
-            toast({ variant: 'destructive', title: 'Erro ao Enfileirar', description: 'Não foi possível enviar a notificação para a fila.' });
+             toast({ variant: 'destructive', title: 'Erro ao Enfileirar', description: 'Não foi possível enviar a notificação para a fila. Verifique as permissões do Firestore.' });
         } finally {
             setIsSendingNotification(false);
         }
@@ -280,8 +405,8 @@ function AdminDashboard() {
     }
     
     return (
-        <>
-            <div className="flex justify-between items-center mb-6">
+        <div className="space-y-8">
+            <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold font-headline text-foreground tracking-wide">
                     Painel de Controle Geral
                 </h2>
@@ -290,7 +415,7 @@ function AdminDashboard() {
                     Salvar Alterações
                 </Button>
             </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {/* Workout Controls Card */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -330,80 +455,78 @@ function AdminDashboard() {
                         </CardFooter>
                 </Card>
 
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Notificações Push</CardTitle>
+                <Card className="col-span-1 lg:col-span-2">
+                    <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                        <div>
+                            <CardTitle className="text-sm font-medium">Notificações Push</CardTitle>
+                             <CardDescription className="text-xs text-muted-foreground pt-1">Envie uma mensagem para todos os usuários que instalaram o app.</CardDescription>
+                        </div>
                         <Bell className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent className="space-y-2">
-                        <p className="text-xs text-muted-foreground">Envie uma mensagem para todos os usuários que instalaram o app.</p>
-                        <Label htmlFor="notification-title" className="sr-only">Título</Label>
-                        <Input 
-                            id="notification-title"
-                            value={notificationTitle}
-                            onChange={(e) => setNotificationTitle(e.target.value)}
-                            placeholder="Título da notificação"
-                        />
-                        <Label htmlFor="notification-body" className="sr-only">Mensagem</Label>
-                        <Textarea 
-                            id="notification-body"
-                            placeholder="Sua mensagem..." 
-                            className="mt-2" 
-                            value={notificationBody}
-                            onChange={(e) => setNotificationBody(e.target.value)}
-                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div className="col-span-1">
+                                <Label htmlFor="notification-title" className="sr-only">Título</Label>
+                                <Input 
+                                    id="notification-title"
+                                    value={notificationTitle}
+                                    onChange={(e) => setNotificationTitle(e.target.value)}
+                                    placeholder="Título da notificação"
+                                />
+                            </div>
+                            <div className="col-span-1 sm:col-span-2">
+                                <Label htmlFor="notification-body" className="sr-only">Mensagem</Label>
+                                <Input 
+                                    id="notification-body"
+                                    placeholder="Sua mensagem aqui..." 
+                                    value={notificationBody}
+                                    onChange={(e) => setNotificationBody(e.target.value)}
+                                />
+                            </div>
+                        </div>
                     </CardContent>
                     <CardFooter>
                         <Button size="sm" className="w-full" onClick={handleSendNotification} disabled={isSendingNotification}>
                             {isSendingNotification && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Enviar Notificação
+                            Enfileirar Notificação para Envio
                         </Button>
                     </CardFooter>
                 </Card>
-                
-                <Card className="opacity-50 cursor-not-allowed">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Editar Usuários</CardTitle>
-                        <Edit className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                            <p className="text-xs text-muted-foreground">Busque e edite os dados de um usuário específico.</p>
-                            <Input placeholder="Buscar por email ou nome..." className="mt-2" disabled/>
-                    </CardContent>
-                        <CardFooter>
-                        <Button variant="outline" size="sm" className="w-full" disabled>Buscar (Em breve)</Button>
-                        </CardFooter>
-                </Card>
             </div>
-            <h2 className="text-xl font-bold font-headline text-foreground mb-4 mt-12">
-                Editor de Etapas do Quiz
-            </h2>
-            {quizSteps && quizSteps.length > 0 ? (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {quizSteps.map((step, index) => (
-                        <Card key={index} className="flex flex-col">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
-                                        <CardTitle className="text-lg">Etapa {index + 1}: {step.type.charAt(0).toUpperCase() + step.type.slice(1)}</CardTitle>
+
+            <NotificationQueueReport />
+
+            <div>
+                 <h2 className="text-xl font-bold font-headline text-foreground mb-4 mt-12">
+                    Editor de Etapas do Quiz
+                </h2>
+                {quizSteps && quizSteps.length > 0 ? (
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {quizSteps.map((step, index) => (
+                            <Card key={index} className="flex flex-col">
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+                                            <CardTitle className="text-lg">Etapa {index + 1}: {step.type.charAt(0).toUpperCase() + step.type.slice(1)}</CardTitle>
+                                        </div>
+                                        {getIcon(step.type)}
                                     </div>
-                                    {getIcon(step.type)}
-                                </div>
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                                <StepContentEditor step={step} index={index} onStepChange={handleStepChange} />
-                            </CardContent>
+                                </CardHeader>
+                                <CardContent className="flex-grow">
+                                    <StepContentEditor step={step} index={index} onStepChange={handleStepChange} />
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                ) : (
+                        <Card className="text-center py-12">
+                            <CardTitle>Nenhuma configuração de quiz encontrada.</CardTitle>
+                            <CardDescription className="mt-2">Isso pode acontecer devido a um erro de permissão ou se nenhuma configuração foi salva ainda.</CardDescription>
                         </Card>
-                    ))}
-                </div>
-            ) : (
-                    <Card className="text-center py-12">
-                        <CardTitle>Nenhuma configuração de quiz encontrada.</CardTitle>
-                        <CardDescription className="mt-2">Isso pode acontecer devido a um erro de permissão ou se nenhuma configuração foi salva ainda.</CardDescription>
-                    </Card>
-            )}
-        </>
+                )}
+            </div>
+        </div>
     );
 }
 
@@ -528,3 +651,5 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    

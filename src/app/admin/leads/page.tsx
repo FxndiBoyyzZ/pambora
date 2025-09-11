@@ -1,3 +1,4 @@
+
 // src/app/admin/leads/page.tsx
 'use client';
 import * as React from 'react';
@@ -160,34 +161,36 @@ export default function LeadsPage() {
                 </div>
             ) : (
                 <div className="border rounded-md">
-                    <Table>
-                    <TableHeader>
-                        <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>WhatsApp</TableHead>
-                        <TableHead>Data de Inscrição</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {leads.length > 0 ? leads.map(lead => (
-                        <TableRow key={lead.uid}>
-                            <TableCell className="font-medium">{lead.name || 'N/A'}</TableCell>
-                            <TableCell>{lead.email || 'N/A'}</TableCell>
-                            <TableCell>{lead.whatsapp || 'N/A'}</TableCell>
-                            <TableCell>
-                            {lead.createdAt ? format(new Date(lead.createdAt.seconds * 1000), 'dd/MM/yyyy') : 'N/A'}
-                            </TableCell>
-                        </TableRow>
-                        )) : (
-                        <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center">
-                            Nenhum lead encontrado.
-                            </TableCell>
-                        </TableRow>
-                        )}
-                    </TableBody>
-                    </Table>
+                    <div className="relative w-full overflow-auto">
+                        <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>WhatsApp</TableHead>
+                            <TableHead>Data de Inscrição</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {leads.length > 0 ? leads.map(lead => (
+                            <TableRow key={lead.uid}>
+                                <TableCell className="font-medium">{lead.name || 'N/A'}</TableCell>
+                                <TableCell>{lead.email || 'N/A'}</TableCell>
+                                <TableCell>{lead.whatsapp || 'N/A'}</TableCell>
+                                <TableCell>
+                                {lead.createdAt ? format(new Date(lead.createdAt.seconds * 1000), 'dd/MM/yyyy') : 'N/A'}
+                                </TableCell>
+                            </TableRow>
+                            )) : (
+                            <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center">
+                                Nenhum lead encontrado.
+                                </TableCell>
+                            </TableRow>
+                            )}
+                        </TableBody>
+                        </Table>
+                    </div>
                 </div>
             )}
           </CardContent>
@@ -196,3 +199,5 @@ export default function LeadsPage() {
     </div>
   );
 }
+
+    
