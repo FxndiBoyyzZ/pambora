@@ -1,21 +1,26 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // ADMIN RULE: Admin user has full read/write access to the entire database.
+
+    // Admin has full, unrestricted access to all documents in the database.
+    // This rule is checked first. If the user is the admin, access is granted
+    // and no other rules are evaluated for this request.
     match /{document=**} {
-      allow read, write: if request.auth.token.email == 'pam@admin.com';
-    }
-    
-    // USER SELF-DATA RULE: Users can read and write to their own document in the 'users' collection.
-    match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.token.email == 'pam@admin.com';
     }
 
-    // CONFIG READ RULE: Authenticated users can read the global configuration files.
+    // Regular users can only read and write to their own user document.
+    // This rule only applies to non-admin users due to the admin rule above.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Any authenticated user (including non-admins) can read the configuration files.
+    // This rule only applies to non-admin users due to the admin rule above.
     match /config/{docId} {
-        allow read: if request.auth != null;
+      allow read: if request.auth != null;
     }
   }
 }
