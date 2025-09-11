@@ -20,7 +20,6 @@ interface QuizAnswers {
   height?: number;
   gender?: 'male' | 'female';
   createdAt?: any;
-  fcmToken?: string;
 }
 
 interface QuizContextType {
