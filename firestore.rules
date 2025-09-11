@@ -1,18 +1,27 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only read and write to their own document.
+    // Regra para a coleção 'users'
     match /users/{userId} {
+      // Qualquer usuário autenticado pode ler os dados de outro usuário.
+      // Apenas o próprio usuário pode escrever em seus dados.
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    // Anyone can read or write to the posts collection.
-    match /posts/{postId} {
-      allow read, write: if true;
+    
+    // Regra para a coleção 'config'
+    match /config/{docId} {
+        // Apenas usuários autenticados podem ler ou escrever na configuração
+        allow read, write: if request.auth != null;
     }
-     // Config collection is private
-    match /config/{document=**} {
-      allow read, write: if false;
+
+    // Regras para a coleção 'posts' (feed #PAMBORA)
+    match /posts/{postId} {
+        // Qualquer pessoa (autenticada ou não) pode ler os posts.
+        allow read: if true;
+        // Qualquer pessoa (autenticada ou não) pode criar/escrever posts.
+        allow write: if true;
     }
   }
 }

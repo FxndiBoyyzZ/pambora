@@ -14,6 +14,7 @@ import { db } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
+import { useQuiz } from '@/services/quiz-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -226,6 +227,7 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                             required
                         />
                     </div>
@@ -242,16 +244,13 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
     );
 }
 
-export default function AdminDashboard() {
+function AdminDashboardContent() {
   const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const { toast } = useToast();
 
   React.useEffect(() => {
-    if (!isAuthenticated) return;
-
     const fetchQuizConfig = async () => {
         setIsLoading(true);
         try {
@@ -260,6 +259,7 @@ export default function AdminDashboard() {
             if(configDoc.exists()) {
                 setQuizSteps(configDoc.data().steps);
             } else {
+                // If no config in firestore, load local one to bootstrap.
                 const { quizSteps: initialQuizSteps } = await import('@/app/quiz/quiz-config');
                 setQuizSteps(initialQuizSteps);
             }
@@ -276,7 +276,7 @@ export default function AdminDashboard() {
     };
     
     fetchQuizConfig();
-  }, [isAuthenticated, toast]);
+  }, [toast]);
 
 
   const handleStepChange = (index: number, newStep: QuizStep) => {
@@ -307,22 +307,24 @@ export default function AdminDashboard() {
         setIsSaving(false);
     }
   }
-
-  const renderContent = () => {
-    if (!isAuthenticated) {
-        return <LoginPage onLogin={() => setIsAuthenticated(true)} />;
-    }
-
-    if (isLoading) {
-      return (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  if (quizSteps && quizSteps.length > 0) {
+    return (
+      <>
+        <div className="flex justify-end mb-4">
+             <Button onClick={handleSaveChanges} disabled={isSaving || isLoading}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Salvar Alterações
+            </Button>
         </div>
-      );
-    }
-    
-    if (quizSteps && quizSteps.length > 0) {
-      return (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {quizSteps.map((step, index) => (
             <Card key={index} className="flex flex-col">
@@ -346,36 +348,48 @@ export default function AdminDashboard() {
             </Card>
           ))}
         </div>
-      );
-    }
-
-    return (
-      <div className="text-center py-12 text-muted-foreground">
-        <p className="text-lg font-semibold">Nenhuma configuração de quiz encontrada.</p>
-      </div>
+      </>
     );
-  };
+  }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <header className="flex justify-between items-center p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
-        <div>
-            <h1 className="text-2xl font-bold font-headline text-foreground">
-            Admin - Configuração do Quiz
-            </h1>
-            <p className="text-muted-foreground">Arraste e solte para reordenar as etapas (funcionalidade em breve).</p>
-        </div>
-        {isAuthenticated && (
-            <Button onClick={handleSaveChanges} disabled={isSaving || isLoading}>
-                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Salvar Alterações
-            </Button>
-        )}
-      </header>
-
-      <main className="flex-grow p-4 md:p-6 lg:p-8">
-        {renderContent()}
-      </main>
+    <div className="text-center py-12 text-muted-foreground">
+      <p className="text-lg font-semibold">Nenhuma configuração de quiz encontrada.</p>
+      <p>Isso pode acontecer devido a um erro de permissão ou se nenhuma configuração foi salva ainda.</p>
     </div>
   );
+}
+
+
+export default function AdminPage() {
+    const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+    const { loading: userLoading } = useQuiz();
+
+    if(userLoading) {
+        return (
+             <div className="flex justify-center items-center h-screen bg-background">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        )
+    }
+    
+    return (
+         <div className="flex flex-col min-h-screen bg-background">
+            <header className="flex justify-between items-center p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
+                <div>
+                    <h1 className="text-2xl font-bold font-headline text-foreground">
+                    Admin - Configuração do Quiz
+                    </h1>
+                    <p className="text-muted-foreground">Arraste e solte para reordenar as etapas (funcionalidade em breve).</p>
+                </div>
+            </header>
+             <main className="flex-grow p-4 md:p-6 lg:p-8">
+                {!isAuthenticated ? (
+                    <LoginPage onLogin={() => setIsAuthenticated(true)} />
+                ) : (
+                    <AdminDashboardContent />
+                )}
+            </main>
+        </div>
+    )
 }
