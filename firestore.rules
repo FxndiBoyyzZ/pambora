@@ -30,8 +30,7 @@ service cloud.firestore {
 
     // Regras para a coleção 'notifications'
     match /notifications/{notificationId} {
-      // Permite que o admin CRIE (enfileire) novas notificações.
-      // Permite que o admin LEIA e LISTE as notificações para exibir o relatório de status.
+      // Permite que o admin CRIE (enfileire) e LEIA (para o relatório) as notificações.
       allow create, read, list: if isAdmin();
     }
   }
