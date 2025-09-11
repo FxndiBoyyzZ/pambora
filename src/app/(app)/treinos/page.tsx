@@ -3,11 +3,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Dumbbell, Flame, Lock, Play, CheckCircle, ArrowRight } from "lucide-react";
+import { Dumbbell, Flame, Lock, Play, CheckCircle, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useQuiz } from "@/services/quiz-service";
 import * as React from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/services/firebase';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -87,13 +89,30 @@ function WorkoutCard({ day, isCompleted, isCurrent, isLocked }: { day: number, i
 
 export default function TreinosPage() {
   const { answers, isWorkoutCompleted } = useQuiz();
+  const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 21 });
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchWorkoutConfig = async () => {
+      try {
+        const configDoc = await getDoc(doc(db, 'config', 'workoutControls'));
+        if (configDoc.exists()) {
+          setWorkoutControls(configDoc.data() as { unlockedDays: number });
+        }
+      } catch (error) {
+        console.error("Failed to fetch workout controls", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchWorkoutConfig();
+  }, []);
+
   const completedWorkouts = answers.completedWorkouts || [];
   const focusDays = completedWorkouts.length;
   const progressPercentage = (focusDays / totalDays) * 100;
 
   // Determine o dia atual para o usuário.
-  // O dia atual é o primeiro dia não concluído.
-  // Se todos estiverem concluídos, o dia atual é o último dia.
   let currentDay = 1;
   while(isWorkoutCompleted(currentDay) && currentDay < totalDays) {
     currentDay++;
@@ -113,6 +132,14 @@ export default function TreinosPage() {
           description: workout.description,
       }
   });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -156,16 +183,16 @@ export default function TreinosPage() {
                     {dailyWorkouts.map((workout) => {
                         const isCompleted = isWorkoutCompleted(workout.day);
                         const isCurrent = workout.day === currentDay;
-                        // A day is locked if it's not completed, not the current day, AND it's in the future
-                        const isLocked = !isCompleted && !isCurrent && workout.day > currentDay;
+                        // Um dia está bloqueado se for maior que o progresso do usuário OU maior que o limite global do admin
+                        const isLocked = workout.day > currentDay || workout.day > workoutControls.unlockedDays;
 
                         return (
                             <WorkoutCard
                                 key={workout.day}
                                 day={workout.day}
                                 isCompleted={isCompleted}
-                                isCurrent={isCurrent}
-                                isLocked={isLocked}
+                                isCurrent={!isLocked && isCurrent}
+                                isLocked={isLocked && !isCurrent && !isCompleted}
                             />
                         )
                     })}

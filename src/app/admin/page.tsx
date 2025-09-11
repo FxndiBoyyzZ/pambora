@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { type QuizStep } from "@/app/quiz/quiz-config";
-import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2, Sparkles, LogIn } from 'lucide-react';
+import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2, Sparkles, LogIn, Dumbbell } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -12,9 +12,6 @@ import { uploadVideo } from './actions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
-import { useQuiz } from '@/services/quiz-service';
 import { signInAnonymously } from 'firebase/auth';
 
 export const dynamic = 'force-dynamic';
@@ -185,14 +182,16 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
 }
 
 export default function AdminPage() {
-    const { user } = useQuiz();
+    const [isAuthenticated, setIsAuthenticated] = React.useState(false);
     const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
+    const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 21 });
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const { toast } = useToast();
 
     React.useEffect(() => {
-        const ensureAdminAuthAndFetch = async () => {
+        const fetchConfig = async () => {
+            if (!isAuthenticated) return;
             setIsLoading(true);
             try {
                 // Ensure we have an authenticated user (anonymous is fine for admin)
@@ -200,30 +199,37 @@ export default function AdminPage() {
                     await signInAnonymously(auth);
                 }
                 
-                // Now fetch the config
-                const configDocRef = doc(db, 'config', 'quiz');
-                const configDoc = await getDoc(configDocRef);
-                if(configDoc.exists()) {
-                    setQuizSteps(configDoc.data().steps);
+                // Fetch Quiz Config
+                const quizConfigDocRef = doc(db, 'config', 'quiz');
+                const quizConfigDoc = await getDoc(quizConfigDocRef);
+                if(quizConfigDoc.exists()) {
+                    setQuizSteps(quizConfigDoc.data().steps);
                 } else {
                     const { quizSteps: initialQuizSteps } = await import('@/app/quiz/quiz-config');
                     setQuizSteps(initialQuizSteps);
                 }
+
+                // Fetch Workout Controls
+                const workoutConfigDocRef = doc(db, 'config', 'workoutControls');
+                const workoutConfigDoc = await getDoc(workoutConfigDocRef);
+                if (workoutConfigDoc.exists()) {
+                    setWorkoutControls(workoutConfigDoc.data() as { unlockedDays: number });
+                }
+
             } catch (error) {
                 console.error("Erro ao autenticar ou buscar configuração:", error);
                 toast({
                     variant: 'destructive',
                     title: 'Erro!',
-                    description: 'Não foi possível carregar a configuração do quiz. Verifique as regras de segurança do Firestore.'
+                    description: 'Não foi possível carregar a configuração. Verifique as regras de segurança do Firestore.'
                 });
             } finally {
                 setIsLoading(false);
             }
         };
 
-        ensureAdminAuthAndFetch();
-    }, [toast]);
-
+        fetchConfig();
+    }, [isAuthenticated, toast]);
 
     const handleStepChange = (index: number, newStep: QuizStep) => {
         if (!quizSteps) return;
@@ -236,14 +242,20 @@ export default function AdminPage() {
         if (!quizSteps) return;
         setIsSaving(true);
         try {
-            const configDocRef = doc(db, 'config', 'quiz');
-            await setDoc(configDocRef, { steps: quizSteps });
+            // Save quiz config
+            const quizConfigDocRef = doc(db, 'config', 'quiz');
+            await setDoc(quizConfigDocRef, { steps: quizSteps });
+
+            // Save workout controls
+            const workoutConfigDocRef = doc(db, 'config', 'workoutControls');
+            await setDoc(workoutConfigDocRef, workoutControls);
+
             toast({
                 title: 'Sucesso!',
-                description: 'Configuração do quiz salva com sucesso.'
+                description: 'Configurações salvas com sucesso.'
             });
         } catch (error) {
-            console.error("Erro ao salvar configuração do quiz:", error);
+            console.error("Erro ao salvar configuração:", error);
             toast({
                 variant: 'destructive',
                 title: 'Erro!',
@@ -254,6 +266,18 @@ export default function AdminPage() {
         }
     };
   
+    const handleLogin = (e: React.FormEvent) => {
+        e.preventDefault();
+        const form = e.target as HTMLFormElement;
+        const username = (form.elements.namedItem('username') as HTMLInputElement).value;
+        const password = (form.elements.namedItem('password') as HTMLInputElement).value;
+        if (username === 'admin' && password === '1234') {
+            setIsAuthenticated(true);
+        } else {
+            alert('Usuário ou senha inválidos.');
+        }
+    };
+
     const renderContent = () => {
         if (isLoading) {
             return (
@@ -263,15 +287,42 @@ export default function AdminPage() {
             );
         }
 
-        if (quizSteps && quizSteps.length > 0) {
-            return (
-                <>
-                    <div className="flex justify-end mb-4">
-                        <Button onClick={handleSaveChanges} disabled={isSaving || isLoading}>
-                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Salvar Alterações
-                        </Button>
-                    </div>
+        return (
+             <>
+                <div className="flex justify-end mb-4">
+                    <Button onClick={handleSaveChanges} disabled={isSaving || isLoading}>
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Salvar Alterações
+                    </Button>
+                </div>
+                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
+                     {/* Workout Controls Card */}
+                    <Card className="md:col-span-2 lg:col-span-1">
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <Dumbbell className="h-6 w-6 text-primary" />
+                                <CardTitle className="text-lg">Controle de Treinos</CardTitle>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                             <div className="space-y-2">
+                                <Label htmlFor="unlockedDays">Último Dia de Treino Liberado</Label>
+                                <Input 
+                                    id="unlockedDays" 
+                                    type="number" 
+                                    value={workoutControls.unlockedDays}
+                                    onChange={(e) => setWorkoutControls({ unlockedDays: parseInt(e.target.value, 10) || 1 })}
+                                    min="1"
+                                    max="21"
+                                />
+                             </div>
+                        </CardContent>
+                    </Card>
+                 </div>
+                <h2 className="text-xl font-bold font-headline text-foreground mb-4">
+                    Editor do Quiz
+                </h2>
+                {quizSteps && quizSteps.length > 0 ? (
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {quizSteps.map((step, index) => (
                             <Card key={index} className="flex flex-col">
@@ -295,27 +346,54 @@ export default function AdminPage() {
                             </Card>
                         ))}
                     </div>
-                </>
-            );
-        }
-
-        return (
-            <div className="text-center py-12 text-muted-foreground">
-                <p className="text-lg font-semibold">Nenhuma configuração de quiz encontrada.</p>
-                <p>Isso pode acontecer devido a um erro de permissão ou se nenhuma configuração foi salva ainda.</p>
-            </div>
+                ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                         <p className="text-lg font-semibold">Nenhuma configuração de quiz encontrada.</p>
+                         <p>Isso pode acontecer devido a um erro de permissão ou se nenhuma configuração foi salva ainda.</p>
+                     </div>
+                )}
+            </>
         );
     };
+
+    if (!isAuthenticated) {
+        return (
+            <div className="flex justify-center items-center min-h-screen bg-muted/40">
+                <Card className="w-full max-w-sm">
+                    <CardHeader>
+                        <CardTitle>Login do Administrador</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="username">Usuário</Label>
+                                <Input id="username" name="username" defaultValue="admin" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="password">Senha</Label>
+                                <Input id="password" name="password" type="password" required />
+                            </div>
+                            <Button type="submit" className="w-full">
+                                <LogIn className="mr-2" />
+                                Entrar
+                            </Button>
+                        </form>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col min-h-screen bg-background">
             <header className="flex justify-between items-center p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
                 <div>
                     <h1 className="text-2xl font-bold font-headline text-foreground">
-                        Admin - Configuração do Quiz
+                        Admin - Painel de Controle
                     </h1>
-                    <p className="text-muted-foreground">Arraste e solte para reordenar as etapas (funcionalidade em breve).</p>
+                    <p className="text-muted-foreground">Gerencie as configurações do aplicativo.</p>
                 </div>
+                 <Button onClick={() => setIsAuthenticated(false)}>Sair</Button>
             </header>
             <main className="flex-grow p-4 md:p-6 lg:p-8">
                 {renderContent()}
