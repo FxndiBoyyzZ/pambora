@@ -1,3 +1,4 @@
+
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
@@ -18,21 +19,27 @@ export const sendPushNotificationOnQueue = functions
     const notificationData = snapshot.data();
     const notificationId = context.params.notificationId;
 
+    functions.logger.info(`Notification ${notificationId} triggered for processing.`);
+
     if (!notificationData) {
-      functions.logger.error("Notification data is empty.");
+      functions.logger.error("Notification data is empty. Aborting.");
       return;
     }
 
     const {title, body} = notificationData;
+    functions.logger.info(`Title: "${title}", Body: "${body}"`);
 
     // 1. Update status to "processing"
     await db.collection("notifications").doc(notificationId).update({
       status: "processing",
     });
+    functions.logger.info(`Status updated to "processing" for ${notificationId}.`);
 
     try {
       // 2. Get all user documents from Firestore
       const usersSnapshot = await db.collection("users").get();
+      functions.logger.info(`Found ${usersSnapshot.size} total users in 'users' collection.`);
+
 
       // 3. Filter out users who have an FCM token
       const tokens: string[] = [];
@@ -44,13 +51,15 @@ export const sendPushNotificationOnQueue = functions
       });
 
       if (tokens.length === 0) {
-        functions.logger.log("No FCM tokens found. No notifications to send.");
+        functions.logger.warn("No FCM tokens found. No notifications to send.");
         await db.collection("notifications").doc(notificationId).update({
           status: "completed",
           stats: {successCount: 0, failureCount: 0},
         });
         return;
       }
+      
+      functions.logger.info(`Found ${tokens.length} tokens. Preparing to send multicast message.`);
 
       // 4. Construct the multicast message
       const message: admin.messaging.MulticastMessage = {
@@ -84,10 +93,10 @@ export const sendPushNotificationOnQueue = functions
       // 5. Send the message to all tokens
       const batchResponse = await messaging.sendEachForMulticast(message);
       functions.logger.log(
-        batchResponse.successCount + " messages were sent successfully"
+        `${batchResponse.successCount} messages were sent successfully.`
       );
       functions.logger.log(
-        batchResponse.failureCount + " messages failed to send"
+        `${batchResponse.failureCount} messages failed to send.`
       );
 
       // 6. Update status to "completed" with stats
@@ -98,8 +107,10 @@ export const sendPushNotificationOnQueue = functions
           failureCount: batchResponse.failureCount,
         },
       });
+      functions.logger.info(`Status updated to "completed" for ${notificationId}.`);
+
     } catch (error) {
-      functions.logger.error("Error sending multicast message:", error);
+      functions.logger.error(`Error sending multicast message for ${notificationId}:`, error);
       // Update status to "failed"
       await db.collection("notifications").doc(notificationId).update({
         status: "failed",
