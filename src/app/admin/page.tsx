@@ -12,7 +12,8 @@ import { uploadVideo } from './actions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { useQuiz } from '@/services/quiz-service'; // Import useQuiz
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -181,14 +182,76 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
     }
 }
 
+function LoginPage({ onLogin }: { onLogin: () => void }) {
+    const [username, setUsername] = React.useState('');
+    const [password, setPassword] = React.useState('');
+    const [error, setError] = React.useState('');
+
+    const handleLogin = () => {
+        if (username === 'admin' && password === '1234') {
+            onLogin();
+        } else {
+            setError('Usuário ou senha inválidos.');
+        }
+    };
+
+    return (
+        <div className="flex items-center justify-center min-h-[80vh]">
+            <Card className="w-full max-w-sm">
+                <CardHeader>
+                    <CardTitle className="text-2xl text-center">Acesso Restrito</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4">
+                    <Alert variant="destructive">
+                      <Terminal className="h-4 w-4" />
+                      <AlertTitle>Atenção</AlertTitle>
+                      <AlertDescription>
+                        Esta área é para desenvolvimento. Não use em produção com estas credenciais.
+                      </AlertDescription>
+                    </Alert>
+                    <div className="grid gap-2">
+                        <Label htmlFor="username">Usuário</Label>
+                        <Input
+                            id="username"
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="password">Senha</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                    </div>
+                    {error && <p className="text-destructive text-sm text-center">{error}</p>}
+                </CardContent>
+                <CardFooter>
+                    <Button className="w-full" onClick={handleLogin}>
+                        <LogIn className="mr-2" />
+                        Entrar
+                    </Button>
+                </CardFooter>
+            </Card>
+        </div>
+    );
+}
+
 export default function AdminDashboard() {
   const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const { toast } = useToast();
-  const { user, loading: authLoading, signInAdmin } = useQuiz();
 
   React.useEffect(() => {
+    if (!isAuthenticated) return;
+
     const fetchQuizConfig = async () => {
         setIsLoading(true);
         try {
@@ -198,7 +261,6 @@ export default function AdminDashboard() {
                 setQuizSteps(configDoc.data().steps);
             } else {
                 const { quizSteps: initialQuizSteps } = await import('@/app/quiz/quiz-config');
-                // Don't set doc here, let admin save it
                 setQuizSteps(initialQuizSteps);
             }
         } catch (error) {
@@ -213,14 +275,8 @@ export default function AdminDashboard() {
         }
     };
     
-    // Only fetch if user is authenticated (could be anonymous admin)
-    if (user) {
-        fetchQuizConfig();
-    } else if (!authLoading) {
-        // If not loading and no user, stop loading spinner.
-        setIsLoading(false);
-    }
-  }, [user, authLoading, toast]);
+    fetchQuizConfig();
+  }, [isAuthenticated, toast]);
 
 
   const handleStepChange = (index: number, newStep: QuizStep) => {
@@ -231,14 +287,7 @@ export default function AdminDashboard() {
   }
 
   const handleSaveChanges = async () => {
-    if (!quizSteps || !user) {
-        toast({
-            variant: 'destructive',
-            title: 'Não autenticado',
-            description: 'Você precisa estar logado para salvar as alterações.'
-        });
-        return;
-    }
+    if (!quizSteps) return;
     setIsSaving(true);
     try {
         const configDocRef = doc(db, 'config', 'quiz');
@@ -258,53 +307,20 @@ export default function AdminDashboard() {
         setIsSaving(false);
     }
   }
-  
-  const handleAdminLogin = async () => {
-      try {
-          await signInAdmin();
-          toast({
-              title: "Login de Admin realizado!"
-          });
-      } catch (error) {
-          console.error("Admin sign in failed", error);
-          toast({
-            variant: 'destructive',
-            title: 'Falha no Login',
-            description: 'Não foi possível realizar o login de administrador.'
-        });
-      }
-  }
 
   const renderContent = () => {
-    if (isLoading || authLoading) {
+    if (!isAuthenticated) {
+        return <LoginPage onLogin={() => setIsAuthenticated(true)} />;
+    }
+
+    if (isLoading) {
       return (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       );
     }
-
-    if (!user) {
-      return (
-        <div className="text-center py-12">
-            <Card className="max-w-sm mx-auto">
-                <CardHeader>
-                    <CardTitle>Acesso Restrito</CardTitle>
-                    <CardContent className="pt-4 text-muted-foreground">
-                        <p>Esta é a área de administração. Por favor, autentique-se para continuar.</p>
-                    </CardContent>
-                    <CardFooter>
-                        <Button className="w-full" onClick={handleAdminLogin}>
-                            <LogIn className="mr-2" />
-                            Entrar como Admin
-                        </Button>
-                    </CardFooter>
-                </CardHeader>
-            </Card>
-        </div>
-      );
-    }
-
+    
     if (quizSteps && quizSteps.length > 0) {
       return (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -349,10 +365,12 @@ export default function AdminDashboard() {
             </h1>
             <p className="text-muted-foreground">Arraste e solte para reordenar as etapas (funcionalidade em breve).</p>
         </div>
-        <Button onClick={handleSaveChanges} disabled={isSaving || isLoading || !user}>
-            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Salvar Alterações
-        </Button>
+        {isAuthenticated && (
+            <Button onClick={handleSaveChanges} disabled={isSaving || isLoading}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Salvar Alterações
+            </Button>
+        )}
       </header>
 
       <main className="flex-grow p-4 md:p-6 lg:p-8">

@@ -2,7 +2,7 @@
 'use client';
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { auth, db } from '@/services/firebase';
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, signInAnonymously } from 'firebase/auth';
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, getFirestore } from 'firebase/firestore';
 
 interface QuizAnswers {
@@ -30,7 +30,6 @@ interface QuizContextType {
   toggleWorkoutCompleted: (workoutId: number) => void;
   isWorkoutCompleted: (workoutId: number) => boolean;
   signUp: (email: string, name: string, whatsapp: string) => Promise<void>;
-  signInAdmin: () => Promise<void>;
 }
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined);
@@ -176,21 +175,12 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signInAdmin = async () => {
-    try {
-        await signInAnonymously(auth);
-    } catch (error) {
-        console.error("Error signing in admin anonymously:", error);
-        throw error;
-    }
-  };
-
   const isWorkoutCompleted = (workoutId: number) => {
       return answers.completedWorkouts?.includes(workoutId) ?? false;
   }
 
   return (
-    <QuizContext.Provider value={{ user, answers, loading, setAnswer, resetQuiz, toggleWorkoutCompleted, isWorkoutCompleted, signUp, signInAdmin }}>
+    <QuizContext.Provider value={{ user, answers, loading, setAnswer, resetQuiz, toggleWorkoutCompleted, isWorkoutCompleted, signUp }}>
       {children}
     </QuizContext.Provider>
   );
