@@ -1,10 +1,9 @@
-
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { type QuizStep } from "@/app/quiz/quiz-config";
-import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2, Sparkles } from 'lucide-react';
+import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2, Sparkles, LogIn } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -187,7 +186,7 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
   const { toast } = useToast();
-  const { user, loading: authLoading } = useQuiz(); // Use hook
+  const { user, loading: authLoading, signInAdmin } = useQuiz();
 
   React.useEffect(() => {
     const fetchQuizConfig = async () => {
@@ -214,7 +213,7 @@ export default function AdminDashboard() {
         }
     };
     
-    // Only fetch if user is authenticated
+    // Only fetch if user is authenticated (could be anonymous admin)
     if (user) {
         fetchQuizConfig();
     } else if (!authLoading) {
@@ -259,6 +258,22 @@ export default function AdminDashboard() {
         setIsSaving(false);
     }
   }
+  
+  const handleAdminLogin = async () => {
+      try {
+          await signInAdmin();
+          toast({
+              title: "Login de Admin realizado!"
+          });
+      } catch (error) {
+          console.error("Admin sign in failed", error);
+          toast({
+            variant: 'destructive',
+            title: 'Falha no Login',
+            description: 'Não foi possível realizar o login de administrador.'
+        });
+      }
+  }
 
   const renderContent = () => {
     if (isLoading || authLoading) {
@@ -271,9 +286,21 @@ export default function AdminDashboard() {
 
     if (!user) {
       return (
-        <div className="text-center py-12 text-muted-foreground">
-          <p className="text-lg font-semibold">Acesso Negado</p>
-          <p>Esta é uma área protegida. Por favor, autentique-se para continuar.</p>
+        <div className="text-center py-12">
+            <Card className="max-w-sm mx-auto">
+                <CardHeader>
+                    <CardTitle>Acesso Restrito</CardTitle>
+                    <CardContent className="pt-4 text-muted-foreground">
+                        <p>Esta é a área de administração. Por favor, autentique-se para continuar.</p>
+                    </CardContent>
+                    <CardFooter>
+                        <Button className="w-full" onClick={handleAdminLogin}>
+                            <LogIn className="mr-2" />
+                            Entrar como Admin
+                        </Button>
+                    </CardFooter>
+                </CardHeader>
+            </Card>
         </div>
       );
     }

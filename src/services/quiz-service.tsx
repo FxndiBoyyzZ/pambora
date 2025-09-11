@@ -30,6 +30,7 @@ interface QuizContextType {
   toggleWorkoutCompleted: (workoutId: number) => void;
   isWorkoutCompleted: (workoutId: number) => boolean;
   signUp: (email: string, name: string, whatsapp: string) => Promise<void>;
+  signInAdmin: () => Promise<void>;
 }
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined);
@@ -46,6 +47,11 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = useCallback(async (user: User) => {
+    // Admins are anonymous and don't have user data in firestore
+    if (user.isAnonymous) {
+      setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
+      return;
+    }
     try {
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
@@ -91,7 +97,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       if (typeof window !== 'undefined') {
         localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
       }
-      if (user) {
+      if (user && !user.isAnonymous) {
         updateFirestore(user.uid, { [step]: answer });
       }
       return newAnswers;
@@ -104,7 +110,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('quizAnswers');
     }
     setAnswers(defaultState);
-    if (user) {
+    if (user && !user.isAnonymous) {
       const initialData = {
           uid: user.uid, // Ensure UID is preserved
           name: answers.name || '',
@@ -126,7 +132,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
             ? completed.filter(id => id !== workoutId)
             : [...completed, workoutId];
         const newAnswers = { ...prev, completedWorkouts: newCompleted };
-        if (user) {
+        if (user && !user.isAnonymous) {
             updateFirestore(user.uid, { completedWorkouts: newCompleted });
         }
         return newAnswers;
@@ -170,12 +176,21 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const signInAdmin = async () => {
+    try {
+        await signInAnonymously(auth);
+    } catch (error) {
+        console.error("Error signing in admin anonymously:", error);
+        throw error;
+    }
+  };
+
   const isWorkoutCompleted = (workoutId: number) => {
       return answers.completedWorkouts?.includes(workoutId) ?? false;
   }
 
   return (
-    <QuizContext.Provider value={{ user, answers, loading, setAnswer, resetQuiz, toggleWorkoutCompleted, isWorkoutCompleted, signUp }}>
+    <QuizContext.Provider value={{ user, answers, loading, setAnswer, resetQuiz, toggleWorkoutCompleted, isWorkoutCompleted, signUp, signInAdmin }}>
       {children}
     </QuizContext.Provider>
   );
