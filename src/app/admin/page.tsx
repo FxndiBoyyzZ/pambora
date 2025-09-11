@@ -1,3 +1,4 @@
+
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
@@ -14,7 +15,6 @@ import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { signInWithEmailAndPassword, onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import Link from 'next/link';
-
 
 export const dynamic = 'force-dynamic';
 
@@ -163,7 +163,7 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
 }
 
 function LoginForm({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUser) => void }) {
-    const [email, setEmail] = React.useState('');
+    const [email, setEmail] = React.useState('pam@admin.com');
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
@@ -175,17 +175,13 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUser) =>
         setError('');
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            if (userCredential.user.email !== 'pam@admin.com') {
-                await signOut(auth);
-                throw new Error("Not an admin account.");
-            }
             onLoginSuccess(userCredential.user);
         } catch (err: any) {
-            setError('Falha no login. Verifique suas credenciais e se é uma conta de administrador.');
-            toast({
+            setError('Falha no login. Verifique suas credenciais.');
+             toast({
                 variant: 'destructive',
                 title: 'Erro de Autenticação',
-                description: 'Email ou senha inválidos, ou a conta não é de administrador.',
+                description: 'Email ou senha inválidos.',
             });
         } finally {
             setIsLoading(false);
@@ -193,7 +189,7 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUser) =>
     };
 
     return (
-        <div className="flex justify-center items-center h-full">
+        <div className="flex items-center justify-center h-full">
             <Card className="w-full max-w-sm">
                 <CardHeader>
                     <CardTitle>Login do Administrador</CardTitle>
@@ -223,29 +219,14 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUser) =>
     );
 }
 
-export default function AdminPage() {
+function AdminDashboard() {
     const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
     const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 21 });
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const { toast } = useToast();
-    const [user, setUser] = React.useState<FirebaseUser | null>(auth.currentUser);
 
-    React.useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (currentUser && currentUser.email === 'pam@admin.com') {
-                setUser(currentUser);
-            } else {
-                setUser(null);
-            }
-            setIsLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
-
-    React.useEffect(() => {
-        if (!user) return; 
-
+     React.useEffect(() => {
         const fetchConfig = async () => {
             setIsLoading(true);
             try {
@@ -255,6 +236,7 @@ export default function AdminPage() {
                 if(quizConfigDoc.exists()) {
                     setQuizSteps(quizConfigDoc.data().steps);
                 } else {
+                    // If no config in DB, load local one.
                     const { quizSteps: initialQuizSteps } = await import('@/app/quiz/quiz-config');
                     setQuizSteps(initialQuizSteps);
                 }
@@ -279,14 +261,8 @@ export default function AdminPage() {
         };
 
         fetchConfig();
-    }, [user, toast]);
+    }, [toast]);
     
-    const handleLogout = async () => {
-        await signOut(auth);
-        setUser(null);
-    };
-
-
     const handleStepChange = (index: number, newStep: QuizStep) => {
         if (!quizSteps) return;
         const newQuizSteps = [...quizSteps];
@@ -295,7 +271,7 @@ export default function AdminPage() {
     };
 
     const handleSaveChanges = async () => {
-        if (!quizSteps || !user) return;
+        if (!quizSteps) return;
         setIsSaving(true);
         try {
             // Save quiz config
@@ -322,136 +298,159 @@ export default function AdminPage() {
         }
     };
   
-    const renderDashboard = () => {
-        if (isLoading || !quizSteps) {
-            return (
-                <div className="flex justify-center items-center h-64">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-            );
-        }
-
-        return (
-             <>
-                <div className="flex justify-between items-center mb-6">
-                     <h2 className="text-xl font-bold font-headline text-foreground tracking-wide">
-                        Painel de Controle Geral
-                    </h2>
-                    <Button onClick={handleSaveChanges} disabled={isSaving || isLoading}>
-                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Salvar Alterações
-                    </Button>
-                </div>
-                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
-                    {/* Workout Controls Card */}
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Controle de Treinos</CardTitle>
-                            <Dumbbell className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                             <div className="space-y-2">
-                                <Label htmlFor="unlockedDays">Último Dia Liberado</Label>
-                                <Input 
-                                    id="unlockedDays" 
-                                    type="number" 
-                                    value={workoutControls.unlockedDays}
-                                    onChange={(e) => setWorkoutControls({ unlockedDays: parseInt(e.target.value, 10) || 1 })}
-                                    min="1"
-                                    max="21"
-                                />
-                                 <p className="text-xs text-muted-foreground">Defina qual o último dia de treino que os usuários podem acessar globalmente.</p>
-                             </div>
-                        </CardContent>
-                    </Card>
-                    
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Gerenciar Leads</CardTitle>
-                            <Download className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                             <p className="text-xs text-muted-foreground">Visualize e exporte a lista de todos os usuários que se inscreveram.</p>
-                        </CardContent>
-                         <CardFooter>
-                            <Link href="/admin/leads" className="w-full">
-                                <Button variant="outline" size="sm" className="w-full">
-                                    Visualizar Leads
-                                </Button>
-                            </Link>
-                         </CardFooter>
-                    </Card>
-
-                     <Card className="opacity-50 cursor-not-allowed">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Notificações Push</CardTitle>
-                            <Bell className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                             <p className="text-xs text-muted-foreground">Envie uma mensagem para todos os usuários que instalaram o app.</p>
-                             <Textarea placeholder="Sua mensagem..." className="mt-2" disabled/>
-                        </CardContent>
-                         <CardFooter>
-                            <Button size="sm" className="w-full" disabled>Enviar Notificação (Em breve)</Button>
-                         </CardFooter>
-                    </Card>
-                     <Card className="opacity-50 cursor-not-allowed">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Editar Usuários</CardTitle>
-                            <Edit className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                             <p className="text-xs text-muted-foreground">Busque e edite os dados de um usuário específico.</p>
-                             <Input placeholder="Buscar por email ou nome..." className="mt-2" disabled/>
-                        </CardContent>
-                         <CardFooter>
-                            <Button variant="outline" size="sm" className="w-full" disabled>Buscar (Em breve)</Button>
-                         </CardFooter>
-                    </Card>
-                 </div>
-                <h2 className="text-xl font-bold font-headline text-foreground mb-4 mt-12">
-                    Editor de Etapas do Quiz
-                </h2>
-                {quizSteps && quizSteps.length > 0 ? (
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {quizSteps.map((step, index) => (
-                            <Card key={index} className="flex flex-col">
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
-                                            <CardTitle className="text-lg">Etapa {index + 1}: {step.type.charAt(0).toUpperCase() + step.type.slice(1)}</CardTitle>
-                                        </div>
-                                        {getIcon(step.type)}
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="flex-grow">
-                                    <StepContentEditor step={step} index={index} onStepChange={handleStepChange} />
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                ) : (
-                     <Card className="text-center py-12">
-                         <CardTitle>Nenhuma configuração de quiz encontrada.</CardTitle>
-                         <CardDescription className="mt-2">Isso pode acontecer devido a um erro de permissão ou se nenhuma configuração foi salva ainda.</CardDescription>
-                     </Card>
-                )}
-            </>
-        );
-    };
-
     if (isLoading) {
         return (
-            <div className="flex justify-center items-center h-screen bg-muted/30">
+            <div className="flex justify-center items-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         );
     }
+    
+    return (
+        <>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold font-headline text-foreground tracking-wide">
+                    Painel de Controle Geral
+                </h2>
+                <Button onClick={handleSaveChanges} disabled={isSaving || isLoading}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Salvar Alterações
+                </Button>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
+                {/* Workout Controls Card */}
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Controle de Treinos</CardTitle>
+                        <Dumbbell className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                            <div className="space-y-2">
+                            <Label htmlFor="unlockedDays">Último Dia Liberado</Label>
+                            <Input 
+                                id="unlockedDays" 
+                                type="number" 
+                                value={workoutControls.unlockedDays}
+                                onChange={(e) => setWorkoutControls({ unlockedDays: parseInt(e.target.value, 10) || 1 })}
+                                min="1"
+                                max="21"
+                            />
+                                <p className="text-xs text-muted-foreground">Defina qual o último dia de treino que os usuários podem acessar globalmente.</p>
+                            </div>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Gerenciar Leads</CardTitle>
+                        <Download className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                            <p className="text-xs text-muted-foreground">Visualize e exporte a lista de todos os usuários que se inscreveram.</p>
+                    </CardContent>
+                        <CardFooter>
+                        <Link href="/admin/leads" className="w-full">
+                            <Button variant="outline" size="sm" className="w-full">
+                                Visualizar Leads
+                            </Button>
+                        </Link>
+                        </CardFooter>
+                </Card>
 
+                    <Card className="opacity-50 cursor-not-allowed">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Notificações Push</CardTitle>
+                        <Bell className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                            <p className="text-xs text-muted-foreground">Envie uma mensagem para todos os usuários que instalaram o app.</p>
+                            <Textarea placeholder="Sua mensagem..." className="mt-2" disabled/>
+                    </CardContent>
+                        <CardFooter>
+                        <Button size="sm" className="w-full" disabled>Enviar Notificação (Em breve)</Button>
+                        </CardFooter>
+                </Card>
+                    <Card className="opacity-50 cursor-not-allowed">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Editar Usuários</CardTitle>
+                        <Edit className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                            <p className="text-xs text-muted-foreground">Busque e edite os dados de um usuário específico.</p>
+                            <Input placeholder="Buscar por email ou nome..." className="mt-2" disabled/>
+                    </CardContent>
+                        <CardFooter>
+                        <Button variant="outline" size="sm" className="w-full" disabled>Buscar (Em breve)</Button>
+                        </CardFooter>
+                </Card>
+            </div>
+            <h2 className="text-xl font-bold font-headline text-foreground mb-4 mt-12">
+                Editor de Etapas do Quiz
+            </h2>
+            {quizSteps && quizSteps.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {quizSteps.map((step, index) => (
+                        <Card key={index} className="flex flex-col">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+                                        <CardTitle className="text-lg">Etapa {index + 1}: {step.type.charAt(0).toUpperCase() + step.type.slice(1)}</CardTitle>
+                                    </div>
+                                    {getIcon(step.type)}
+                                </div>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <StepContentEditor step={step} index={index} onStepChange={handleStepChange} />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            ) : (
+                    <Card className="text-center py-12">
+                        <CardTitle>Nenhuma configuração de quiz encontrada.</CardTitle>
+                        <CardDescription className="mt-2">Isso pode acontecer devido a um erro de permissão ou se nenhuma configuração foi salva ainda.</CardDescription>
+                    </Card>
+            )}
+        </>
+    );
+}
+
+export default function AdminPage() {
+    const [user, setUser] = React.useState<FirebaseUser | null>(null);
+    const [isLoading, setIsLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            if (currentUser && currentUser.email === 'pam@admin.com') {
+                setUser(currentUser);
+            } else {
+                setUser(null);
+                 if (currentUser) { // If a non-admin user is somehow logged in, log them out.
+                    signOut(auth);
+                }
+            }
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const handleLogout = async () => {
+        await signOut(auth);
+        setUser(null);
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-muted/30">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+    
     return (
         <div className="flex flex-col min-h-screen bg-muted/30">
-            <header className="flex justify-between items-center p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
+             <header className="flex justify-between items-center p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
                 <div>
                     <h1 className="text-2xl font-bold font-headline text-foreground">
                         Admin - Painel de Controle
@@ -466,8 +465,10 @@ export default function AdminPage() {
                  )}
             </header>
             <main className="flex-grow p-4 md:p-6 lg:p-8">
-                 {user ? renderDashboard() : <LoginForm onLoginSuccess={setUser} />}
+                 {user ? <AdminDashboard /> : <LoginForm onLoginSuccess={setUser} />}
             </main>
         </div>
     );
 }
+
+    
