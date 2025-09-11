@@ -1,4 +1,3 @@
-
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
@@ -10,12 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadVideo } from './actions';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, addDoc, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
-import { sendPushNotification } from '@/ai/flows/notification-sender';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export const dynamic = 'force-dynamic';
 
@@ -163,13 +165,106 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
     }
 }
 
+interface NotificationJob {
+  id: string;
+  createdAt: { seconds: number; nanoseconds: number };
+  title: string;
+  body: string;
+  status: 'queued' | 'processing' | 'completed' | 'failed';
+  stats?: {
+    successCount: number;
+    failureCount: number;
+  };
+}
+
+const NotificationQueueReport: React.FC = () => {
+    const [jobs, setJobs] = React.useState<NotificationJob[]>([]);
+    const [loading, setLoading] = React.useState(true);
+    const { toast } = useToast();
+
+    React.useEffect(() => {
+        const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const jobsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NotificationJob));
+            setJobs(jobsData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Erro ao buscar fila de notificações:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Erro de Permissão',
+                description: 'Não foi possível ler a fila de notificações. Verifique as regras do Firestore.'
+            });
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [toast]);
+
+    const getStatusVariant = (status: NotificationJob['status']): 'default' | 'secondary' | 'destructive' | 'outline' => {
+        switch (status) {
+            case 'completed': return 'default';
+            case 'processing': return 'secondary';
+            case 'failed': return 'destructive';
+            case 'queued': return 'outline';
+            default: return 'outline';
+        }
+    };
+    
+    return (
+      <Card className="col-span-1 md:col-span-2 lg:col-span-3 xl:col-span-4">
+          <CardHeader>
+              <CardTitle>Relatório de Envio de Notificações</CardTitle>
+              <CardDescription>Status das últimas notificações enviadas.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              {loading && <Loader2 className="mx-auto h-6 w-6 animate-spin" />}
+              {!loading && jobs.length === 0 && <p className="text-sm text-muted-foreground text-center">Nenhuma notificação na fila ainda.</p>}
+              {!loading && jobs.length > 0 && (
+                 <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Horário</TableHead>
+                            <TableHead>Título</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Resultado</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {jobs.map(job => (
+                            <TableRow key={job.id}>
+                                <TableCell>{formatDistanceToNow(new Date(job.createdAt.seconds * 1000), { addSuffix: true, locale: ptBR })}</TableCell>
+                                <TableCell className="font-medium">{job.title}</TableCell>
+                                <TableCell>
+                                    <Badge variant={getStatusVariant(job.status)}>{job.status}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    {job.stats ? (
+                                        <span className="text-xs">
+                                          ✅ {job.stats.successCount} | ❌ {job.stats.failureCount}
+                                        </span>
+                                    ) : (
+                                        <span className="text-xs text-muted-foreground">--</span>
+                                    )}
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                 </Table>
+              )}
+          </CardContent>
+      </Card>
+    )
+}
+
 
 function AdminDashboard() {
     const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
     const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 21 });
     const [isLoadingData, setIsLoadingData] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
-    const [notificationTitle, setNotificationTitle] = React.useState('Nova Mensagem de Pam');
+    const [notificationTitle, setNotificationTitle] = React.useState('Nova Mensagem da Pam');
     const [notificationBody, setNotificationBody] = React.useState('');
     const [isSendingNotification, setIsSendingNotification] = React.useState(false);
     const { toast } = useToast();
@@ -246,29 +341,34 @@ function AdminDashboard() {
         }
     };
   
-    const handleSendNotification = async () => {
-        if (!notificationBody) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'A mensagem da notificação não pode estar vazia.' });
-            return;
-        }
-        setIsSendingNotification(true);
-        try {
-            const result = await sendPushNotification({
-                title: notificationTitle,
-                body: notificationBody,
-            });
-
-            toast({
-                title: 'Envio Concluído!',
-                description: `✅ ${result.successCount} enviadas com sucesso. ❌ ${result.failureCount} falharam.`,
-            });
-            setNotificationBody('');
-        } catch (error) {
-            console.error('Error sending notification', error);
-             toast({ variant: 'destructive', title: 'Erro ao Enviar', description: 'Não foi possível enviar as notificações. Verifique o console para mais detalhes.' });
-        } finally {
-            setIsSendingNotification(false);
-        }
+    const handleQueueNotification = async () => {
+      if (!notificationBody) {
+          toast({ variant: 'destructive', title: 'Erro', description: 'A mensagem da notificação não pode estar vazia.' });
+          return;
+      }
+      setIsSendingNotification(true);
+      try {
+          await addDoc(collection(db, 'notifications'), {
+              title: notificationTitle,
+              body: notificationBody,
+              status: 'queued',
+              createdAt: new Date(),
+          });
+          toast({
+              title: 'Notificação Enfileirada!',
+              description: 'A notificação foi adicionada à fila e será enviada em breve.',
+          });
+          setNotificationBody('');
+      } catch (error) {
+          console.error("Erro ao enfileirar notificação:", error);
+          toast({
+              variant: 'destructive',
+              title: 'Erro ao Enfileirar!',
+              description: 'Não foi possível enfileirar a notificação. Verifique as permissões do Firestore.',
+          });
+      } finally {
+          setIsSendingNotification(false);
+      }
     };
 
     if (isLoadingData) {
@@ -361,12 +461,14 @@ function AdminDashboard() {
                         </div>
                     </CardContent>
                     <CardFooter>
-                        <Button size="sm" className="w-full" onClick={handleSendNotification} disabled={isSendingNotification}>
+                        <Button size="sm" className="w-full" onClick={handleQueueNotification} disabled={isSendingNotification}>
                             {isSendingNotification && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Enviar Notificação Imediatamente
+                            Enfileirar para Envio Imediato
                         </Button>
                     </CardFooter>
                 </Card>
+
+                <NotificationQueueReport />
             </div>
 
             <div>
