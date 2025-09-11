@@ -1,4 +1,3 @@
-
 // src/app/admin/leads/page.tsx
 'use client';
 import * as React from 'react';
@@ -40,7 +39,6 @@ export default function LeadsPage() {
       if (currentUser && currentUser.email === 'pam@admin.com') {
         setUser(currentUser);
       } else {
-        // Se não for o admin, redireciona para a página de login do admin
         router.push('/admin');
       }
     });
@@ -48,7 +46,7 @@ export default function LeadsPage() {
   }, [router]);
 
   React.useEffect(() => {
-    if (!user) return; // Não busca os dados se o admin não estiver logado
+    if (!user) return; 
 
     const fetchLeads = async () => {
       setLoading(true);
@@ -66,7 +64,7 @@ export default function LeadsPage() {
         toast({
           variant: 'destructive',
           title: 'Erro ao Carregar Leads',
-          description: 'Não foi possível buscar os dados dos usuários. Verifique as regras do Firestore.',
+          description: 'Não foi possível buscar os dados dos usuários. Verifique as regras do Firestore e sua conexão.',
         });
       } finally {
         setLoading(false);
@@ -113,7 +111,7 @@ export default function LeadsPage() {
     document.body.removeChild(link);
   };
 
-  if (loading || !user) {
+  if (!user || loading) {
     return (
         <div className="flex h-screen items-center justify-center bg-muted/30">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />

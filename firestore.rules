@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -8,20 +7,18 @@ service cloud.firestore {
       return request.auth.token.email == 'pam@admin.com';
     }
 
-    // Rule 1: Admin has full access to everything.
+    // Admin has full access to everything.
     match /{document=**} {
       allow read, write: if isAdmin();
     }
-
-    // Rule 2: Non-admin users have specific permissions.
-    // These are only checked if the user is NOT the admin.
+    
+    // User-specific rules for non-admins.
     match /users/{userId} {
-      // A user can read/write their own data.
       allow read, write: if request.auth.uid == userId;
     }
 
     match /config/{docId} {
-      // Any authenticated user can read the config (e.g., quiz steps).
+      // Any authenticated user can read the config.
       allow read: if request.auth != null;
     }
   }

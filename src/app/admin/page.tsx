@@ -1,4 +1,3 @@
-
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
@@ -360,7 +359,7 @@ function AdminDashboard() {
 }
 
 function AdminLoginPage({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUser) => void }) {
-    const [email, setEmail] = React.useState('');
+    const [email, setEmail] = React.useState('pam@admin.com');
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
@@ -369,12 +368,6 @@ function AdminLoginPage({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUse
         e.preventDefault();
         setError('');
         setIsLoading(true);
-
-        if (email !== 'pam@admin.com') {
-            setError('Acesso permitido apenas para a conta de administrador.');
-            setIsLoading(false);
-            return;
-        }
 
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
