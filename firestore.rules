@@ -1,16 +1,18 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow users to manage their own data
     match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
+      // Logged-in users can only read/write their own data.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Allow admin (any authenticated user) to manage config
+    // WARNING: Insecure rule for development purposes.
+    // This allows anyone to read/write to the application configuration.
+    // This MUST be secured before deploying to production, for example by
+    // only allowing specific admin UIDs to write.
     match /config/{docId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
   }
 }

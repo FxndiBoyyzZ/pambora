@@ -1,18 +1,18 @@
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { type QuizStep } from "@/app/quiz/quiz-config";
-import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2, Sparkles, LogIn, Dumbbell } from 'lucide-react';
+import { Film, ListChecks, MessageSquare, Gift, HelpCircle, User, GripVertical, UploadCloud, Loader2, Sparkles, LogIn, Dumbbell, Download, Bell, Edit } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadVideo } from './actions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db, auth } from '@/services/firebase';
+import { db } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { signInAnonymously } from 'firebase/auth';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,12 +65,12 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
             return (
                 <div className="space-y-4">
                     <div>
-                        <Label htmlFor={`videoUrl-${index}`}>URL do Vídeo</Label>
-                        <Input id={`videoUrl-${index}`} value={stepData.videoUrl} onChange={(e) => handleChange('videoUrl', e.target.value)} placeholder="https://..." />
+                        <Label htmlFor={`videoUrl-${index}`}>URL do Vídeo (Vimeo)</Label>
+                        <Input id={`videoUrl-${index}`} value={stepData.videoUrl} onChange={(e) => handleChange('videoUrl', e.target.value)} placeholder="https://vimeo.com/..." />
                     </div>
                     <div className="text-center text-xs text-muted-foreground">OU</div>
                     <div>
-                         <Label htmlFor={`videoUpload-${index}`}>Fazer Upload</Label>
+                         <Label htmlFor={`videoUpload-${index}`}>Fazer Upload (Firebase Storage)</Label>
                          <div className="flex items-center gap-2 rounded-md border border-dashed p-2">
                              {isUploading ? <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" /> : <UploadCloud className="h-5 w-5 text-muted-foreground" />}
                             <Input 
@@ -117,16 +117,19 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
                     )}
                     {stepData.questionType === 'multiple-choice' && (
                          <div>
-                            <Label>Opções</Label>
-                             <div className="space-y-2">
-                                {stepData.options.map((opt: any, optIndex: number) => (
-                                     <Input key={opt.id} value={opt.label} onChange={(e) => {
-                                         const newOptions = [...stepData.options];
-                                         newOptions[optIndex].label = e.target.value;
-                                         handleChange('options', newOptions);
-                                     }} />
-                                ))}
-                            </div>
+                            <Label>Opções (uma por linha)</Label>
+                            <Textarea 
+                                value={stepData.options.map((o: any) => o.label).join('\n')}
+                                onChange={(e) => {
+                                    const labels = e.target.value.split('\n');
+                                    const newOptions = labels.map((label, i) => ({
+                                        id: stepData.options[i]?.id || label.toLowerCase().replace(/\s+/g, '-'),
+                                        label
+                                    }));
+                                    handleChange('options', newOptions);
+                                }}
+                                rows={stepData.options.length || 2}
+                            />
                         </div>
                     )}
                      <div>
@@ -135,54 +138,29 @@ const StepContentEditor = ({ step, index, onStepChange }: { step: any, index: nu
                     </div>
                 </div>
              )
-        case 'scratch':
+        case 'vitals':
              return (
-                <div className="space-y-4">
+                 <div className="space-y-4">
                     <div>
-                        <Label htmlFor={`scratch-title-${index}`}>Título</Label>
-                        <Input id={`scratch-title-${index}`} value={stepData.title} onChange={(e) => handleChange('title', e.target.value)} />
-                    </div>
-                    <div>
-                        <Label htmlFor={`scratch-desc-${index}`}>Descrição</Label>
-                        <Textarea id={`scratch-desc-${index}`} value={stepData.description} onChange={(e) => handleChange('description', e.target.value)} />
-                    </div>
-                    <div>
-                        <Label htmlFor={`scratch-prize-${index}`}>Texto do Prêmio</Label>
-                        <Input id={`scratch-prize-${index}`} value={stepData.prizeText} onChange={(e) => handleChange('prizeText', e.target.value)} />
+                        <Label htmlFor={`vitals-title-${index}`}>Título</Label>
+                        <Input id={`vitals-title-${index}`} value={stepData.title} onChange={(e) => handleChange('title', e.target.value)} />
                     </div>
                      <div>
-                        <Label htmlFor={`scratch-bg-${index}`}>URL da Imagem de Fundo</Label>
-                        <Input id={`scratch-bg-${index}`} value={stepData.backgroundUrl} onChange={(e) => handleChange('backgroundUrl', e.target.value)} />
+                        <Label htmlFor={`vitals-desc-${index}`}>Descrição</Label>
+                        <Textarea id={`vitals-desc-${index}`} value={stepData.description} onChange={(e) => handleChange('description', e.target.value)} />
                     </div>
-                </div>
-             )
-        case 'chat':
-             return (
-                <div className="space-y-4">
-                    <Label>Mensagens</Label>
-                     {stepData.messages.map((msg: any, msgIndex: number) => (
-                         msg.author === 'ByPamela' && (
-                           <Textarea 
-                              key={msgIndex} 
-                              value={msg.text} 
-                              className="bg-muted" 
-                              onChange={(e) => {
-                                const newMessages = [...stepData.messages];
-                                newMessages[msgIndex].text = e.target.value;
-                                handleChange('messages', newMessages);
-                              }}
-                           />
-                         )
-                     ))}
+                     <div>
+                        <Label htmlFor={`vitals-bg-${index}`}>URL da Imagem de Fundo</Label>
+                        <Input id={`vitals-bg-${index}`} value={stepData.backgroundUrl} onChange={(e) => handleChange('backgroundUrl', e.target.value)} />
+                    </div>
                 </div>
              )
         default:
-            return null;
+            return <p className="text-sm text-muted-foreground">Este tipo de etapa não possui conteúdo editável.</p>;
     }
 }
 
 export default function AdminPage() {
-    const [isAuthenticated, setIsAuthenticated] = React.useState(false);
     const [quizSteps, setQuizSteps] = React.useState<QuizStep[] | null>(null);
     const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 21 });
     const [isLoading, setIsLoading] = React.useState(true);
@@ -191,20 +169,15 @@ export default function AdminPage() {
 
     React.useEffect(() => {
         const fetchConfig = async () => {
-            if (!isAuthenticated) return;
             setIsLoading(true);
             try {
-                // Ensure we have an authenticated user (anonymous is fine for admin)
-                if (!auth.currentUser) {
-                    await signInAnonymously(auth);
-                }
-                
                 // Fetch Quiz Config
                 const quizConfigDocRef = doc(db, 'config', 'quiz');
                 const quizConfigDoc = await getDoc(quizConfigDocRef);
                 if(quizConfigDoc.exists()) {
                     setQuizSteps(quizConfigDoc.data().steps);
                 } else {
+                    // Fallback to local config if nothing in Firestore
                     const { quizSteps: initialQuizSteps } = await import('@/app/quiz/quiz-config');
                     setQuizSteps(initialQuizSteps);
                 }
@@ -217,10 +190,10 @@ export default function AdminPage() {
                 }
 
             } catch (error) {
-                console.error("Erro ao autenticar ou buscar configuração:", error);
+                console.error("Erro ao buscar configuração:", error);
                 toast({
                     variant: 'destructive',
-                    title: 'Erro!',
+                    title: 'Erro de Permissão!',
                     description: 'Não foi possível carregar a configuração. Verifique as regras de segurança do Firestore.'
                 });
             } finally {
@@ -229,7 +202,7 @@ export default function AdminPage() {
         };
 
         fetchConfig();
-    }, [isAuthenticated, toast]);
+    }, [toast]);
 
     const handleStepChange = (index: number, newStep: QuizStep) => {
         if (!quizSteps) return;
@@ -258,26 +231,14 @@ export default function AdminPage() {
             console.error("Erro ao salvar configuração:", error);
             toast({
                 variant: 'destructive',
-                title: 'Erro!',
-                description: 'Não foi possível salvar a configuração. Verifique as regras do Firestore.'
+                title: 'Erro ao Salvar!',
+                description: 'Não foi possível salvar. Verifique as permissões do Firestore.'
             });
         } finally {
             setIsSaving(false);
         }
     };
   
-    const handleLogin = (e: React.FormEvent) => {
-        e.preventDefault();
-        const form = e.target as HTMLFormElement;
-        const username = (form.elements.namedItem('username') as HTMLInputElement).value;
-        const password = (form.elements.namedItem('password') as HTMLInputElement).value;
-        if (username === 'admin' && password === '1234') {
-            setIsAuthenticated(true);
-        } else {
-            alert('Usuário ou senha inválidos.');
-        }
-    };
-
     const renderContent = () => {
         if (isLoading) {
             return (
@@ -289,24 +250,25 @@ export default function AdminPage() {
 
         return (
              <>
-                <div className="flex justify-end mb-4">
+                <div className="flex justify-between items-center mb-6">
+                     <h2 className="text-xl font-bold font-headline text-foreground tracking-wide">
+                        Painel de Controle Geral
+                    </h2>
                     <Button onClick={handleSaveChanges} disabled={isSaving || isLoading}>
                         {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         Salvar Alterações
                     </Button>
                 </div>
                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
-                     {/* Workout Controls Card */}
-                    <Card className="md:col-span-2 lg:col-span-1">
-                        <CardHeader>
-                            <div className="flex items-center gap-2">
-                                <Dumbbell className="h-6 w-6 text-primary" />
-                                <CardTitle className="text-lg">Controle de Treinos</CardTitle>
-                            </div>
+                    {/* Workout Controls Card */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Controle de Treinos</CardTitle>
+                            <Dumbbell className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                              <div className="space-y-2">
-                                <Label htmlFor="unlockedDays">Último Dia de Treino Liberado</Label>
+                                <Label htmlFor="unlockedDays">Último Dia Liberado</Label>
                                 <Input 
                                     id="unlockedDays" 
                                     type="number" 
@@ -315,12 +277,53 @@ export default function AdminPage() {
                                     min="1"
                                     max="21"
                                 />
+                                 <p className="text-xs text-muted-foreground">Defina qual o último dia de treino que os usuários podem acessar globalmente.</p>
                              </div>
                         </CardContent>
                     </Card>
+                    {/* Placeholder Cards */}
+                     <Card className="opacity-50 cursor-not-allowed">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Visualizar Leads</CardTitle>
+                            <Download className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                             <div className="text-2xl font-bold">1,234</div>
+                             <p className="text-xs text-muted-foreground">Usuários inscritos no total.</p>
+                        </CardContent>
+                         <CardFooter>
+                            <Button variant="outline" size="sm" className="w-full" disabled>Exportar para Excel (Em breve)</Button>
+                         </CardFooter>
+                    </Card>
+                     <Card className="opacity-50 cursor-not-allowed">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Notificações Push</CardTitle>
+                            <Bell className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                             <p className="text-xs text-muted-foreground">Envie uma mensagem para todos os usuários que instalaram o app.</p>
+                             <Textarea placeholder="Sua mensagem..." className="mt-2" disabled/>
+                        </CardContent>
+                         <CardFooter>
+                            <Button size="sm" className="w-full" disabled>Enviar Notificação (Em breve)</Button>
+                         </CardFooter>
+                    </Card>
+                     <Card className="opacity-50 cursor-not-allowed">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Editar Usuários</CardTitle>
+                            <Edit className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                             <p className="text-xs text-muted-foreground">Busque e edite os dados de um usuário específico.</p>
+                             <Input placeholder="Buscar por email ou nome..." className="mt-2" disabled/>
+                        </CardContent>
+                         <CardFooter>
+                            <Button variant="outline" size="sm" className="w-full" disabled>Buscar (Em breve)</Button>
+                         </CardFooter>
+                    </Card>
                  </div>
-                <h2 className="text-xl font-bold font-headline text-foreground mb-4">
-                    Editor do Quiz
+                <h2 className="text-xl font-bold font-headline text-foreground mb-4 mt-12">
+                    Editor de Etapas do Quiz
                 </h2>
                 {quizSteps && quizSteps.length > 0 ? (
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -328,7 +331,7 @@ export default function AdminPage() {
                             <Card key={index} className="flex flex-col">
                                 <CardHeader>
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-3">
                                             <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
                                             <CardTitle className="text-lg">Etapa {index + 1}: {step.type.charAt(0).toUpperCase() + step.type.slice(1)}</CardTitle>
                                         </div>
@@ -338,64 +341,37 @@ export default function AdminPage() {
                                 <CardContent className="flex-grow">
                                     <StepContentEditor step={step} index={index} onStepChange={handleStepChange} />
                                 </CardContent>
-                                <CardFooter>
-                                    <Button variant="destructive" size="sm" className="w-full" onClick={() => alert('Funcionalidade de remover ainda não implementada.')}>
-                                    Remover Etapa
-                                    </Button>
-                                </CardFooter>
                             </Card>
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                         <p className="text-lg font-semibold">Nenhuma configuração de quiz encontrada.</p>
-                         <p>Isso pode acontecer devido a um erro de permissão ou se nenhuma configuração foi salva ainda.</p>
-                     </div>
+                    <Card className="text-center py-12">
+                         <CardTitle>Nenhuma configuração de quiz encontrada.</CardTitle>
+                         <CardDescription className="mt-2">Isso pode acontecer devido a um erro de permissão ou se nenhuma configuração foi salva ainda.</CardDescription>
+                     </Card>
                 )}
             </>
         );
     };
 
-    if (!isAuthenticated) {
-        return (
-            <div className="flex justify-center items-center min-h-screen bg-muted/40">
-                <Card className="w-full max-w-sm">
-                    <CardHeader>
-                        <CardTitle>Login do Administrador</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleLogin} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="username">Usuário</Label>
-                                <Input id="username" name="username" defaultValue="admin" required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="password">Senha</Label>
-                                <Input id="password" name="password" type="password" required />
-                            </div>
-                            <Button type="submit" className="w-full">
-                                <LogIn className="mr-2" />
-                                Entrar
-                            </Button>
-                        </form>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
     return (
-        <div className="flex flex-col min-h-screen bg-background">
+        <div className="flex flex-col min-h-screen bg-muted/30">
             <header className="flex justify-between items-center p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
                 <div>
                     <h1 className="text-2xl font-bold font-headline text-foreground">
                         Admin - Painel de Controle
                     </h1>
-                    <p className="text-muted-foreground">Gerencie as configurações do aplicativo.</p>
+                    <p className="text-muted-foreground">Gerencie o conteúdo e as configurações do aplicativo aqui.</p>
                 </div>
-                 <Button onClick={() => setIsAuthenticated(false)}>Sair</Button>
             </header>
             <main className="flex-grow p-4 md:p-6 lg:p-8">
+                 <Alert variant="destructive" className="mb-6">
+                    <Sparkles className="h-4 w-4" />
+                    <AlertTitle>Acesso de Desenvolvedor Ativado</AlertTitle>
+                    <AlertDescription>
+                       Esta página está temporariamente com acesso público para facilitar a configuração. Lembre-se de proteger esta rota com autenticação antes de ir para produção.
+                    </AlertDescription>
+                </Alert>
                 {renderContent()}
             </main>
         </div>
