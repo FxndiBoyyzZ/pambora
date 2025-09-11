@@ -6,8 +6,25 @@
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-// Importa os serviços já inicializados de forma segura.
-import { db, messaging } from '@/services/firebase-admin';
+import * as admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
+
+// Helper function to safely initialize firebase-admin
+function initializeFirebaseAdmin() {
+  if (!admin.apps.length) {
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+      // Used in local development environments if the environment variable is set
+      admin.initializeApp({
+        credential: admin.credential.cert(JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON)),
+      });
+    } else {
+      // Used in the App Hosting production environment, which configures credentials automatically.
+      admin.initializeApp();
+    }
+  }
+}
+
 
 const NotificationInputSchema = z.object({
   title: z.string().describe('The title of the push notification.'),
@@ -33,6 +50,11 @@ const sendPushNotificationFlow = ai.defineFlow(
     outputSchema: NotificationOutputSchema,
   },
   async (payload) => {
+    // Initialize Firebase Admin SDK safely
+    initializeFirebaseAdmin();
+    const db = getFirestore();
+    const messaging = getMessaging();
+
     try {
       console.log('Fetching user tokens from Firestore...');
       const usersSnapshot = await db.collection('users').get();
