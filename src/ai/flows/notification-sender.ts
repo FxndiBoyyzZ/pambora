@@ -27,7 +27,8 @@ export async function sendPushNotification(input: NotificationInput): Promise<No
 }
 
 const initializeFirebaseAdmin = () => {
-  if (admin.apps.length === 0) {
+  // Prevent re-initialization in hot-reload environments
+  if (!admin.apps.length) {
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
         admin.initializeApp({
             credential: admin.credential.cert(JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON)),
@@ -39,6 +40,9 @@ const initializeFirebaseAdmin = () => {
   }
 };
 
+// Initialize Firebase Admin SDK when the module is loaded.
+initializeFirebaseAdmin();
+
 const sendPushNotificationFlow = ai.defineFlow(
   {
     name: 'sendPushNotificationFlow',
@@ -47,7 +51,6 @@ const sendPushNotificationFlow = ai.defineFlow(
   },
   async (payload) => {
     try {
-      initializeFirebaseAdmin();
       const db = getFirestore();
       const messaging = getMessaging();
 
