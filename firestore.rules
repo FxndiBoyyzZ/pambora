@@ -3,23 +3,16 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permite que usuários autenticados leiam e escrevam seus próprios dados.
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Regra para a coleção 'config'
+    // Allow admin (authenticated anonymously) to read/write config
     match /config/{docId} {
-      // Permite que qualquer usuário autenticado leia e escreva na coleção 'config'.
-      // Ideal para a página de administração.
       allow read, write: if request.auth != null;
     }
 
-    // Permite que o administrador (qualquer usuário autenticado) leia todos os perfis de usuário.
+    // Allow admin (authenticated) to read all user data for the leads page
+    // Allow users to write only to their own document
     match /users/{userId} {
-      allow get, list: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
-
-    
