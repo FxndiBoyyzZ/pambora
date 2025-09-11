@@ -2,9 +2,9 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default rule for all documents: only allow access if user is authenticated.
-    // This is a temporary secure rule for launch.
-    // For more specific admin roles, this should be updated.
+    // Rule: Allow read/write access to the entire database if the user is authenticated.
+    // This is a simple and effective rule for the initial launch, as only the admin page
+    // has a login mechanism.
     match /{document=**} {
       allow read, write: if request.auth != null;
     }

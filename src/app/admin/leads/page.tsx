@@ -110,7 +110,7 @@ export default function LeadsPage() {
     document.body.removeChild(link);
   };
 
-  if (!user) {
+  if (!user || loading) {
     return (
         <div className="flex h-screen items-center justify-center bg-muted/30">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />

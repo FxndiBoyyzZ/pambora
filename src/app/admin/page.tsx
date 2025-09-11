@@ -421,14 +421,7 @@ export default function AdminPage() {
 
     React.useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (currentUser && currentUser.email === 'pam@admin.com') {
-                setUser(currentUser);
-            } else {
-                setUser(null);
-                 if (currentUser) { // If a non-admin user is somehow logged in, log them out.
-                    signOut(auth);
-                }
-            }
+            setUser(currentUser);
             setIsLoading(false);
         });
         return () => unsubscribe();
