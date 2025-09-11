@@ -8,12 +8,16 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Allow full access for admin OR if user is accessing their own data.
-      allow read, write: if isAdmin() || request.auth.uid == userId;
+      // Allow admin to list all users, which is needed for the leads page.
+      allow list: if isAdmin();
+      // Allow admin to read any user OR user to read their own data.
+      allow read: if isAdmin() || request.auth.uid == userId;
+      // Allow admin to write to any user OR user to write to their own data.
+      allow write: if isAdmin() || request.auth.uid == userId;
     }
 
     match /config/{docId} {
-      // Allow full access for admin to read/write, OR any authenticated user to read.
+      // Allow full access for admin OR any authenticated user to read.
       allow read: if isAdmin() || request.auth != null;
       allow write: if isAdmin(); // Only admin can write config.
     }
