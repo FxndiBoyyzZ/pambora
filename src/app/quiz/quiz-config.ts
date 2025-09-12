@@ -48,7 +48,7 @@ export const quizSteps: QuizStep[] = [
                 { id: 'Perder Peso', label: 'Perder Peso' },
                 { id: 'Ganhar Massa Muscular', label: 'Ganhar Massa Muscular' },
             ],
-            backgroundUrl: '/fundo1p.png',
+            backgroundUrl: '/fundo1.png',
         }
     },
     {
@@ -66,7 +66,7 @@ export const quizSteps: QuizStep[] = [
                 { id: 'amendoim', label: 'Alergia a Amendoim' },
             ],
             textPlaceholder: "Ex: Tenho alergia a nozes e não como carne de porco.",
-            backgroundUrl: '/fundo1p.png',
+            backgroundUrl: '/fundo1.png',
         }
     },
     {
