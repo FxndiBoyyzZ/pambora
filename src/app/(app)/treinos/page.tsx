@@ -69,39 +69,34 @@ const Countdown = () => {
 export default function TreinosPage() {
     // Hooks sempre no topo
     const { answers, loading: isQuizLoading } = useQuiz();
-    const [unlockedDays, setUnlockedDays] = React.useState(1);
+    const [unlockedDays, setUnlockedDays] = React.useState(0);
     const [workoutsConfig, setWorkoutsConfig] = React.useState<any[]>([]);
     const [configLoading, setConfigLoading] = React.useState(true);
     
-    // Calcula o estado do desafio
-    const isChallengeStarted = !isBefore(startOfDay(new Date()), startOfDay(challengeStartDate));
-
-    // Carrega a configuração do admin apenas se o desafio tiver começado
+    // Carrega a configuração do admin
     React.useEffect(() => {
-        if (isChallengeStarted) {
-            const fetchConfig = async () => {
-                setConfigLoading(true);
-                try {
-                    const controlsDoc = await getDoc(doc(db, 'config', 'workoutControls'));
-                    if (controlsDoc.exists()) {
-                        setUnlockedDays(controlsDoc.data().unlockedDays);
-                    }
-                    const workoutsDoc = await getDoc(doc(db, 'config', 'workouts'));
-                    if (workoutsDoc.exists()) {
-                        setWorkoutsConfig(workoutsDoc.data().workouts);
-                    }
-                } catch (error) {
-                    console.error("Error fetching config:", error);
-                } finally {
-                    setConfigLoading(false);
+        const fetchConfig = async () => {
+            setConfigLoading(true);
+            try {
+                const controlsDoc = await getDoc(doc(db, 'config', 'workoutControls'));
+                if (controlsDoc.exists()) {
+                    setUnlockedDays(controlsDoc.data().unlockedDays || 0);
                 }
-            };
-            fetchConfig();
-        } else {
-            // Se o desafio não começou, não há nada para carregar
-            setConfigLoading(false);
-        }
-    }, [isChallengeStarted]);
+                const workoutsDoc = await getDoc(doc(db, 'config', 'workouts'));
+                if (workoutsDoc.exists()) {
+                    setWorkoutsConfig(workoutsDoc.data().workouts);
+                }
+            } catch (error) {
+                console.error("Error fetching config:", error);
+            } finally {
+                setConfigLoading(false);
+            }
+        };
+        fetchConfig();
+    }, []);
+
+    // Determina se o desafio começou com base na configuração do admin
+    const isChallengeStarted = unlockedDays > 0;
 
     // Lógica de cálculo dos dados do usuário
     const completedWorkouts = isChallengeStarted ? (answers.completedWorkouts || []) : [];
@@ -152,7 +147,11 @@ export default function TreinosPage() {
             </header>
 
             <div className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto space-y-8">
-                {!isChallengeStarted ? (
+                {configLoading ? (
+                     <div className="flex justify-center items-center h-64">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                ) : !isChallengeStarted ? (
                     // Tela de PRÉ-DESAFIO (Estática)
                     <>
                         <Card className="bg-gradient-to-br from-muted/50 to-card text-center">
@@ -162,7 +161,7 @@ export default function TreinosPage() {
                                 </div>
                                 <CardTitle className="text-3xl font-headline tracking-wide">O Desafio Começa em Breve!</CardTitle>
                                 <CardDescription className="text-md text-foreground/80 max-w-md mx-auto">
-                                    A sua jornada de 21 dias começará na segunda-feira, 22 de Setembro.
+                                    A sua jornada de 21 dias para uma vida mais saudável está prestes a começar.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -190,46 +189,38 @@ export default function TreinosPage() {
                 ) : (
                     // Tela do DESAFIO ATIVO
                     <>
-                        {configLoading ? (
-                            <div className="flex justify-center items-center h-64">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            </div>
-                        ) : (
-                            <>
-                                <Card className="bg-gradient-to-br from-primary/20 to-card">
-                                    <CardHeader>
-                                        <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {currentDayForDisplay}</CardDescription>
-                                        <CardTitle className="text-3xl font-headline tracking-wide">{currentWorkoutDetails?.title || 'Treino não encontrado'}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <p className="text-muted-foreground mb-4">{currentWorkoutDetails?.description || '...'}</p>
-                                        <Link href={`/treinos/${currentDayForDisplay}`} passHref>
-                                            <Button size="lg" className="w-full sm:w-auto" disabled={!currentWorkoutDetails}>
-                                                Começar Agora <ArrowRight className="ml-2" />
-                                            </Button>
-                                        </Link>
-                                    </CardContent>
-                                </Card>
+                        <Card className="bg-gradient-to-br from-primary/20 to-card">
+                            <CardHeader>
+                                <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {currentDayForDisplay}</CardDescription>
+                                <CardTitle className="text-3xl font-headline tracking-wide">{currentWorkoutDetails?.title || 'Treino não encontrado'}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-muted-foreground mb-4">{currentWorkoutDetails?.description || '...'}</p>
+                                <Link href={`/treinos/${currentDayForDisplay}`} passHref>
+                                    <Button size="lg" className="w-full sm:w-auto" disabled={!currentWorkoutDetails}>
+                                        Começar Agora <ArrowRight className="ml-2" />
+                                    </Button>
+                                </Link>
+                            </CardContent>
+                        </Card>
 
-                                <div>
-                                    <h2 className="text-xl font-bold mb-4 font-headline tracking-wide text-center">Seu Progresso</h2>
-                                    <div className="grid gap-4 md:grid-cols-2">
-                                        <StatCard 
-                                            icon={Flame}
-                                            title="Calorias Queimadas"
-                                            value={totalCaloriesBurned.toLocaleString('pt-BR')}
-                                            description="Estimativa dos treinos concluídos"
-                                        />
-                                        <StatCard 
-                                            icon={Dumbbell}
-                                            title="Treinos Concluídos"
-                                            value={`${focusDays} de ${totalDays}`}
-                                            description="Continue com foco total!"
-                                        />
-                                    </div>
-                                </div>
-                            </>
-                        )}
+                        <div>
+                            <h2 className="text-xl font-bold mb-4 font-headline tracking-wide text-center">Seu Progresso</h2>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <StatCard 
+                                    icon={Flame}
+                                    title="Calorias Queimadas"
+                                    value={totalCaloriesBurned.toLocaleString('pt-BR')}
+                                    description="Estimativa dos treinos concluídos"
+                                />
+                                <StatCard 
+                                    icon={Dumbbell}
+                                    title="Treinos Concluídos"
+                                    value={`${focusDays} de ${totalDays}`}
+                                    description="Continue com foco total!"
+                                />
+                            </div>
+                        </div>
                     </>
                 )}
             </div>
