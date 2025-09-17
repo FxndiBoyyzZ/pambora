@@ -10,7 +10,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser, createUserWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -166,17 +166,7 @@ function AdminLoginPage({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUse
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             onLoginSuccess(userCredential.user);
         } catch (err: any) {
-            // If user not found, try to create a new admin user
-            if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-                try {
-                    const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
-                    onLoginSuccess(newUserCredential.user);
-                } catch (createErr) {
-                    setError('Falha ao entrar ou criar conta. Verifique os dados.');
-                }
-            } else {
-                setError('Email ou senha inválidos. Por favor, tente novamente.');
-            }
+            setError('Email ou senha inválidos. Por favor, tente novamente.');
         } finally {
             setIsLoading(false);
         }
@@ -219,7 +209,7 @@ function AdminLoginPage({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUse
                     <CardFooter>
                         <Button type="submit" className="w-full" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Entrar ou Criar Conta
+                            Entrar
                         </Button>
                     </CardFooter>
                 </form>
