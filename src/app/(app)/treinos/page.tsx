@@ -4,9 +4,10 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Dumbbell, Flame, TrendingUp, Target, ArrowRight, Loader2 } from "lucide-react";
+import { Dumbbell, Flame, TrendingUp, Target, ArrowRight, Loader2, CalendarClock } from "lucide-react";
 import Link from "next/link";
 import { useQuiz } from "@/services/quiz-service";
+import { isBefore, startOfDay } from 'date-fns';
 
 const baseWorkouts = [
   { id: 1, title: 'HIIT Intenso', description: 'Queima máxima de calorias em 20 minutos.', calories: 300, icon: Flame },
@@ -15,6 +16,8 @@ const baseWorkouts = [
 ];
 
 const totalDays = 21;
+const challengeStartDate = new Date('2024-09-22T00:00:00');
+
 
 const StatCard = ({ icon: Icon, title, value, description }: { icon: React.ElementType, title: string, value: string, description: string }) => (
     <Card>
@@ -31,29 +34,38 @@ const StatCard = ({ icon: Icon, title, value, description }: { icon: React.Eleme
 
 export default function TreinosPage() {
   const { answers, isWorkoutCompleted, loading: isQuizLoading } = useQuiz();
+  const [isChallengeStarted, setIsChallengeStarted] = React.useState(false);
+
+  React.useEffect(() => {
+    const today = startOfDay(new Date());
+    setIsChallengeStarted(!isBefore(today, challengeStartDate));
+  }, []);
 
   const completedWorkouts = answers.completedWorkouts || [];
-  const focusDays = completedWorkouts.length;
+  const focusDays = isChallengeStarted ? completedWorkouts.length : 0;
   const progressPercentage = (focusDays / totalDays) * 100;
 
   // Determinar o dia atual
   let currentDay = 1;
-  while (isWorkoutCompleted(currentDay) && currentDay < totalDays) {
-    currentDay++;
-  }
-   if (focusDays === totalDays) {
-    currentDay = totalDays;
+  if (isChallengeStarted) {
+    while (isWorkoutCompleted(currentDay) && currentDay < totalDays) {
+      currentDay++;
+    }
+     if (focusDays === totalDays) {
+      currentDay = totalDays;
+    }
   }
   
   const currentWorkoutDetails = baseWorkouts[(currentDay - 1) % baseWorkouts.length];
   
   // Calcular estimativas
   const totalCaloriesBurned = React.useMemo(() => {
+    if (!isChallengeStarted) return 0;
     return completedWorkouts.reduce((acc, day) => {
         const workout = baseWorkouts[(day - 1) % baseWorkouts.length];
         return acc + workout.calories;
     }, 0);
-  }, [completedWorkouts]);
+  }, [completedWorkouts, isChallengeStarted]);
 
   const projection = React.useMemo(() => {
     const weeklyChangeKg = answers.goal === "Perder Peso" ? -0.5 : 0.25; // Média de 0.5kg/semana para perda e 0.25kg/semana para ganho
@@ -91,20 +103,38 @@ export default function TreinosPage() {
         </div>
       </header>
       <div className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto space-y-8">
-            <Card className="bg-gradient-to-br from-primary/20 to-card">
-                 <CardHeader>
-                    <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {currentDay}</CardDescription>
-                    <CardTitle className="text-3xl font-headline tracking-wide">{currentWorkoutDetails.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground mb-4">{currentWorkoutDetails.description}</p>
-                     <Link href={`/treinos/${currentDay}`} passHref>
-                        <Button size="lg" className="w-full sm:w-auto">
-                            Começar Agora <ArrowRight className="ml-2" />
-                        </Button>
-                    </Link>
-                </CardContent>
-            </Card>
+            {isChallengeStarted ? (
+                <Card className="bg-gradient-to-br from-primary/20 to-card">
+                    <CardHeader>
+                        <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {currentDay}</CardDescription>
+                        <CardTitle className="text-3xl font-headline tracking-wide">{currentWorkoutDetails.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground mb-4">{currentWorkoutDetails.description}</p>
+                        <Link href={`/treinos/${currentDay}`} passHref>
+                            <Button size="lg" className="w-full sm:w-auto">
+                                Começar Agora <ArrowRight className="ml-2" />
+                            </Button>
+                        </Link>
+                    </CardContent>
+                </Card>
+            ) : (
+                <Card className="bg-gradient-to-br from-muted/50 to-card text-center">
+                    <CardHeader>
+                        <div className="flex justify-center mb-2">
+                            <CalendarClock className="h-10 w-10 text-primary" />
+                        </div>
+                        <CardTitle className="text-3xl font-headline tracking-wide">O Desafio Começa em Breve!</CardTitle>
+                        <CardDescription className="text-md text-foreground/80">
+                            Sua jornada está prestes a começar. O treino do Dia 1 será liberado na
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold text-primary">Segunda-feira, 22 de Setembro</p>
+                        <p className="text-muted-foreground mt-4">Enquanto isso, que tal explorar a seção de bônus ou se apresentar na comunidade #PAMBORA?</p>
+                    </CardContent>
+                </Card>
+            )}
 
             <div>
                 <h2 className="text-xl font-bold mb-4 font-headline tracking-wide text-center">Seu Progresso</h2>
