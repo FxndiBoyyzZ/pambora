@@ -40,14 +40,13 @@ export default function TreinosPage() {
   const today = startOfDay(new Date());
   const isChallengeStarted = !isBefore(today, challengeStartDate);
 
-  // If the challenge has NOT started, completedWorkouts should be treated as empty.
+  // If the challenge has NOT started, completedWorkouts must be treated as empty.
   const completedWorkouts = isChallengeStarted ? (answers.completedWorkouts || []) : [];
   const focusDays = completedWorkouts.length;
   const progressPercentage = (focusDays / totalDays) * 100;
 
-  // Determine the current day
+  // Determine the current day. If the challenge hasn't started, this defaults to 1 but won't be used.
   let currentDay = 1;
-  // This loop should only run if the challenge has started.
   if (isChallengeStarted) {
     while (isWorkoutCompleted(currentDay) && currentDay < totalDays) {
       currentDay++;
@@ -59,9 +58,8 @@ export default function TreinosPage() {
   
   const currentWorkoutDetails = baseWorkouts[(currentDay - 1) % baseWorkouts.length];
   
-  // Calculate estimates
+  // Calculate estimates. This will be 0 if challenge has not started.
   const totalCaloriesBurned = React.useMemo(() => {
-    // This will correctly calculate 0 if completedWorkouts is empty (because the challenge hasn't started)
     return completedWorkouts.reduce((acc, day) => {
         const workout = baseWorkouts[(day - 1) % baseWorkouts.length];
         return acc + workout.calories;
@@ -104,22 +102,7 @@ export default function TreinosPage() {
         </div>
       </header>
       <div className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto space-y-8">
-            {isChallengeStarted ? (
-                <Card className="bg-gradient-to-br from-primary/20 to-card">
-                    <CardHeader>
-                        <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {currentDay}</CardDescription>
-                        <CardTitle className="text-3xl font-headline tracking-wide">{currentWorkoutDetails.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground mb-4">{currentWorkoutDetails.description}</p>
-                        <Link href={`/treinos/${currentDay}`} passHref>
-                            <Button size="lg" className="w-full sm:w-auto">
-                                Começar Agora <ArrowRight className="ml-2" />
-                            </Button>
-                        </Link>
-                    </CardContent>
-                </Card>
-            ) : (
+            {!isChallengeStarted ? (
                 <Card className="bg-gradient-to-br from-muted/50 to-card text-center">
                     <CardHeader>
                         <div className="flex justify-center mb-2">
@@ -133,6 +116,21 @@ export default function TreinosPage() {
                     <CardContent>
                         <p className="text-2xl font-bold text-primary">Segunda-feira, 22 de Setembro</p>
                         <p className="text-muted-foreground mt-4">Enquanto isso, que tal explorar a seção de bônus ou se apresentar na comunidade #PAMBORA?</p>
+                    </CardContent>
+                </Card>
+            ) : (
+                <Card className="bg-gradient-to-br from-primary/20 to-card">
+                    <CardHeader>
+                        <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {currentDay}</CardDescription>
+                        <CardTitle className="text-3xl font-headline tracking-wide">{currentWorkoutDetails.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground mb-4">{currentWorkoutDetails.description}</p>
+                        <Link href={`/treinos/${currentDay}`} passHref>
+                            <Button size="lg" className="w-full sm:w-auto">
+                                Começar Agora <ArrowRight className="ml-2" />
+                            </Button>
+                        </Link>
                     </CardContent>
                 </Card>
             )}
