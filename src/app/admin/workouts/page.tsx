@@ -1,4 +1,3 @@
-
 // src/app/admin/workouts/page.tsx
 'use client';
 import * as React from 'react';
@@ -8,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Save, ArrowLeft, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { onAuthStateChanged, type User } from 'firebase/auth';
@@ -86,7 +84,7 @@ export default function WorkoutsAdminPage() {
 
     React.useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (currentUser && currentUser.email === 'pam@admin.com') {
+            if (currentUser) {
                 setUser(currentUser);
             } else {
                 router.push('/admin');
@@ -244,4 +242,3 @@ export default function WorkoutsAdminPage() {
         </div>
     );
 }
-

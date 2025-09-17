@@ -10,7 +10,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser, createUserWithEmailAndPassword } from 'firebase/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -122,11 +122,9 @@ function AdminDashboard() {
                             <p className="text-xs text-muted-foreground">Edite os detalhes de cada treino base, como vídeos, exercícios e durações.</p>
                     </CardContent>
                         <CardFooter>
-                        <Link href="/admin/workouts" className="w-full">
-                            <Button variant="outline" size="sm" className="w-full">
-                                Editar Treinos
-                            </Button>
-                        </Link>
+                        <Button variant="outline" size="sm" className="w-full" asChild>
+                           <Link href="/admin/workouts">Editar Treinos</Link>
+                        </Button>
                         </CardFooter>
                 </Card>
                 
@@ -166,7 +164,7 @@ function AdminLoginPage({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUse
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             onLoginSuccess(userCredential.user);
         } catch (err: any) {
-            setError('Email ou senha inválidos. Por favor, tente novamente.');
+             setError('Email ou senha inválidos. Por favor, tente novamente.');
         } finally {
             setIsLoading(false);
         }
