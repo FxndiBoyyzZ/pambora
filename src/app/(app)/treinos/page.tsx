@@ -30,75 +30,22 @@ const StatCard = ({ icon: Icon, title, value, description }: { icon: React.Eleme
     </Card>
 );
 
-
-function PreChallengeScreen() {
-    const renderHeader = () => (
-     <header className="p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
-        <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold font-headline text-foreground uppercase tracking-wider">
-                Sua Jornada
-                </h1>
-                <div className="flex items-center gap-2 text-primary font-bold text-lg">
-                    <Flame className="h-7 w-7" />
-                    <span>0</span>
-                    <span className="text-sm font-normal text-muted-foreground">/ {totalDays} dias!</span>
-                </div>
-            </div>
-            <Progress value={0} className="h-2" />
-        </div>
-      </header>
-    );
-
-    return (
-        <div className="flex flex-col h-full">
-            {renderHeader()}
-            <div className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto space-y-8">
-                <Card className="bg-gradient-to-br from-muted/50 to-card text-center">
-                    <CardHeader>
-                        <div className="flex justify-center mb-2">
-                            <CalendarClock className="h-10 w-10 text-primary" />
-                        </div>
-                        <CardTitle className="text-3xl font-headline tracking-wide">O Desafio Começa em Breve!</CardTitle>
-                        <CardDescription className="text-md text-foreground/80 max-w-md mx-auto">
-                            Sua jornada está prestes a começar. O treino do Dia 1 será liberado em:
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-2xl font-bold text-primary">Segunda-feira, 22 de Setembro</p>
-                        <p className="text-muted-foreground mt-4">Enquanto isso, que tal explorar a seção de bônus ou se apresentar na comunidade #PAMBORA?</p>
-                    </CardContent>
-                </Card>
-                <div>
-                    <h2 className="text-xl font-bold mb-4 font-headline tracking-wide text-center">Seu Progresso</h2>
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <StatCard 
-                            icon={Flame}
-                            title="Calorias Queimadas"
-                            value={"0"}
-                            description="Estimativa dos treinos concluídos"
-                        />
-                        <StatCard 
-                            icon={Dumbbell}
-                            title="Treinos Concluídos"
-                            value={`0 de ${totalDays}`}
-                            description="Prepare-se para começar!"
-                        />
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-
-function ChallengeScreen() {
+export default function TreinosPage() {
   const { answers, loading: isQuizLoading } = useQuiz();
   const [unlockedDays, setUnlockedDays] = React.useState(1);
   const [workoutsConfig, setWorkoutsConfig] = React.useState<any[]>([]);
   const [configLoading, setConfigLoading] = React.useState(true);
 
+  const today = startOfDay(new Date());
+  const isChallengeStarted = !isBefore(today, challengeStartDate);
+
   React.useEffect(() => {
+    // Only fetch config if the challenge has started
+    if (!isChallengeStarted) {
+      setConfigLoading(false);
+      return;
+    }
+
     const fetchConfig = async () => {
         setConfigLoading(true);
         try {
@@ -117,35 +64,27 @@ function ChallengeScreen() {
         }
     };
     fetchConfig();
-  }, []);
+  }, [isChallengeStarted]);
 
-  const completedWorkouts = answers.completedWorkouts || [];
+  const completedWorkouts = isChallengeStarted ? (answers.completedWorkouts || []) : [];
   const focusDays = completedWorkouts.length;
   const progressPercentage = (focusDays / totalDays) * 100;
   
   const currentDayForDisplay = unlockedDays > totalDays ? totalDays : unlockedDays;
-  const currentWorkoutDetails = workoutsConfig.length > 0
+  const currentWorkoutDetails = workoutsConfig.length > 0 && isChallengeStarted
       ? workoutsConfig[(currentDayForDisplay - 1) % workoutsConfig.length]
       : null;
   
   const totalCaloriesBurned = React.useMemo(() => {
-    if (!workoutsConfig.length) return 0;
+    if (!workoutsConfig.length || !isChallengeStarted) return 0;
     
     return (completedWorkouts || []).reduce((acc, day) => {
         const workout = workoutsConfig[(day - 1) % workoutsConfig.length];
         return acc + (workout?.calories || 0);
     }, 0);
-  }, [completedWorkouts, workoutsConfig]);
-  
-  if (isQuizLoading || configLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  const renderHeader = () => (
+  }, [completedWorkouts, workoutsConfig, isChallengeStarted]);
+
+  const renderHeader = (days: number, progress: number) => (
      <header className="p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
@@ -154,63 +93,99 @@ function ChallengeScreen() {
                 </h1>
                 <div className="flex items-center gap-2 text-primary font-bold text-lg">
                     <Flame className="h-7 w-7" />
-                    <span>{focusDays}</span>
+                    <span>{days}</span>
                     <span className="text-sm font-normal text-muted-foreground">/ {totalDays} dias!</span>
                 </div>
             </div>
-            <Progress value={progressPercentage} className="h-2" />
+            <Progress value={progress} className="h-2" />
         </div>
       </header>
   );
 
+  if (isQuizLoading || configLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
-        {renderHeader()}
-         <div className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto space-y-8">
+      {renderHeader(focusDays, progressPercentage)}
+      <div className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto space-y-8">
+        {!isChallengeStarted ? (
+          <>
+            <Card className="bg-gradient-to-br from-muted/50 to-card text-center">
+              <CardHeader>
+                <div className="flex justify-center mb-2">
+                  <CalendarClock className="h-10 w-10 text-primary" />
+                </div>
+                <CardTitle className="text-3xl font-headline tracking-wide">O Desafio Começa em Breve!</CardTitle>
+                <CardDescription className="text-md text-foreground/80 max-w-md mx-auto">
+                  Sua jornada está prestes a começar. O treino do Dia 1 será liberado em:
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-primary">Segunda-feira, 22 de Setembro</p>
+                <p className="text-muted-foreground mt-4">Enquanto isso, que tal explorar a seção de bônus ou se apresentar na comunidade #PAMBORA?</p>
+              </CardContent>
+            </Card>
+            <div>
+              <h2 className="text-xl font-bold mb-4 font-headline tracking-wide text-center">Seu Progresso</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                <StatCard 
+                  icon={Flame}
+                  title="Calorias Queimadas"
+                  value={"0"}
+                  description="Estimativa dos treinos concluídos"
+                />
+                <StatCard 
+                  icon={Dumbbell}
+                  title="Treinos Concluídos"
+                  value={`0 de ${totalDays}`}
+                  description="Prepare-se para começar!"
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
             <Card className="bg-gradient-to-br from-primary/20 to-card">
-                <CardHeader>
-                    <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {currentDayForDisplay}</CardDescription>
-                    <CardTitle className="text-3xl font-headline tracking-wide">{currentWorkoutDetails?.title || 'Carregando treino...'}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground mb-4">{currentWorkoutDetails?.description || '...'}</p>
-                    <Link href={`/treinos/${currentDayForDisplay}`} passHref>
-                        <Button size="lg" className="w-full sm:w-auto" disabled={!currentWorkoutDetails}>
-                            {currentWorkoutDetails ? <>Começar Agora <ArrowRight className="ml-2" /></> : <Loader2 className="animate-spin" />}
-                        </Button>
-                    </Link>
-                </CardContent>
+              <CardHeader>
+                <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {currentDayForDisplay}</CardDescription>
+                <CardTitle className="text-3xl font-headline tracking-wide">{currentWorkoutDetails?.title || 'Carregando treino...'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">{currentWorkoutDetails?.description || '...'}</p>
+                <Link href={`/treinos/${currentDayForDisplay}`} passHref>
+                  <Button size="lg" className="w-full sm:w-auto" disabled={!currentWorkoutDetails}>
+                    {currentWorkoutDetails ? <>Começar Agora <ArrowRight className="ml-2" /></> : <Loader2 className="animate-spin" />}
+                  </Button>
+                </Link>
+              </CardContent>
             </Card>
 
             <div>
-                <h2 className="text-xl font-bold mb-4 font-headline tracking-wide text-center">Seu Progresso</h2>
-                <div className="grid gap-4 md:grid-cols-2">
-                    <StatCard 
-                        icon={Flame}
-                        title="Calorias Queimadas"
-                        value={totalCaloriesBurned.toLocaleString('pt-BR')}
-                        description="Estimativa dos treinos concluídos"
-                    />
-                    <StatCard 
-                        icon={Dumbbell}
-                        title="Treinos Concluídos"
-                        value={`${focusDays} de ${totalDays}`}
-                        description="Continue com foco total!"
-                    />
-                </div>
+              <h2 className="text-xl font-bold mb-4 font-headline tracking-wide text-center">Seu Progresso</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                <StatCard 
+                  icon={Flame}
+                  title="Calorias Queimadas"
+                  value={totalCaloriesBurned.toLocaleString('pt-BR')}
+                  description="Estimativa dos treinos concluídos"
+                />
+                <StatCard 
+                  icon={Dumbbell}
+                  title="Treinos Concluídos"
+                  value={`${focusDays} de ${totalDays}`}
+                  description="Continue com foco total!"
+                />
+              </div>
             </div>
+          </>
+        )}
       </div>
     </div>
   );
-}
-
-export default function TreinosPage() {
-  const today = startOfDay(new Date());
-  const isChallengeStarted = !isBefore(today, challengeStartDate);
-
-  if (!isChallengeStarted) {
-    return <PreChallengeScreen />;
-  }
-
-  return <ChallengeScreen />;
 }
