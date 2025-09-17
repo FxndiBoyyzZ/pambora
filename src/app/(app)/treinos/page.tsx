@@ -36,18 +36,18 @@ const StatCard = ({ icon: Icon, title, value, description }: { icon: React.Eleme
 export default function TreinosPage() {
   const { answers, isWorkoutCompleted, loading: isQuizLoading } = useQuiz();
   
-  // Determine if the challenge has started. This logic now runs on every render.
+  // This is the core logic fix: Determine if the challenge has started.
   const today = startOfDay(new Date());
   const isChallengeStarted = !isBefore(today, challengeStartDate);
 
-  const completedWorkouts = answers.completedWorkouts || [];
-  
-  // If the challenge hasn't started, force focusDays to be 0
-  const focusDays = isChallengeStarted ? completedWorkouts.length : 0;
-  const progressPercentage = isChallengeStarted ? (focusDays / totalDays) * 100 : 0;
+  // If the challenge has NOT started, completedWorkouts should be treated as empty.
+  const completedWorkouts = isChallengeStarted ? (answers.completedWorkouts || []) : [];
+  const focusDays = completedWorkouts.length;
+  const progressPercentage = (focusDays / totalDays) * 100;
 
   // Determine the current day
   let currentDay = 1;
+  // This loop should only run if the challenge has started.
   if (isChallengeStarted) {
     while (isWorkoutCompleted(currentDay) && currentDay < totalDays) {
       currentDay++;
@@ -61,14 +61,12 @@ export default function TreinosPage() {
   
   // Calculate estimates
   const totalCaloriesBurned = React.useMemo(() => {
-    // Return 0 if the challenge has not started
-    if (!isChallengeStarted) return 0;
-
+    // This will correctly calculate 0 if completedWorkouts is empty (because the challenge hasn't started)
     return completedWorkouts.reduce((acc, day) => {
         const workout = baseWorkouts[(day - 1) % baseWorkouts.length];
         return acc + workout.calories;
     }, 0);
-  }, [completedWorkouts, isChallengeStarted]);
+  }, [completedWorkouts]);
 
   const projection = React.useMemo(() => {
     const weeklyChangeKg = answers.goal === "Perder Peso" ? -0.5 : 0.25; // Média de 0.5kg/semana para perda e 0.25kg/semana para ganho
