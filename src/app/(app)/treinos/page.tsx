@@ -1,13 +1,13 @@
-
+// src/app/(app)/treinos/page.tsx
 'use client';
+import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Dumbbell, Flame, Lock, Play, CheckCircle, ArrowRight, Loader2 } from "lucide-react";
+import { Dumbbell, Flame, Lock, Play, CheckCircle, ArrowRight, Loader2, Award } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useQuiz } from "@/services/quiz-service";
-import * as React from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import {
@@ -18,8 +18,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 const baseWorkouts = [
   { id: 1, title: 'HIIT Intenso', description: 'Queima máxima de calorias em 20 minutos.', icon: Flame },
@@ -28,41 +29,51 @@ const baseWorkouts = [
 ];
 
 const totalDays = 21;
+const checkpoints = [7, 14, 21];
 
-function WorkoutCard({ day, isCompleted, isCurrent, isLocked }: { day: number, isCompleted: boolean, isCurrent: boolean, isLocked: boolean }) {
-    const cardContent = (
-        <Card className={cn(
-            "group relative overflow-hidden transition-all duration-300 h-full hover:bg-muted/50",
-            isCurrent && "border-primary ring-2 ring-primary",
-            isCompleted && "bg-muted/50 border-dashed",
-            isLocked && "cursor-not-allowed"
-        )}>
-            <CardContent className="p-4 flex items-center gap-4">
-                    {isCompleted ? (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/20 text-green-500">
-                        <CheckCircle className="h-6 w-6" />
-                        </div>
-                    ) : isCurrent ? (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary animate-pulse">
-                            <Play className="h-6 w-6" />
-                    </div>
-                    ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                        <Lock className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                    )}
-                <div>
-                    <p className={cn("font-semibold", isCompleted && "text-muted-foreground line-through")}>Dia {day}</p>
+function JourneyNode({ day, isCompleted, isCurrent, isLocked }: { day: number, isCompleted: boolean, isCurrent: boolean, isLocked: boolean }) {
+    const isCheckpoint = checkpoints.includes(day);
+
+    const nodeContent = (
+         <div className={cn(
+            "relative w-16 h-16 rounded-full flex items-center justify-center border-4",
+            isCompleted ? "bg-green-500 border-green-700" : "bg-muted border-border",
+            isCurrent && "border-primary ring-4 ring-primary/50 animate-pulse",
+            isLocked && "bg-muted/50 border-dashed"
+         )}>
+            {isLocked && <Lock className="h-6 w-6 text-muted-foreground/50" />}
+            {isCompleted && <CheckCircle className="h-8 w-8 text-white" />}
+            {isCurrent && <Play className="h-8 w-8 text-primary" />}
+            {!isLocked && !isCompleted && !isCurrent && (
+                <span className="text-xl font-bold text-muted-foreground">{day}</span>
+            )}
+
+            {isCheckpoint && (
+                <div className="absolute -top-4 -right-4 bg-amber-400 p-1.5 rounded-full border-2 border-background shadow-md">
+                    <Award className="h-5 w-5 text-amber-900" />
                 </div>
-            </CardContent>
-        </Card>
+            )}
+        </div>
+    );
+    
+    const nodeWithTooltip = (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>{nodeContent}</div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Dia {day}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
 
     if (isLocked) {
         return (
             <AlertDialog>
                 <AlertDialogTrigger asChild>
-                    <div className="cursor-pointer">{cardContent}</div>
+                    <div className="cursor-pointer">{nodeWithTooltip}</div>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -81,11 +92,10 @@ function WorkoutCard({ day, isCompleted, isCurrent, isLocked }: { day: number, i
 
     return (
         <Link href={`/treinos/${day}`} passHref>
-            {cardContent}
+            {nodeWithTooltip}
         </Link>
     );
 }
-
 
 export default function TreinosPage() {
   const { answers, isWorkoutCompleted } = useQuiz();
@@ -112,7 +122,6 @@ export default function TreinosPage() {
   const focusDays = completedWorkouts.length;
   const progressPercentage = (focusDays / totalDays) * 100;
 
-  // Determine o dia atual para o usuário.
   let currentDay = 1;
   while(isWorkoutCompleted(currentDay) && currentDay < totalDays) {
     currentDay++;
@@ -123,15 +132,7 @@ export default function TreinosPage() {
 
   const currentWorkoutDetails = baseWorkouts[(currentDay - 1) % baseWorkouts.length];
   
-  const dailyWorkouts = Array.from({ length: totalDays }, (_, i) => {
-      const day = i + 1;
-      const workout = baseWorkouts[i % baseWorkouts.length];
-      return {
-          day: day,
-          title: workout.title,
-          description: workout.description,
-      }
-  });
+  const dailyWorkouts = Array.from({ length: totalDays }, (_, i) => ({ day: i + 1 }));
 
   if (isLoading) {
     return (
@@ -160,7 +161,6 @@ export default function TreinosPage() {
       </header>
       <div className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto">
         <div className="space-y-8">
-            {/* Today's Workout Card */}
             <Card className="bg-gradient-to-br from-primary/20 to-card">
                  <CardHeader>
                     <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {currentDay}</CardDescription>
@@ -176,26 +176,37 @@ export default function TreinosPage() {
                 </CardContent>
             </Card>
 
-            {/* Journey Timeline */}
             <div>
-                <h2 className="text-xl font-bold mb-4 font-headline tracking-wide">Seu Histórico de Treinos</h2>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {dailyWorkouts.map((workout) => {
-                        const isCompleted = isWorkoutCompleted(workout.day);
-                        const isCurrent = workout.day === currentDay;
-                        // Um dia está bloqueado se for maior que o progresso do usuário OU maior que o limite global do admin
-                        const isLocked = workout.day > currentDay || workout.day > workoutControls.unlockedDays;
+                <h2 className="text-xl font-bold mb-6 font-headline tracking-wide text-center">Mapa da sua Jornada de 21 Dias</h2>
+                 <div className="relative">
+                     {/* The path SVG */}
+                    <svg className="absolute top-0 left-0 w-full h-full" preserveAspectRatio="none">
+                        <path 
+                            d="M20 40 Q 50 80, 100 80 T 200 80 Q 250 80, 280 120 T 200 160 Q 150 200, 100 200 T 20 240 Q 50 280, 100 280 T 200 280 Q 250 280, 280 320 T 200 360 Q 150 400, 100 400 T 20 440 Q 50 480, 100 480 T 200 480 Q 250 480, 280 520 T 200 560 Q 150 600, 100 600 T 20 640" 
+                            fill="none" 
+                            stroke="hsl(var(--border))" 
+                            strokeWidth="4"
+                            strokeDasharray="10 5"
+                            vectorEffect="non-scaling-stroke"
+                        />
+                     </svg>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-x-2 gap-y-12 items-center justify-items-center">
+                        {dailyWorkouts.map(({day}) => {
+                            const isCompleted = isWorkoutCompleted(day);
+                            const isCurrent = day === currentDay;
+                            const isLocked = day > currentDay || day > workoutControls.unlockedDays;
 
-                        return (
-                            <WorkoutCard
-                                key={workout.day}
-                                day={workout.day}
-                                isCompleted={isCompleted}
-                                isCurrent={!isLocked && isCurrent}
-                                isLocked={isLocked && !isCurrent && !isCompleted}
-                            />
-                        )
-                    })}
+                            return (
+                                <JourneyNode
+                                    key={day}
+                                    day={day}
+                                    isCompleted={isCompleted}
+                                    isCurrent={!isLocked && isCurrent}
+                                    isLocked={isLocked && !isCurrent && !isCompleted}
+                                />
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </div>
