@@ -11,11 +11,17 @@ import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser, createUserWithEmailAndPassword } from 'firebase/auth';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export const dynamic = 'force-dynamic';
 
+interface WorkoutControls {
+    unlockedDays: number;
+    baseWorkoutForToday: number;
+}
+
 function AdminDashboard() {
-    const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 1 });
+    const [workoutControls, setWorkoutControls] = React.useState<WorkoutControls>({ unlockedDays: 0, baseWorkoutForToday: 1 });
     const [isLoadingData, setIsLoadingData] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const { toast } = useToast();
@@ -24,13 +30,16 @@ function AdminDashboard() {
         const fetchConfig = async () => {
             setIsLoadingData(true);
             try {
-                // Fetch Workout Controls
                 const workoutConfigDocRef = doc(db, 'config', 'workoutControls');
                 const workoutConfigDoc = await getDoc(workoutConfigDocRef);
                 if (workoutConfigDoc.exists()) {
-                    setWorkoutControls(workoutConfigDoc.data() as { unlockedDays: number });
+                    const data = workoutConfigDoc.data();
+                     setWorkoutControls({
+                        unlockedDays: data.unlockedDays || 0,
+                        baseWorkoutForToday: data.baseWorkoutForToday || 1,
+                    });
                 } else {
-                     await setDoc(workoutConfigDocRef, { unlockedDays: 1 });
+                     await setDoc(workoutConfigDocRef, { unlockedDays: 0, baseWorkoutForToday: 1 });
                 }
 
             } catch (error) {
@@ -51,7 +60,6 @@ function AdminDashboard() {
     const handleSaveChanges = async () => {
         setIsSaving(true);
         try {
-            // Save workout controls
             const workoutConfigDocRef = doc(db, 'config', 'workoutControls');
             await setDoc(workoutConfigDocRef, workoutControls);
 
@@ -92,24 +100,49 @@ function AdminDashboard() {
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {/* Workout Controls Card */}
-                <Card>
+                <Card className="md:col-span-2">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Controle de Treinos</CardTitle>
                         <Dumbbell className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent>
-                            <div className="space-y-2">
-                            <Label htmlFor="unlockedDays">Último Dia Liberado</Label>
-                            <Input 
-                                id="unlockedDays" 
-                                type="number" 
-                                value={workoutControls.unlockedDays}
-                                onChange={(e) => setWorkoutControls({ unlockedDays: parseInt(e.target.value, 10) || 1 })}
-                                min="1"
-                                max="21"
-                            />
-                                <p className="text-xs text-muted-foreground">Defina qual o último dia de treino que os usuários podem acessar globalmente.</p>
-                            </div>
+                    <CardContent className="grid sm:grid-cols-2 gap-4 pt-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="unlockedDays">Dia liberado hoje</Label>
+                            <Select
+                                value={String(workoutControls.unlockedDays)}
+                                onValueChange={(value) => setWorkoutControls(prev => ({ ...prev, unlockedDays: parseInt(value) }))}
+                            >
+                                <SelectTrigger id="unlockedDays">
+                                    <SelectValue placeholder="Selecione o dia" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="0">Em Breve</SelectItem>
+                                    {Array.from({ length: 21 }, (_, i) => i + 1).map(day => (
+                                        <SelectItem key={day} value={String(day)}>
+                                            Dia {day}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">Defina qual dia do desafio está ativo.</p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="baseWorkout">Treino base de hoje</Label>
+                            <Select
+                                value={String(workoutControls.baseWorkoutForToday)}
+                                onValueChange={(value) => setWorkoutControls(prev => ({...prev, baseWorkoutForToday: parseInt(value)}))}
+                            >
+                                <SelectTrigger id="baseWorkout">
+                                    <SelectValue placeholder="Selecione o treino" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="1">Treino Base 1</SelectItem>
+                                    <SelectItem value="2">Treino Base 2</SelectItem>
+                                    <SelectItem value="3">Treino Base 3</SelectItem>
+                                </SelectContent>
+                            </Select>
+                             <p className="text-xs text-muted-foreground">Escolha o treino para o dia liberado.</p>
+                        </div>
                     </CardContent>
                 </Card>
 
