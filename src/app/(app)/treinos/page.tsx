@@ -13,7 +13,7 @@ import { isBefore, startOfDay, intervalToDuration } from 'date-fns';
 
 const totalDays = 21;
 // Data de início do desafio (importante: o mês é baseado em zero, então 8 = Setembro)
-const challengeStartDate = new Date(2024, 8, 22, 0, 0, 0);
+const challengeStartDate = new Date(2025, 8, 22, 0, 0, 0);
 
 const StatCard = ({ icon: Icon, title, value, description }: { icon: React.ElementType, title: string, value: string, description: string }) => (
     <Card>
