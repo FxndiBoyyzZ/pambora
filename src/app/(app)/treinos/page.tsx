@@ -35,6 +35,9 @@ export default function TreinosPage() {
   const [unlockedDays, setUnlockedDays] = React.useState(1);
   const [workoutsConfig, setWorkoutsConfig] = React.useState<any[]>([]);
   const [configLoading, setConfigLoading] = React.useState(true);
+  
+  const today = startOfDay(new Date());
+  const isChallengeStarted = !isBefore(today, challengeStartDate);
 
   React.useEffect(() => {
     const fetchConfig = async () => {
@@ -57,17 +60,6 @@ export default function TreinosPage() {
     fetchConfig();
   }, []);
 
-  if (isQuizLoading || configLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  const today = startOfDay(new Date());
-  const isChallengeStarted = !isBefore(today, challengeStartDate);
-
   // If the challenge hasn't started, completed workouts should be considered 0 for this page's logic.
   const completedWorkouts = isChallengeStarted ? (answers.completedWorkouts || []) : [];
   const focusDays = completedWorkouts.length;
@@ -88,7 +80,14 @@ export default function TreinosPage() {
         return acc + (workout?.calories || 0);
     }, 0);
   }, [completedWorkouts, workoutsConfig, isChallengeStarted]);
-
+  
+  if (isQuizLoading || configLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
