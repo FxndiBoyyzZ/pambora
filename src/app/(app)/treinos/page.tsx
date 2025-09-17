@@ -31,7 +31,7 @@ const StatCard = ({ icon: Icon, title, value, description }: { icon: React.Eleme
 );
 
 export default function TreinosPage() {
-  const { answers, isWorkoutCompleted, loading: isQuizLoading } = useQuiz();
+  const { answers, loading: isQuizLoading } = useQuiz();
   const [unlockedDays, setUnlockedDays] = React.useState(1);
   const [workoutsConfig, setWorkoutsConfig] = React.useState<any[]>([]);
   const [configLoading, setConfigLoading] = React.useState(true);
@@ -60,19 +60,22 @@ export default function TreinosPage() {
   const today = startOfDay(new Date());
   const isChallengeStarted = !isBefore(today, challengeStartDate);
 
+  // If the challenge hasn't started, completed workouts should be considered 0 for this page's logic.
   const completedWorkouts = isChallengeStarted ? (answers.completedWorkouts || []) : [];
   const focusDays = completedWorkouts.length;
   const progressPercentage = (focusDays / totalDays) * 100;
   
   // Wait for config to load before calculating derived state
-  const currentDayForDisplay = !configLoading ? (unlockedDays > totalDays ? totalDays : unlockedDays) : 1;
-  const currentWorkoutDetails = !configLoading && workoutsConfig.length > 0 
+  const currentDayForDisplay = unlockedDays > totalDays ? totalDays : unlockedDays;
+  const currentWorkoutDetails = workoutsConfig.length > 0
       ? workoutsConfig[(currentDayForDisplay - 1) % workoutsConfig.length]
       : null;
   
   const totalCaloriesBurned = React.useMemo(() => {
     if (!workoutsConfig.length || !isChallengeStarted) return 0;
-    return completedWorkouts.reduce((acc, day) => {
+    
+    // Ensure completedWorkouts is an array before reducing
+    return (completedWorkouts || []).reduce((acc, day) => {
         const workout = workoutsConfig[(day - 1) % workoutsConfig.length];
         return acc + (workout?.calories || 0);
     }, 0);
