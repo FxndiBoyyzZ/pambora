@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Award, BookOpen, Download } from "lucide-react";
 import Image from "next/image";
@@ -22,7 +23,8 @@ const bonuses = [
         description: "Mantenha a motivação em alta com playlists selecionadas para cada tipo de treino.",
         icon: Download,
         image: "https://placehold.co/600x400.png",
-        imageHint: "music playlist"
+        imageHint: "music playlist",
+        link: "https://open.spotify.com/playlist/4ZqjhPyrWT9oqKRMafvDE0?si=f7RQpejvSPy-jMWLDEEX6g&pi=SGpxE8JWQxqVg"
     }
 ]
 
@@ -56,9 +58,17 @@ export default function BonusPage() {
                             </div>
                         </CardHeader>
                         <CardContent className="mt-auto">
-                            <button className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors">
-                                Acessar Agora
-                            </button>
+                           {bonus.link ? (
+                                <a href={bonus.link} target="_blank" rel="noopener noreferrer">
+                                    <button className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors">
+                                        Acessar Agora
+                                    </button>
+                                </a>
+                            ) : (
+                                <button className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors">
+                                    Acessar Agora
+                                </button>
+                            )}
                         </CardContent>
                     </Card>
                 ))}
