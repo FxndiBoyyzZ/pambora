@@ -38,7 +38,7 @@ export default function TreinosPage() {
 
   React.useEffect(() => {
     const fetchConfig = async () => {
-        setConfigLoading(true);
+        if (!configLoading) setConfigLoading(true);
         try {
             const controlsDoc = await getDoc(doc(db, 'config', 'workoutControls'));
             if (controlsDoc.exists()) {
@@ -56,6 +56,14 @@ export default function TreinosPage() {
     };
     fetchConfig();
   }, []);
+
+  if (isQuizLoading || configLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const today = startOfDay(new Date());
   const isChallengeStarted = !isBefore(today, challengeStartDate);
@@ -81,14 +89,6 @@ export default function TreinosPage() {
     }, 0);
   }, [completedWorkouts, workoutsConfig, isChallengeStarted]);
 
-
-  if (isQuizLoading || configLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full">
