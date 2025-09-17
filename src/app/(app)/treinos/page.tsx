@@ -1,3 +1,4 @@
+
 // src/app/(app)/treinos/page.tsx
 'use client';
 import * as React from 'react';
@@ -8,11 +9,22 @@ import { Dumbbell, Flame, TrendingUp, Target, ArrowRight, Loader2, CalendarClock
 import Link from "next/link";
 import { useQuiz } from "@/services/quiz-service";
 import { isBefore, startOfDay } from 'date-fns';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/services/firebase';
 
-const baseWorkouts = [
-  { id: 1, title: 'HIIT Intenso', description: 'Queima máxima de calorias em 20 minutos.', calories: 300, icon: Flame },
-  { id: 2, title: 'Força Total', description: 'Foco em construção muscular e definição.', calories: 400, icon: Dumbbell },
-  { id: 3, title: 'Mobilidade e Core', description: 'Melhore sua flexibilidade e fortaleça seu abdômen.', calories: 150, icon: Target },
+interface Workout {
+    id: number;
+    title: string;
+    description: string;
+    calories: number;
+    icon: React.ElementType; // Keep icon on client
+}
+
+// Base structure with client-side components
+const baseWorkoutsClient: Omit<Workout, 'calories' | 'title' | 'description'>[] = [
+  { id: 1, icon: Flame },
+  { id: 2, icon: Dumbbell },
+  { id: 3, icon: Target },
 ];
 
 const totalDays = 21;
@@ -35,48 +47,59 @@ const StatCard = ({ icon: Icon, title, value, description }: { icon: React.Eleme
 
 export default function TreinosPage() {
   const { answers, isWorkoutCompleted, loading: isQuizLoading } = useQuiz();
-  
-  // This is the core logic fix: Determine if the challenge has started.
+  const [unlockedDays, setUnlockedDays] = React.useState(1);
+  const [workoutsConfig, setWorkoutsConfig] = React.useState<any[]>([]);
+  const [configLoading, setConfigLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchConfig = async () => {
+        setConfigLoading(true);
+        try {
+            const controlsDoc = await getDoc(doc(db, 'config', 'workoutControls'));
+            if (controlsDoc.exists()) {
+                setUnlockedDays(controlsDoc.data().unlockedDays);
+            }
+            const workoutsDoc = await getDoc(doc(db, 'config', 'workouts'));
+            if (workoutsDoc.exists()) {
+                setWorkoutsConfig(workoutsDoc.data().workouts);
+            }
+        } catch (error) {
+            console.error("Error fetching config:", error);
+        } finally {
+            setConfigLoading(false);
+        }
+    };
+    fetchConfig();
+  }, []);
+
   const today = startOfDay(new Date());
   const isChallengeStarted = !isBefore(today, challengeStartDate);
 
-  // If the challenge has NOT started, completedWorkouts must be treated as empty.
   const completedWorkouts = isChallengeStarted ? (answers.completedWorkouts || []) : [];
   const focusDays = completedWorkouts.length;
   const progressPercentage = (focusDays / totalDays) * 100;
-
-  // Determine the current day. If the challenge hasn't started, this defaults to 1 but won't be used.
-  let currentDay = 1;
-  if (isChallengeStarted) {
-    while (isWorkoutCompleted(currentDay) && currentDay < totalDays) {
-      currentDay++;
-    }
-     if (focusDays === totalDays) {
-      currentDay = totalDays;
-    }
-  }
   
-  const currentWorkoutDetails = baseWorkouts[(currentDay - 1) % baseWorkouts.length];
+  const currentDayForDisplay = unlockedDays > totalDays ? totalDays : unlockedDays;
+  const currentWorkoutDetails = workoutsConfig[(currentDayForDisplay - 1) % workoutsConfig.length];
   
-  // Calculate estimates. This will be 0 if challenge has not started.
   const totalCaloriesBurned = React.useMemo(() => {
+    if (!workoutsConfig.length) return 0;
     return completedWorkouts.reduce((acc, day) => {
-        const workout = baseWorkouts[(day - 1) % baseWorkouts.length];
-        return acc + workout.calories;
+        const workout = workoutsConfig[(day - 1) % workoutsConfig.length];
+        return acc + (workout.calories || 0);
     }, 0);
-  }, [completedWorkouts]);
+  }, [completedWorkouts, workoutsConfig]);
 
   const projection = React.useMemo(() => {
-    const weeklyChangeKg = answers.goal === "Perder Peso" ? -0.5 : 0.25; // Média de 0.5kg/semana para perda e 0.25kg/semana para ganho
-    const changeIn6Months = weeklyChangeKg * 4.33 * 6; // 4.33 semanas por mês
+    const weeklyChangeKg = answers.goal === "Perder Peso" ? -0.5 : 0.25;
+    const changeIn6Months = weeklyChangeKg * 4.33 * 6;
     return {
         value: `${changeIn6Months.toFixed(1)} kg`,
         label: answers.goal === "Perder Peso" ? "a menos" : "a mais",
     };
   }, [answers.goal]);
 
-
-  if (isQuizLoading) {
+  if (isQuizLoading || configLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -121,14 +144,14 @@ export default function TreinosPage() {
             ) : (
                 <Card className="bg-gradient-to-br from-primary/20 to-card">
                     <CardHeader>
-                        <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {currentDay}</CardDescription>
-                        <CardTitle className="text-3xl font-headline tracking-wide">{currentWorkoutDetails.title}</CardTitle>
+                        <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {currentDayForDisplay}</CardDescription>
+                        <CardTitle className="text-3xl font-headline tracking-wide">{currentWorkoutDetails?.title || 'Carregando treino...'}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-muted-foreground mb-4">{currentWorkoutDetails.description}</p>
-                        <Link href={`/treinos/${currentDay}`} passHref>
-                            <Button size="lg" className="w-full sm:w-auto">
-                                Começar Agora <ArrowRight className="ml-2" />
+                        <p className="text-muted-foreground mb-4">{currentWorkoutDetails?.description || '...'}</p>
+                        <Link href={`/treinos/${currentDayForDisplay}`} passHref>
+                            <Button size="lg" className="w-full sm:w-auto" disabled={!currentWorkoutDetails}>
+                                {currentWorkoutDetails ? <>Começar Agora <ArrowRight className="ml-2" /></> : <Loader2 className="animate-spin" />}
                             </Button>
                         </Link>
                     </CardContent>

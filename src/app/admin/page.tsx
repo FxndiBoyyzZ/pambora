@@ -1,8 +1,9 @@
+
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Loader2, Dumbbell, Download, LogOut } from 'lucide-react';
+import { Loader2, Dumbbell, Download, LogOut, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSign
 export const dynamic = 'force-dynamic';
 
 function AdminDashboard() {
-    const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 21 });
+    const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 1 });
     const [isLoadingData, setIsLoadingData] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const { toast } = useToast();
@@ -29,6 +30,8 @@ function AdminDashboard() {
                 const workoutConfigDoc = await getDoc(workoutConfigDocRef);
                 if (workoutConfigDoc.exists()) {
                     setWorkoutControls(workoutConfigDoc.data() as { unlockedDays: number });
+                } else {
+                     await setDoc(workoutConfigDocRef, { unlockedDays: 1 });
                 }
 
             } catch (error) {
@@ -109,6 +112,23 @@ function AdminDashboard() {
                                 <p className="text-xs text-muted-foreground">Defina qual o último dia de treino que os usuários podem acessar globalmente.</p>
                             </div>
                     </CardContent>
+                </Card>
+
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Gerenciar Treinos</CardTitle>
+                        <Settings className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                            <p className="text-xs text-muted-foreground">Edite os detalhes de cada treino base, como vídeos, exercícios e durações.</p>
+                    </CardContent>
+                        <CardFooter>
+                        <Link href="/admin/workouts" className="w-full">
+                            <Button variant="outline" size="sm" className="w-full">
+                                Editar Treinos
+                            </Button>
+                        </Link>
+                        </CardFooter>
                 </Card>
                 
                 <Card>

@@ -2,7 +2,7 @@
 'use client';
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { CheckCircle, Circle, Clock, Dumbbell, PlayCircle, Flame, Play, Info } from "lucide-react";
+import { CheckCircle, Circle, Clock, Dumbbell, PlayCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuiz } from '@/services/quiz-service';
 import { useToast } from '@/hooks/use-toast';
@@ -13,85 +13,81 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/services/firebase';
 
+interface Exercise {
+    name: string;
+    reps: string;
+}
 
-// Base Workouts that will be cycled through
-const baseWorkouts = [
-  {
-    id: 1,
-    title: 'Treino HIIT Intenso',
-    description: 'Queima máxima de calorias em 20 minutos.',
-    duration: '20 minutos',
-    videoUrl: "https://www.youtube.com/embed/nJoG-iGk_hY", 
-    exercises: [
-      { name: "Burpees", reps: "3x10" },
-      { name: "Agachamento com Salto", reps: "3x15" },
-      { name: "Alpinista", reps: "3x30s" },
-      { name: "Polichinelo", reps: "3x45s" },
-    ]
-  },
-  {
-    id: 2,
-    title: 'Força Total',
-    description: 'Foco em construção muscular e definição.',
-    duration: '45 minutos',
-    videoUrl: "https://www.youtube.com/embed/545K3byoJgE", 
-    exercises: [
-      { name: "Agachamento", reps: "3x12" },
-      { name: "Flexão de Braço", reps: "3x10" },
-      { name: "Remada com Halter", reps: "3x12" },
-      { name: "Prancha", reps: "3x45s" },
-    ]
-  },
-   {
-    id: 3,
-    title: 'Mobilidade e Core',
-    description: 'Melhore sua flexibilidade e fortaleça seu abdômen.',
-    duration: '30 minutos',
-    videoUrl: "https://www.youtube.com/embed/jyV-cIC8xNo",
-    exercises: [
-      { name: "Prancha Lateral", reps: "3x30s cada lado" },
-      { name: "Ponte de Glúteos", reps: "3x15" },
-      { name: "Abdominal Remador", reps: "3x20" },
-      { name: "Gato-Camelo", reps: "3x10" },
-    ]
-  }
-];
-
-const totalDays = 21;
+interface Workout {
+    id: number;
+    title: string;
+    description: string;
+    duration: string;
+    videoUrl: string;
+    exercises: Exercise[];
+}
 
 export default function TreinoDetailPage() {
   const params = useParams();
   const { toast } = useToast();
+  const { answers, toggleWorkoutCompleted, isWorkoutCompleted, loading: quizLoading } = useQuiz();
+
+  const [workout, setWorkout] = React.useState<Workout | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [unlockedDays, setUnlockedDays] = React.useState(1);
+  
   const day = parseInt(params.id as string, 10);
-  
-  const { answers, toggleWorkoutCompleted, isWorkoutCompleted } = useQuiz();
-  const completedWorkouts = answers.completedWorkouts || [];
-  
-  // Determine which workout to show based on the day
-  const workout = baseWorkouts[(day - 1) % baseWorkouts.length];
   const isCompleted = isWorkoutCompleted(day);
 
-  // Determine the user's current day
-  let currentDay = 1;
-  while(isWorkoutCompleted(currentDay) && currentDay < totalDays) {
-    currentDay++;
-  }
-   if (completedWorkouts.length === totalDays) {
-    currentDay = totalDays;
-  }
+  React.useEffect(() => {
+    const fetchWorkoutConfig = async () => {
+        setLoading(true);
+        try {
+            const configDocRef = doc(db, 'config', 'workouts');
+            const configDoc = await getDoc(configDocRef);
 
-  const isTodayWorkout = day === currentDay;
+            const controlsDocRef = doc(db, 'config', 'workoutControls');
+            const controlsDoc = await getDoc(controlsDocRef);
+
+            if (configDoc.exists()) {
+                const allWorkouts = configDoc.data().workouts as Workout[];
+                // Determine which workout to show based on the day
+                const workoutToShow = allWorkouts[(day - 1) % allWorkouts.length];
+                setWorkout(workoutToShow);
+            }
+
+             if (controlsDoc.exists()) {
+                setUnlockedDays(controlsDoc.data().unlockedDays);
+            }
+        } catch (error) {
+            console.error("Failed to fetch workout config:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro ao carregar treino",
+                description: "Não foi possível buscar os detalhes do treino.",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    fetchWorkoutConfig();
+  }, [day, toast]);
+  
+
+  const isTodayWorkout = day === unlockedDays;
   const canToggleComplete = isTodayWorkout || isCompleted;
 
 
   const handleToggleComplete = () => {
-    // Prevent toggling if it's not the current day's workout (and it's not already completed)
     if (!canToggleComplete) {
        toast({
         variant: "destructive",
         title: "Ação não permitida!",
-        description: `Você só pode marcar/desmarcar o treino do dia ${currentDay}.`,
+        description: `Você só pode marcar/desmarcar o treino do dia atual (${unlockedDays}).`,
       });
       return;
     }
@@ -103,7 +99,15 @@ export default function TreinoDetailPage() {
     })
   }
 
-  if (!workout || !day) {
+  if (loading || quizLoading) {
+     return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!workout) {
     return (
       <div className="flex items-center justify-center h-full">
         <p>Treino não encontrado.</p>
