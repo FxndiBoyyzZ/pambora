@@ -16,6 +16,7 @@ const baseWorkouts = [
 ];
 
 const totalDays = 21;
+// Set the start date for the challenge
 const challengeStartDate = new Date('2024-09-22T00:00:00');
 
 
@@ -34,18 +35,18 @@ const StatCard = ({ icon: Icon, title, value, description }: { icon: React.Eleme
 
 export default function TreinosPage() {
   const { answers, isWorkoutCompleted, loading: isQuizLoading } = useQuiz();
-  const [isChallengeStarted, setIsChallengeStarted] = React.useState(false);
-
-  React.useEffect(() => {
-    const today = startOfDay(new Date());
-    setIsChallengeStarted(!isBefore(today, challengeStartDate));
-  }, []);
+  
+  // Determine if the challenge has started. This logic now runs on every render.
+  const today = startOfDay(new Date());
+  const isChallengeStarted = !isBefore(today, challengeStartDate);
 
   const completedWorkouts = answers.completedWorkouts || [];
+  
+  // If the challenge hasn't started, force focusDays to be 0
   const focusDays = isChallengeStarted ? completedWorkouts.length : 0;
-  const progressPercentage = (focusDays / totalDays) * 100;
+  const progressPercentage = isChallengeStarted ? (focusDays / totalDays) * 100 : 0;
 
-  // Determinar o dia atual
+  // Determine the current day
   let currentDay = 1;
   if (isChallengeStarted) {
     while (isWorkoutCompleted(currentDay) && currentDay < totalDays) {
@@ -58,9 +59,11 @@ export default function TreinosPage() {
   
   const currentWorkoutDetails = baseWorkouts[(currentDay - 1) % baseWorkouts.length];
   
-  // Calcular estimativas
+  // Calculate estimates
   const totalCaloriesBurned = React.useMemo(() => {
+    // Return 0 if the challenge has not started
     if (!isChallengeStarted) return 0;
+
     return completedWorkouts.reduce((acc, day) => {
         const workout = baseWorkouts[(day - 1) % baseWorkouts.length];
         return acc + workout.calories;
@@ -125,8 +128,8 @@ export default function TreinosPage() {
                             <CalendarClock className="h-10 w-10 text-primary" />
                         </div>
                         <CardTitle className="text-3xl font-headline tracking-wide">O Desafio Começa em Breve!</CardTitle>
-                        <CardDescription className="text-md text-foreground/80">
-                            Sua jornada está prestes a começar. O treino do Dia 1 será liberado na
+                        <CardDescription className="text-md text-foreground/80 max-w-md mx-auto">
+                            Sua jornada está prestes a começar. O treino do Dia 1 será liberado em:
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
