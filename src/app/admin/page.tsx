@@ -1,4 +1,3 @@
-
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
@@ -11,7 +10,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser, createUserWithEmailAndPassword } from 'firebase/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -153,7 +152,7 @@ function AdminDashboard() {
 }
 
 function AdminLoginPage({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUser) => void }) {
-    const [email, setEmail] = React.useState('pam@admin.com');
+    const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
@@ -166,8 +165,18 @@ function AdminLoginPage({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUse
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             onLoginSuccess(userCredential.user);
-        } catch (err) {
-            setError('Email ou senha inválidos. Por favor, tente novamente.');
+        } catch (err: any) {
+            // If user not found, try to create a new admin user
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+                try {
+                    const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    onLoginSuccess(newUserCredential.user);
+                } catch (createErr) {
+                    setError('Falha ao entrar ou criar conta. Verifique os dados.');
+                }
+            } else {
+                setError('Email ou senha inválidos. Por favor, tente novamente.');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -189,7 +198,7 @@ function AdminLoginPage({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUse
                             <Input 
                                 id="email" 
                                 type="email" 
-                                placeholder="pam@admin.com" 
+                                placeholder="seu@email.com" 
                                 value={email} 
                                 onChange={(e) => setEmail(e.target.value)}
                                 required 
@@ -210,7 +219,7 @@ function AdminLoginPage({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUse
                     <CardFooter>
                         <Button type="submit" className="w-full" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Entrar
+                            Entrar ou Criar Conta
                         </Button>
                     </CardFooter>
                 </form>
@@ -225,11 +234,7 @@ export default function AdminPage() {
 
     React.useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (currentUser && currentUser.email === 'pam@admin.com') {
-                setUser(currentUser);
-            } else {
-                setUser(null);
-            }
+            setUser(currentUser); // Allow any logged-in user initially
             setLoading(false);
         });
 
