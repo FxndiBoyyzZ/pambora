@@ -12,21 +12,6 @@ import { isBefore, startOfDay } from 'date-fns';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 
-interface Workout {
-    id: number;
-    title: string;
-    description: string;
-    calories: number;
-    icon: React.ElementType; // Keep icon on client
-}
-
-// Base structure with client-side components
-const baseWorkoutsClient: Omit<Workout, 'calories' | 'title' | 'description'>[] = [
-  { id: 1, icon: Flame },
-  { id: 2, icon: Dumbbell },
-  { id: 3, icon: Target },
-];
-
 const totalDays = 21;
 // Set the start date for the challenge
 const challengeStartDate = new Date('2024-09-22T00:00:00');
@@ -79,25 +64,20 @@ export default function TreinosPage() {
   const focusDays = completedWorkouts.length;
   const progressPercentage = (focusDays / totalDays) * 100;
   
-  const currentDayForDisplay = unlockedDays > totalDays ? totalDays : unlockedDays;
-  const currentWorkoutDetails = workoutsConfig[(currentDayForDisplay - 1) % workoutsConfig.length];
+  // Wait for config to load before calculating derived state
+  const currentDayForDisplay = !configLoading ? (unlockedDays > totalDays ? totalDays : unlockedDays) : 1;
+  const currentWorkoutDetails = !configLoading && workoutsConfig.length > 0 
+      ? workoutsConfig[(currentDayForDisplay - 1) % workoutsConfig.length]
+      : null;
   
   const totalCaloriesBurned = React.useMemo(() => {
-    if (!workoutsConfig.length) return 0;
+    if (!workoutsConfig.length || !isChallengeStarted) return 0;
     return completedWorkouts.reduce((acc, day) => {
         const workout = workoutsConfig[(day - 1) % workoutsConfig.length];
-        return acc + (workout.calories || 0);
+        return acc + (workout?.calories || 0);
     }, 0);
-  }, [completedWorkouts, workoutsConfig]);
+  }, [completedWorkouts, workoutsConfig, isChallengeStarted]);
 
-  const projection = React.useMemo(() => {
-    const weeklyChangeKg = answers.goal === "Perder Peso" ? -0.5 : 0.25;
-    const changeIn6Months = weeklyChangeKg * 4.33 * 6;
-    return {
-        value: `${changeIn6Months.toFixed(1)} kg`,
-        label: answers.goal === "Perder Peso" ? "a menos" : "a mais",
-    };
-  }, [answers.goal]);
 
   if (isQuizLoading || configLoading) {
     return (
@@ -160,18 +140,12 @@ export default function TreinosPage() {
 
             <div>
                 <h2 className="text-xl font-bold mb-4 font-headline tracking-wide text-center">Seu Progresso</h2>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2">
                     <StatCard 
                         icon={Flame}
                         title="Calorias Queimadas"
                         value={totalCaloriesBurned.toLocaleString('pt-BR')}
                         description="Estimativa dos treinos concluídos"
-                    />
-                    <StatCard 
-                        icon={TrendingUp}
-                        title="Projeção para 6 Meses"
-                        value={projection.value}
-                        description={`Estimativa de peso ${projection.label}`}
                     />
                     <StatCard 
                         icon={Dumbbell}
