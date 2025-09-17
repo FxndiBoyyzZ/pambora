@@ -74,7 +74,7 @@ const mealPlanPrompt = ai.definePrompt({
 3.  **Formato da Saída:**
     - A saída DEVE ser um objeto JSON estruturado, conforme o schema definido.
     - NÃO adicione texto, introduções ou explicações fora do JSON.
-    - O lanche da manhã não deve ser incluído no resultado final.
+    - O lanche da manhã e a ceia não devem ser incluídos no resultado final. O "Lanche" no JSON de saída deve ser o "Lanche tarde".
 
 ---
 
@@ -84,36 +84,43 @@ const mealPlanPrompt = ai.definePrompt({
 
 *   **Segunda-feira:**
     *   Café da manhã: 1 fatia de pão integral + 1 ovo mexido + 1 fatia de queijo branco + 1 banana pequena
+    *   Lanche manhã: 1 iogurte natural desnatado
     *   Almoço: 3 col. sopa de arroz integral + 1 concha feijão + peito de frango grelhado + salada de folhas + 1 maçã
     *   Lanche tarde: 1 fatia de pão integral com pasta de ricota + 3 castanhas-do-pará
     *   Jantar: Omelete com 2 claras + 1 ovo inteiro + espinafre e tomate + salada
 *   **Terça-feira:**
     *   Café da manhã: 2 torradas integrais + 1 colher de sopa de requeijão light + 1 fatia de mamão
+    *   Lanche manhã: 1 banana pequena amassada com 1 colher de sopa de aveia
     *   Almoço: 3 col. sopa de batata doce amassada + filé de peixe grelhado + brócolis no vapor + 1 mexerica
     *   Lanche tarde: 1 iogurte grego light + 5 amêndoas
     *   Jantar: Sopa de legumes (abobrinha, cenoura, chuchu) com 1 filé de frango desfiado + salada
 *   **Quarta-feira:**
     *   Café da manhã: 1 fatia de pão integral + 2 claras mexidas + 1 fatia de queijo minas + 1 laranja pequena
+    *   Lanche manhã: 1 iogurte natural + 1 colher de chá de chia
     *   Almoço: 3 col. sopa de arroz integral + 1 concha feijão + carne moída magra + salada colorida + 1 fatia de melancia
     *   Lanche tarde: 1 fatia de pão integral com pasta de cottage + 3 nozes
     *   Jantar: Omelete de legumes (2 ovos) + salada verde
 *   **Quinta-feira:**
     *   Café da manhã: 1 tapioca pequena com queijo branco + café sem açúcar + 1 fatia de manga
+    *   Lanche manhã: 1 maçã pequena
     *   Almoço: 3 col. sopa de purê de batata doce + peito de frango + abobrinha grelhada + salada de folhas + 1 fatia de abacaxi
     *   Lanche tarde: 1 iogurte grego light + 6 amêndoas
     *   Jantar: Sopa de abóbora com carne desfiada + salada verde
 *   **Sexta-feira:**
     *   Café da manhã: 1 fatia de pão integral + 1 ovo mexido + 1 fatia de queijo cottage + 1 fatia de mamão
+    *   Lanche manhã: 1 banana pequena + 1 colher de sopa de aveia
     *   Almoço: 3 col. sopa de arroz integral + 1 concha feijão + filé de tilápia + brócolis e couve refogados + 1 pera pequena
     *   Lanche tarde: 1 fatia de pão integral com requeijão light + 3 castanhas-do-pará
     *   Jantar: Omelete de 2 ovos + espinafre + salada verde
 *   **Sábado:**
     *   Café da manhã: 2 torradas integrais + 1 colher de sopa de ricota + 1 fatia de melancia
+    *   Lanche manhã: 1 iogurte natural + 1 colher de sopa de linhaça
     *   Almoço: 3 col. sopa de arroz integral + peito de frango grelhado + legumes cozidos + 1 fatia de abacaxi
     *   Lanche tarde: 1 iogurte grego light + 5 nozes
     *   Jantar: Sopa de legumes com carne magra desfiada + salada de folhas
 *   **Domingo:**
     *   Café da manhã: 1 tapioca pequena com queijo branco + 1 fatia de mamão + café sem açúcar
+    *   Lanche manhã: 1 banana pequena + 1 colher de sopa de aveia
     *   Almoço: 3 col. sopa de batata doce amassada + peito de frango grelhado + salada colorida + 1 laranja pequena
     *   Lanche tarde: 1 fatia de pão integral com pasta de ricota + 6 amêndoas
     *   Jantar: Omelete de legumes (2 ovos) + salada verde
@@ -122,39 +129,53 @@ const mealPlanPrompt = ai.definePrompt({
 
 *   **Segunda-feira:**
     *   Café da manhã: 2 fatias de pão integral + 2 ovos mexidos + 1 fatia de queijo minas + 1 banana grande + 1 colher de sopa de pasta de amendoim
+    *   Lanche manhã: Iogurte grego + 2 colheres de granola + 1 colher de mel
     *   Almoço: 5 col. sopa de arroz integral + 1 concha feijão + peito de frango grande grelhado + salada com azeite + batata-doce média + fatia de melancia
     *   Lanche tarde: Sanduíche natural (pão integral, peito de peru, ricota, tomate, folhas) + 30 g de castanhas
     *   Jantar: 4 col. sopa de arroz integral + salmão grelhado + legumes refogados no azeite + salada de folhas com azeite
+    *   Ceia: Leite desnatado + 2 col. sopa de aveia + cacau em pó + mel
 *   **Terça-feira:**
     *   Café da manhã: 1 tapioca média com queijo minas + 2 ovos mexidos + 1 fatia de mamão + 1 colher de sopa de pasta de amendoim
+    *   Lanche manhã: 1 vitamina de banana com leite desnatado + 1 colher de sopa de aveia
     *   Almoço: 5 col. sopa de purê de batata doce + filé grande de peixe grelhado + brócolis no vapor + salada com azeite + 1 mexerica
     *   Lanche tarde: 1 pão integral com atum e requeijão light + 20 g de amêndoas
     *   Jantar: Macarrão integral (1 prato pequeno) com peito de frango desfiado + molho de tomate caseiro + salada verde
+    *   Ceia: 1 copo de leite + 1 colher de sopa de granola + 1 colher de chá de mel
 *   **Quarta-feira:**
     *   Café da manhã: 2 fatias de pão integral + 2 claras + 1 ovo inteiro + queijo cottage + 1 laranja + 1 colher de sopa de pasta de amendoim
+    *   Lanche manhã: 1 iogurte natural + 1 colher de chia + 1 banana pequena
     *   Almoço: 5 col. sopa de arroz integral + 1 concha feijão + carne moída magra + salada colorida com azeite + fatia de melancia
     *   Lanche tarde: 1 wrap integral de frango + folhas + 1 colher de sopa de homus + 20 g de castanhas
     *   Jantar: Omelete de 3 ovos com legumes + 1 fatia de pão integral + salada verde
+    *   Ceia: 1 copo de leite morno com aveia e canela
 *   **Quinta-feira:**
     *   Café da manhã: 1 tapioca média com queijo branco + 2 ovos mexidos + 1 fatia de manga + 1 colher de sopa de pasta de amendoim
+    *   Lanche manhã: 1 maçã grande + 1 punhado de nozes
     *   Almoço: 5 col. sopa de purê de batata doce + peito de frango grelhado grande + abobrinha grelhada + salada de folhas com azeite + fatia de abacaxi
     *   Lanche tarde: 1 iogurte grego light + 2 col. de granola + 1 colher de mel
     *   Jantar: Risoto integral de frango com legumes (1 prato pequeno) + salada verde
+    *   Ceia: 1 copo de leite com cacau em pó + 1 colher de sopa de aveia
 *   **Sexta-feira:**
     *   Café da manhã: 2 fatias de pão integral + 2 ovos mexidos + queijo cottage + mamão + 1 colher de sopa de pasta de amendoim
+    *   Lanche manhã: 1 vitamina de abacate com leite desnatado (pequena, sem açúcar)
     *   Almoço: 5 col. sopa de arroz integral + 1 concha feijão + filé de tilápia grande + brócolis refogado + salada de folhas com azeite + pera pequena
     *   Lanche tarde: Sanduíche integral de peito de peru + ricota + tomate + 30 g de castanhas
     *   Jantar: Omelete de 3 ovos + espinafre + salada verde + 1 fatia de pão integral
+    *   Ceia: 1 copo de leite + 1 colher de sopa de aveia + mel
 *   **Sábado:**
     *   Café da manhã: 2 torradas integrais + 1 colher de sopa de ricota + 2 ovos mexidos + melancia + 1 colher de sopa de pasta de amendoim
+    *   Lanche manhã: 1 iogurte natural + 1 colher de linhaça + 1 banana pequena
     *   Almoço: 5 col. sopa de arroz integral + peito de frango grande grelhado + legumes cozidos + salada com azeite + 1 fatia de abacaxi
     *   Lanche tarde: 1 wrap integral com atum, ricota e folhas + 20 g de nozes
     *   Jantar: Lasanha de berinjela com frango (1 prato médio) + salada verde
+    *   Ceia: 1 copo de leite com canela + 2 col. sopa de aveia
 *   **Domingo:**
     *   Café da manhã: 1 tapioca média com queijo minas + 2 ovos mexidos + 1 fatia de mamão + 1 colher de sopa de pasta de amendoim
+    *   Lanche manhã: 1 vitamina de morango com leite desnatado + 1 colher de sopa de chia
     *   Almoço: 5 col. sopa de batata doce + peito de frango grande grelhado + salada colorida com azeite + 1 laranja
     *   Lanche tarde: 1 pão integral com pasta de ricota + peito de peru + 30 g de castanhas
     *   Jantar: Omelete de 3 ovos com legumes + 1 fatia de pão integral + salada verde
+    *   Ceia: 1 copo de leite com cacau em pó + 1 colher de sopa de aveia + mel
 
 `,
 });
@@ -166,8 +187,6 @@ const mealPlanFlow = ai.defineFlow(
     outputSchema: MealPlanOutputSchema,
   },
   async input => {
-    // Adicionar "Lanche" vazio ao input para garantir que o schema de output seja satisfeito.
-    // A IA foi instruída a não gerar lanches da manhã, mas o schema de output espera o campo.
     const {output} = await mealPlanPrompt(input);
     if (output) {
         for (const day of Object.keys(output.mealPlan)) {
