@@ -1,30 +1,31 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Função helper para verificar se o usuário logado é o administrador.
     function isAdmin() {
-      // O e-mail do admin é pego do documento 'admin_user' na coleção 'config'.
-      // Isso é mais seguro do que deixar o e-mail fixo nas regras.
-      // A função `exists` garante que a leitura só aconteça se o documento existir.
-      return exists(/databases/$(database)/documents/config/admin_user) &&
-             request.auth.token.email == get(/databases/$(database)/documents/config/admin_user).data.email;
+      // IMPORTANTE: Substitua pelo seu e-mail de administrador.
+      return request.auth.token.email == 'SEU_NOVO_EMAIL_DE_ADMIN_AQUI.com';
     }
 
     // Regras para a coleção 'users'
     match /users/{userId} {
-      // Permite que o admin liste, leia e escreva qualquer perfil de usuário.
-      // Um usuário normal só pode ler e escrever seus próprios dados.
-      allow list, read, write: if isAdmin() || request.auth.uid == userId;
+      // O admin pode listar todos os usuários (necessário para a página de leads).
+      allow list: if isAdmin();
+      
+      // O admin pode ler/escrever qualquer perfil.
+      // Um usuário normal só pode ler/escrever o seu próprio perfil.
+      allow read, write: if isAdmin() || request.auth.uid == userId;
     }
 
     // Regras para a coleção 'config'
     match /config/{docId} {
-      // O admin pode ler e escrever em qualquer documento de configuração.
-      // Usuários normais autenticados só podem ler.
+      // O admin pode ler e escrever (salvar) as configurações do quiz e dos treinos.
+      allow read, write: if isAdmin();
+      
+      // Qualquer usuário autenticado pode ler as configurações (para o app funcionar).
       allow read: if request.auth != null;
-      allow write: if isAdmin();
     }
   }
 }
