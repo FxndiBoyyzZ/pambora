@@ -6,6 +6,7 @@ import { CheckCircle, Circle, Clock, Dumbbell, PlayCircle, Flame, Play, Info } f
 import { Button } from "@/components/ui/button";
 import { useQuiz } from '@/services/quiz-service';
 import { useToast } from '@/hooks/use-toast';
+import { useParams } from 'next/navigation';
 import {
   Tooltip,
   TooltipContent,
@@ -59,9 +60,10 @@ const baseWorkouts = [
 
 const totalDays = 21;
 
-export default function TreinoDetailPage({ params }: { params: { id: string } }) {
+export default function TreinoDetailPage() {
+  const params = useParams();
   const { toast } = useToast();
-  const day = parseInt(params.id, 10);
+  const day = parseInt(params.id as string, 10);
   
   const { answers, toggleWorkoutCompleted, isWorkoutCompleted } = useQuiz();
   const completedWorkouts = answers.completedWorkouts || [];
