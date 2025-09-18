@@ -3,7 +3,7 @@
 'use client';
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { auth, db } from '@/services/firebase';
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, getFirestore } from 'firebase/firestore';
 
 interface QuizAnswers {
@@ -48,7 +48,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserData = useCallback(async (user: User) => {
     // Admins are anonymous and don't have user data in firestore
-    if (user.email === 'pam@admin.com') {
+    if (user.email === 'pam@admin.com' || user.email === 'bypam@admin.com') {
       setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
       return;
     }
@@ -65,20 +65,27 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setLoading(true);
-      if (currentUser) {
-        setUser(currentUser);
-        await fetchUserData(currentUser);
-      } else {
-        setUser(null);
-        // Reset answers to default when no user is logged in.
-        setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    // Set persistence to local to keep user logged in
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+          setLoading(true);
+          if (currentUser) {
+            setUser(currentUser);
+            await fetchUserData(currentUser);
+          } else {
+            setUser(null);
+            // Reset answers to default when no user is logged in.
+            setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
+          }
+          setLoading(false);
+        });
+        return () => unsubscribe();
+      })
+      .catch((error) => {
+        console.error("Firebase persistence error:", error);
+        setLoading(false);
+      });
   }, [fetchUserData]);
 
   const updateFirestore = async (uid: string, data: Partial<QuizAnswers>) => {
@@ -97,7 +104,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       if (typeof window !== 'undefined') {
         localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
       }
-      if (user && user.email !== 'pam@admin.com') {
+      if (user && user.email !== 'pam@admin.com' && user.email !== 'bypam@admin.com') {
         updateFirestore(user.uid, { [step]: answer });
       }
       return newAnswers;
@@ -110,7 +117,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('quizAnswers');
     }
     setAnswers(defaultState);
-    if (user && user.email !== 'pam@admin.com') {
+    if (user && user.email !== 'pam@admin.com' && user.email !== 'bypam@admin.com') {
       const initialData = {
           uid: user.uid, // Ensure UID is preserved
           name: answers.name || '',
@@ -132,7 +139,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
             ? completed.filter(id => id !== workoutId)
             : [...completed, workoutId];
         const newAnswers = { ...prev, completedWorkouts: newCompleted };
-        if (user && user.email !== 'pam@admin.com') {
+        if (user && user.email !== 'pam@admin.com' && user.email !== 'bypam@admin.com') {
             updateFirestore(user.uid, { completedWorkouts: newCompleted });
         }
         return newAnswers;

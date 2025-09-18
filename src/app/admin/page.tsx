@@ -1,8 +1,9 @@
+
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Loader2, Dumbbell, Download, LogOut, Settings } from 'lucide-react';
+import { Loader2, Dumbbell, Download, LogOut, Settings, EyeOff, Eye } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -15,13 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export const dynamic = 'force-dynamic';
 
-interface WorkoutControls {
-    unlockedDays: number;
-    baseWorkoutForToday: number;
-}
-
 function AdminDashboard() {
-    const [workoutControls, setWorkoutControls] = React.useState<WorkoutControls>({ unlockedDays: 0, baseWorkoutForToday: 1 });
+    const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 0, baseWorkoutForToday: 1 });
     const [isLoadingData, setIsLoadingData] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const { toast } = useToast();
@@ -187,6 +183,7 @@ function AdminLoginPage({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUse
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
+    const [showPassword, setShowPassword] = React.useState(false);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -227,13 +224,24 @@ function AdminLoginPage({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUse
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password">Senha</Label>
-                            <Input 
-                                id="password" 
-                                type="password" 
-                                value={password} 
-                                onChange={(e) => setPassword(e.target.value)}
-                                required 
-                            />
+                            <div className="relative">
+                                <Input 
+                                    id="password" 
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={password} 
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required 
+                                />
+                                <Button 
+                                    type="button"
+                                    variant="ghost" 
+                                    size="icon"
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                                    onClick={() => setShowPassword(prev => !prev)}
+                                >
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
+                            </div>
                         </div>
                         {error && <p className="text-sm text-destructive">{error}</p>}
                     </CardContent>
@@ -252,11 +260,20 @@ function AdminLoginPage({ onLoginSuccess }: { onLoginSuccess: (user: FirebaseUse
 export default function AdminPage() {
     const [user, setUser] = React.useState<FirebaseUser | null>(null);
     const [loading, setLoading] = React.useState(true);
+    const [isAdmin, setIsAdmin] = React.useState(false);
+    const [authChecked, setAuthChecked] = React.useState(false);
 
     React.useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser); // Allow any logged-in user initially
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            setUser(currentUser);
+            if (currentUser) {
+                const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid));
+                setIsAdmin(adminDoc.exists());
+            } else {
+                setIsAdmin(false);
+            }
             setLoading(false);
+            setAuthChecked(true);
         });
 
         return () => unsubscribe();
@@ -265,11 +282,10 @@ export default function AdminPage() {
     const handleLogout = async () => {
         await firebaseSignOut(auth);
         setUser(null);
+        setIsAdmin(false);
     };
 
-
-
-    if (loading) {
+    if (loading || !authChecked) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -278,7 +294,31 @@ export default function AdminPage() {
     }
     
     if (!user) {
-        return <AdminLoginPage onLoginSuccess={setUser} />;
+        return <AdminLoginPage onLoginSuccess={(loggedInUser) => {
+             setUser(loggedInUser);
+             // Re-check admin status on login
+             getDoc(doc(db, 'admins', loggedInUser.uid)).then(adminDoc => {
+                setIsAdmin(adminDoc.exists());
+             });
+        }} />;
+    }
+
+    if (!isAdmin) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-background">
+                <Card className="w-full max-w-sm text-center">
+                     <CardHeader>
+                        <CardTitle>Acesso Negado</CardTitle>
+                        <CardDescription>Esta conta não é de administrador.</CardDescription>
+                     </CardHeader>
+                     <CardFooter>
+                        <Button variant="destructive" onClick={handleLogout} className="w-full">
+                            Sair e tentar novamente
+                        </Button>
+                     </CardFooter>
+                </Card>
+            </div>
+        )
     }
 
     return (
