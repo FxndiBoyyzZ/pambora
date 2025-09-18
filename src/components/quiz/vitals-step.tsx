@@ -22,23 +22,16 @@ interface VitalsStepProps {
 
 export function VitalsStep({ step, onComplete }: VitalsStepProps) {
   const { answers, setAnswer } = useQuiz();
-  const [gender, setGender] = React.useState(answers.gender);
   const [height, setHeight] = React.useState(answers.height || 160);
   const [weight, setWeight] = React.useState(answers.weight || 60);
 
-  const handleGenderSelect = (selectedGender: 'male' | 'female') => {
-    setGender(selectedGender);
-  };
-
   const handleNext = () => {
-    setAnswer('gender', gender);
+    setAnswer('gender', 'female'); // Define 'female' como padrão
     setAnswer('height', height);
     setAnswer('weight', weight);
     onComplete();
   };
   
-  const isFormValid = !!gender;
-
   return (
     <div className="w-full h-full flex items-center justify-center p-4 bg-cover bg-center" style={{ backgroundImage: `url('${step.content.backgroundUrl}')` }}>
       <Card className="w-full max-w-md bg-background/80 backdrop-blur-sm text-foreground">
@@ -47,28 +40,6 @@ export function VitalsStep({ step, onComplete }: VitalsStepProps) {
           <CardDescription>{step.content.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
-          {/* Gender Selection */}
-          <div className="space-y-4">
-            <label className="font-medium text-foreground/90">Seu sexo</label>
-            <div className="grid grid-cols-2 gap-4">
-              <Button
-                variant={gender === 'female' ? 'default' : 'outline'}
-                className="h-24 flex-col gap-2"
-                onClick={() => handleGenderSelect('female')}
-              >
-                <User className="h-8 w-8" />
-                <span>Feminino</span>
-              </Button>
-              <Button
-                variant={gender === 'male' ? 'default' : 'outline'}
-                className="h-24 flex-col gap-2"
-                onClick={() => handleGenderSelect('male')}
-              >
-                <User className="h-8 w-8" />
-                <span>Masculino</span>
-              </Button>
-            </div>
-          </div>
           {/* Height Slider */}
           <div className="space-y-4">
             <div className="flex justify-between items-end">
@@ -111,7 +82,7 @@ export function VitalsStep({ step, onComplete }: VitalsStepProps) {
           </div>
         </CardContent>
         <CardFooter>
-          <Button onClick={handleNext} className="w-full" disabled={!isFormValid}>Continuar</Button>
+          <Button onClick={handleNext} className="w-full">Continuar</Button>
         </CardFooter>
       </Card>
     </div>
