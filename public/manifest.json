@@ -1,11 +1,6 @@
-
 {
   "name": "Pam Fit - Desafio PAMBORA!",
   "short_name": "Pam Fit",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#F2A649",
   "description": "Um aplicativo para o desafio fitness de 21 dias #PAMBORA.",
   "icons": [
     {
@@ -18,5 +13,9 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "theme_color": "#E6A570",
+  "background_color": "#1C1C1E",
+  "start_url": "/treinos",
+  "display": "standalone"
 }
