@@ -9,7 +9,7 @@ const bonuses = [
         title: "E-book de Receitas Fit",
         description: "Um guia completo com mais de 300 receitas saudáveis e deliciosas.",
         icon: BookOpen,
-        link: "#", // Placeholder link
+        link: "/300 - CAFÉS DA MANHÃ.pdf", // Link para o PDF
         disabled: false,
     },
     {
@@ -62,7 +62,7 @@ const BonusCard = ({ bonus }: { bonus: typeof bonuses[0] }) => {
         </Card>
     );
 
-    if (bonus.disabled || !bonus.link) {
+    if (bonus.disabled || !bonus.link || bonus.link === "#") {
         return cardContent;
     }
 
