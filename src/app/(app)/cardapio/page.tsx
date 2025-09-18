@@ -33,7 +33,7 @@ function MealPlanSkeleton() {
 
 export default function CardapioPage() {
     const router = useRouter();
-    const { user, answers, resetQuiz } = useQuiz();
+    const { user, answers, resetQuiz, loading: quizLoading } = useQuiz();
     const [loading, setLoading] = React.useState(true);
     const [mealPlan, setMealPlan] = React.useState<MealPlanOutput['mealPlan'] | null>(null);
     const [favorites, setFavorites] = React.useState<Record<string, boolean>>({});
@@ -52,6 +52,12 @@ export default function CardapioPage() {
     }, []);
 
     React.useEffect(() => {
+        // Wait for the quiz data to be loaded from Firebase/localStorage.
+        if (quizLoading) {
+            setLoading(true);
+            return;
+        }
+
         const hasRequiredAnswers = answers.goal && answers.diet;
 
         if (hasRequiredAnswers) {
@@ -72,10 +78,10 @@ export default function CardapioPage() {
             };
             getPlan();
         } else {
-            // If essential answers are missing, show the empty state instead of redirecting.
+            setMealPlan(null); // Explicitly set mealPlan to null to show the empty state
             setLoading(false);
         }
-    }, [answers.goal, answers.diet, answers.allergies]);
+    }, [answers.goal, answers.diet, answers.allergies, quizLoading]);
 
     const handleResetQuiz = async () => {
         await resetQuiz();

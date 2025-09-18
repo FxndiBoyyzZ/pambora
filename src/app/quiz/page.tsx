@@ -112,15 +112,22 @@ export default function QuizPage() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const { answers, setAnswer, signUp, user, loading: authLoading } = useQuiz();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>(answers.allergies?.split(', ')[0].split(',') || []);
   const [otherAllergyText, setOtherAllergyText] = useState(answers.allergies?.split('; ')[1] || '');
 
+  // This effect handles redirection after the quiz is completed and user is signed up.
   useEffect(() => {
-    if (user && !authLoading) {
+    // If we've finished the quiz (isSubmitting) and the user is now available...
+    if (isSubmitting && user && !authLoading) {
+      // Prevent this from running multiple times
+      if (isNavigating) return;
+      
+      setIsNavigating(true);
       router.push('/treinos');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, isSubmitting, isNavigating]);
   
   const handleNext = useCallback(async () => {
     if (quizSteps.length === 0) return;
@@ -139,7 +146,7 @@ export default function QuizPage() {
             // The useEffect will handle the redirect once the user is signed in.
         } catch (error) {
             console.error("Sign up failed on the final step", error);
-            setIsSubmitting(false);
+            setIsSubmitting(false); // Allow user to try again if sign-up fails.
         }
     } else {
       setCurrentStepIndex(prevIndex => prevIndex + 1);
