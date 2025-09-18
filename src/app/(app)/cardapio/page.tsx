@@ -71,7 +71,7 @@ export default function CardapioPage() {
             return;
         }
 
-        const hasRequiredAnswers = !!answers.goal && !!answers.diet;
+        const hasRequiredAnswers = !!answers.goal;
 
         if (hasRequiredAnswers) {
             const getPlan = async () => {
@@ -207,14 +207,14 @@ export default function CardapioPage() {
             </header>
             <div className="flex-grow p-4 md:p-6 lg:p-8">
                 {renderContent()}
-                <DebugPanel data={{
+                {/* <DebugPanel data={{
                     quizLoading,
                     pageState,
                     "goal_exists": !!answers.goal,
                     "diet_exists": !!answers.diet,
                     "allergies_exists": !!answers.allergies,
                     answers,
-                }} />
+                }} /> */}
             </div>
         </div>
     );

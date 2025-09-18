@@ -15,7 +15,7 @@ import {z} from 'genkit';
 
 const MealPlanInputSchema = z.object({
   goal: z.string().describe('The user\'s primary fitness goal (e.g., "Perder Peso", "Ganhar Massa Muscular").'),
-  diet: z.string().describe('The user\'s dietary preference (e.g., "Sem Restrições", "Vegetariana"). Can be empty.'),
+  diet: z.string().optional().describe('The user\'s dietary preference (e.g., "Sem Restrições", "Vegetariana"). Can be empty.'),
   allergies: z.string().describe('A list of user\'s allergies, comma-separated (e.g., "Glúten, lactose").'),
 });
 export type MealPlanInput = z.infer<typeof MealPlanInputSchema>;
@@ -64,7 +64,7 @@ const mealPlanPrompt = ai.definePrompt({
 
 2.  **Adapte o Cardápio:**
     - Analise as restrições alimentares do usuário e o tipo de dieta.
-    - Se o campo "Tipo de Dieta" estiver vazio ou for "Sem Restrições", use o cardápio padrão.
+    - Se o campo "Tipo de Dieta" estiver vazio ou for "Sem Restrições", use o cardápio padrão, sem fazer adaptações de dieta.
     - Se for "Vegetariana", substitua todas as carnes (frango, peixe, carne moída, etc.) por equivalentes vegetarianos (ex: tofu, lentilha, grão de bico, omelete).
     - Faça as substituições **mínimas e mais simples possíveis** no cardápio base para evitar os alérgenos.
     - **Exemplos de Adaptações:**
