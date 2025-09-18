@@ -34,7 +34,7 @@ function MealPlanSkeleton() {
 export default function CardapioPage() {
     const router = useRouter();
     const { user, answers, resetQuiz, loading: quizLoading } = useQuiz();
-    const [loading, setLoading] = React.useState(true);
+    const [pageState, setPageState] = React.useState<'loading' | 'generating' | 'error' | 'success'>('loading');
     const [mealPlan, setMealPlan] = React.useState<MealPlanOutput['mealPlan'] | null>(null);
     const [favorites, setFavorites] = React.useState<Record<string, boolean>>({});
     const [currentDay, setCurrentDay] = React.useState(orderedDays[0]);
@@ -52,36 +52,37 @@ export default function CardapioPage() {
     }, []);
 
     React.useEffect(() => {
-        // Wait for the quiz data to be loaded from Firebase/localStorage.
-        if (quizLoading) {
-            setLoading(true);
-            return;
-        }
+        // This effect runs when the authentication and user data loading state changes.
+        if (!quizLoading) {
+            // Once quiz data is loaded, check for required answers.
+            const hasRequiredAnswers = !!answers.goal && !!answers.diet;
 
-        const hasRequiredAnswers = answers.goal && answers.diet;
-
-        if (hasRequiredAnswers) {
-             const getPlan = async () => {
-                setLoading(true);
-                try {
-                    const result = await generateMealPlan({
-                        goal: answers.goal || '',
-                        diet: answers.diet || '',
-                        allergies: answers.allergies || '',
-                    });
-                    setMealPlan(result.mealPlan);
-                } catch (error) {
-                    console.error("Failed to generate meal plan:", error);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            getPlan();
+            if (hasRequiredAnswers) {
+                const getPlan = async () => {
+                    setPageState('generating');
+                    try {
+                        const result = await generateMealPlan({
+                            goal: answers.goal || '',
+                            diet: answers.diet || '',
+                            allergies: answers.allergies || '',
+                        });
+                        setMealPlan(result.mealPlan);
+                        setPageState('success');
+                    } catch (error) {
+                        console.error("Failed to generate meal plan:", error);
+                        setPageState('error'); // Show a generic error on AI failure
+                    }
+                };
+                getPlan();
+            } else {
+                // If answers are missing after loading, it means the user needs to do the quiz.
+                setPageState('error');
+            }
         } else {
-            setMealPlan(null); // Explicitly set mealPlan to null to show the empty state
-            setLoading(false);
+            // While quiz data is being loaded, keep the page in a loading state.
+             setPageState('loading');
         }
-    }, [answers, quizLoading]);
+    }, [quizLoading, answers.goal, answers.diet, answers.allergies]);
 
     const handleResetQuiz = async () => {
         await resetQuiz();
@@ -92,29 +93,25 @@ export default function CardapioPage() {
         setFavorites(prev => ({...prev, [meal]: !prev[meal]}));
     }
     
-    return (
-        <div className="flex flex-col h-full">
-            <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
-                <h1 className="text-3xl font-bold font-headline text-foreground uppercase tracking-wider">Cardápio</h1>
-                <Button variant="outline" size="sm" onClick={handleResetQuiz}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Refazer o Quiz
-                </Button>
-            </header>
-            <div className="flex-grow p-4 md:p-6 lg:p-8">
-                {loading ? (
+    const renderContent = () => {
+        switch (pageState) {
+            case 'loading':
+            case 'generating':
+                return (
                      <Card>
                         <CardHeader>
                             <CardTitle className='flex items-center gap-2'>
                                 <Loader2 className="h-5 w-5 animate-spin" />
-                                Gerando seu cardápio personalizado...
+                                {pageState === 'loading' ? 'Carregando suas informações...' : 'Gerando seu cardápio personalizado...'}
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <MealPlanSkeleton />
                         </CardContent>
                      </Card>
-                ) : !mealPlan ? (
+                );
+            case 'error':
+                 return (
                     <Card className="text-center">
                         <CardHeader>
                             <CardTitle>Complete seu Quiz!</CardTitle>
@@ -128,7 +125,10 @@ export default function CardapioPage() {
                             </Button>
                         </CardContent>
                     </Card>
-                ) : (
+                );
+            case 'success':
+                 if (!mealPlan) return null; // Should not happen in success state, but as a safeguard.
+                 return (
                     <Tabs value={currentDay} onValueChange={setCurrentDay} className="w-full">
                         <TabsList className="grid w-full grid-cols-7">
                             {orderedDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
@@ -174,7 +174,21 @@ export default function CardapioPage() {
                             )
                         })}
                     </Tabs>
-                )}
+                );
+        }
+    }
+
+    return (
+        <div className="flex flex-col h-full">
+            <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
+                <h1 className="text-3xl font-bold font-headline text-foreground uppercase tracking-wider">Cardápio</h1>
+                <Button variant="outline" size="sm" onClick={handleResetQuiz}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Refazer o Quiz
+                </Button>
+            </header>
+            <div className="flex-grow p-4 md:p-6 lg:p-8">
+                {renderContent()}
             </div>
         </div>
     );
