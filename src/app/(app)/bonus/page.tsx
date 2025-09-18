@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Award, BookOpen, Download, Sparkles } from "lucide-react";
+import { BookOpen, Download, Sparkles, Lock, Gift, Trophy } from "lucide-react";
 import Link from 'next/link';
 import { cn } from "@/lib/utils";
 
@@ -9,14 +9,7 @@ const bonuses = [
         title: "E-book de Receitas Fit",
         description: "Um guia completo com mais de 300 receitas saudáveis e deliciosas.",
         icon: BookOpen,
-        link: "/300 - CAFÉS DA MANHÃ.pdf", // Link para o PDF
-        disabled: false,
-    },
-    {
-        title: "Guia de Meditação",
-        description: "Aprenda a meditar e reduza o estresse com nosso guia para iniciantes.",
-        icon: Award,
-        link: "#", // Placeholder link
+        link: "/300 - CAFÉS DA MANHÃ.pdf",
         disabled: false,
     },
     {
@@ -27,9 +20,23 @@ const bonuses = [
         disabled: false,
     },
     {
-        title: "Novos Bônus em Breve...",
-        description: "Estamos sempre preparando novidades incríveis para potencializar sua jornada.",
-        icon: Sparkles,
+        title: "Bônus da Semana 2 (Em Breve)",
+        description: "Uma surpresa especial será liberada para te manter no foco total!",
+        icon: Lock,
+        link: "#",
+        disabled: true,
+    },
+    {
+        title: "Bônus da Semana 3 (Em Breve)",
+        description: "Na reta final, um novo bônus incrível para potencializar seus resultados.",
+        icon: Gift,
+        link: "#",
+        disabled: true,
+    },
+    {
+        title: "Presente Final (Último Dia)",
+        description: "Complete o desafio e receba uma recompensa exclusiva por sua dedicação.",
+        icon: Trophy,
         link: "#",
         disabled: true,
     }
@@ -84,7 +91,7 @@ export default function BonusPage() {
         </header>
 
         <main className="flex-grow p-4 md:p-6 lg:p-8">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {bonuses.map((bonus, index) => (
                    <BonusCard key={index} bonus={bonus} />
                 ))}
