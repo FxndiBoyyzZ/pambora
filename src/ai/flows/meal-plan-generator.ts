@@ -15,7 +15,7 @@ import {z} from 'genkit';
 
 const MealPlanInputSchema = z.object({
   goal: z.string().describe('The user\'s primary fitness goal (e.g., "Perder Peso", "Ganhar Massa Muscular").'),
-  diet: z.string().describe('The user\'s dietary preference (e.g., "Sem Restrições", "Vegetariana").'),
+  diet: z.string().describe('The user\'s dietary preference (e.g., "Sem Restrições", "Vegetariana"). Can be empty.'),
   allergies: z.string().describe('A list of user\'s allergies, comma-separated (e.g., "Glúten, lactose").'),
 });
 export type MealPlanInput = z.infer<typeof MealPlanInputSchema>;
@@ -54,6 +54,7 @@ const mealPlanPrompt = ai.definePrompt({
 
 **Informações do Usuário:**
 - **Objetivo Principal:** {{{goal}}}
+- **Tipo de Dieta:** {{{diet}}}
 - **Restrições Alimentares:** {{{allergies}}}
 
 **Instruções:**
@@ -62,14 +63,16 @@ const mealPlanPrompt = ai.definePrompt({
     - Se o objetivo for "Ganhar Massa Muscular", use o "Cardápio Semanal – 2.300 kcal".
 
 2.  **Adapte o Cardápio:**
-    - Analise as restrições alimentares do usuário.
+    - Analise as restrições alimentares do usuário e o tipo de dieta.
+    - Se o campo "Tipo de Dieta" estiver vazio ou for "Sem Restrições", use o cardápio padrão.
+    - Se for "Vegetariana", substitua todas as carnes (frango, peixe, carne moída, etc.) por equivalentes vegetarianos (ex: tofu, lentilha, grão de bico, omelete).
     - Faça as substituições **mínimas e mais simples possíveis** no cardápio base para evitar os alérgenos.
     - **Exemplos de Adaptações:**
         - Se a restrição for "lactose": substitua "iogurte" por "iogurte sem lactose", "leite" por "leite sem lactose", "queijo" por "queijo sem lactose".
         - Se a restrição for "glúten": substitua "pão integral" por "pão sem glúten", "aveia" por "aveia sem glúten", "macarrão integral" por "macarrão sem glúten".
         - Se a restrição for "amendoim": substitua "pasta de amendoim" por "pasta de castanha de caju".
-    - **NÃO altere as quantidades ou a estrutura geral do cardápio.** Apenas substitua os itens problemáticos. Se um item não puder ser substituído (ex: alergia a frango), mantenha o item e confie que o usuário saberá não consumi-lo.
-    - Se o usuário indicar "Não possuo restrições" ou algo similar, retorne o cardápio base escolhido sem nenhuma alteração.
+    - **NÃO altere as quantidades ou a estrutura geral do cardápio.** Apenas substitua os itens problemáticos. 
+    - Se o usuário indicar "Não possuo restrições" ou algo similar para alergias, não faça adaptações de alergia.
 
 3.  **Formato da Saída:**
     - A saída DEVE ser um objeto JSON estruturado, conforme o schema definido.

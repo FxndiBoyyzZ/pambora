@@ -54,6 +54,20 @@ export const quizSteps: QuizStep[] = [
     {
         type: 'question',
         content: {
+            title: 'Qual sua preferência de dieta?',
+            description: 'Selecione uma opção para adaptarmos seu cardápio.',
+            questionType: 'multiple-choice',
+            answerKey: 'diet',
+            options: [
+                { id: 'Sem Restrições', label: 'Sem Restrições' },
+                { id: 'Vegetariana', label: 'Vegetariana' },
+            ],
+            backgroundUrl: '/fundo1.png',
+        }
+    },
+    {
+        type: 'question',
+        content: {
             title: 'Você possui alguma alergia ou restrição alimentar?',
             description: 'Selecione as opções ou descreva abaixo. Esta informação é crucial para a sua segurança.',
             questionType: 'multiple-select-plus-text',
