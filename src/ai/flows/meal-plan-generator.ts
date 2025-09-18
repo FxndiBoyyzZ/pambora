@@ -73,8 +73,9 @@ const mealPlanPrompt = ai.definePrompt({
 
 3.  **Formato da Saída:**
     - A saída DEVE ser um objeto JSON estruturado, conforme o schema definido.
+    - No JSON final, o campo para o lanche da tarde deve se chamar "Lanche".
+    - NÃO inclua o "Lanche manhã" ou a "Ceia" no JSON final.
     - NÃO adicione texto, introduções ou explicações fora do JSON.
-    - O lanche da manhã e a ceia não devem ser incluídos no resultado final. O "Lanche" no JSON de saída deve ser o "Lanche tarde".
 
 ---
 
@@ -188,14 +189,6 @@ const mealPlanFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await mealPlanPrompt(input);
-    if (output) {
-        for (const day of Object.keys(output.mealPlan)) {
-            const dayPlan = output.mealPlan[day as keyof typeof output.mealPlan];
-            if (!dayPlan.Lanche) {
-               (dayPlan as any).Lanche = (dayPlan as any)["Lanche tarde"] || [];
-            }
-        }
-    }
     return output!;
   }
 );
