@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 const bonuses = [
     {
         title: "E-book de Receitas Fit",
-        description: "Um guia completo com mais de 50 receitas saudáveis e deliciosas.",
+        description: "Um guia completo com mais de 300 receitas saudáveis e deliciosas.",
         icon: BookOpen,
         link: "#", // Placeholder link
         disabled: false,
