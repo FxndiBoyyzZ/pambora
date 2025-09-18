@@ -72,17 +72,10 @@ export default function CardapioPage() {
             };
             getPlan();
         } else {
-            // If essential answers are missing, maybe they skipped the quiz.
-            // Redirect them back, but ONLY if they are a permanent user.
-            if (user && !user.isAnonymous) {
-                router.push('/quiz');
-            } else {
-                 // For anonymous users or users just starting out, show the empty/loading state.
-                 // This prevents the redirect loop.
-                 setLoading(false);
-            }
+            // If essential answers are missing, show the empty state instead of redirecting.
+            setLoading(false);
         }
-    }, [answers.goal, answers.diet, answers.allergies, router, user]);
+    }, [answers.goal, answers.diet, answers.allergies]);
 
     const handleResetQuiz = async () => {
         await resetQuiz();
