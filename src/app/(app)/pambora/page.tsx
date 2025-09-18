@@ -6,8 +6,7 @@ import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 
 export default function PamboraPage() {
-  // ATENÇÃO: Substitua este link pelo link real da sua comunidade no WhatsApp!
-  const whatsAppCommunityLink = 'https://chat.whatsapp.com/YOUR_COMMUNITY_ID';
+  const whatsAppCommunityLink = 'https://wa.me/5511910751921?text=Oiee%2C%20quero%20entrar%20na%20comunidade%20do%20Desafio%20Pambora';
 
   return (
     <div className="flex flex-col h-full">
