@@ -31,6 +31,20 @@ function MealPlanSkeleton() {
     )
 }
 
+function DebugPanel({ data }: { data: any }) {
+    return (
+        <Card className="mt-4 bg-muted/50">
+            <CardHeader>
+                <CardTitle>Painel de Diagnóstico (Temporário)</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
+            </CardContent>
+        </Card>
+    );
+}
+
+
 export default function CardapioPage() {
     const router = useRouter();
     const { user, answers, resetQuiz, loading: quizLoading } = useQuiz();
@@ -52,35 +66,39 @@ export default function CardapioPage() {
     }, []);
 
     React.useEffect(() => {
-        // This effect runs when the authentication and user data loading state changes.
-        if (!quizLoading) {
-            // Once quiz data is loaded, check for required answers.
-            const hasRequiredAnswers = !!answers.goal && !!answers.diet;
+        if (quizLoading) {
+            setPageState('loading');
+            return;
+        }
 
-            if (hasRequiredAnswers) {
-                const getPlan = async () => {
-                    setPageState('generating');
-                    try {
-                        const result = await generateMealPlan({
-                            goal: answers.goal || '',
-                            diet: answers.diet || '',
-                            allergies: answers.allergies || '',
-                        });
+        const hasRequiredAnswers = !!answers.goal && !!answers.diet;
+
+        if (hasRequiredAnswers) {
+            const getPlan = async () => {
+                setPageState('generating');
+                try {
+                    const result = await generateMealPlan({
+                        goal: answers.goal || '',
+                        diet: answers.diet || '',
+                        allergies: answers.allergies || '',
+                    });
+                    if (result && result.mealPlan) {
                         setMealPlan(result.mealPlan);
                         setPageState('success');
-                    } catch (error) {
-                        console.error("Failed to generate meal plan:", error);
-                        setPageState('error'); // Show a generic error on AI failure
+                    } else {
+                        // This case can happen if the AI returns an empty or invalid response
+                        console.error("AI returned invalid meal plan structure:", result);
+                        setPageState('error');
                     }
-                };
-                getPlan();
-            } else {
-                // If answers are missing after loading, it means the user needs to do the quiz.
-                setPageState('error');
-            }
+                } catch (error) {
+                    console.error("Failed to generate meal plan:", error);
+                    setPageState('error');
+                }
+            };
+            getPlan();
         } else {
-            // While quiz data is being loaded, keep the page in a loading state.
-             setPageState('loading');
+             // If answers are missing after loading, it means the user needs to do the quiz.
+            setPageState('error');
         }
     }, [quizLoading, answers.goal, answers.diet, answers.allergies]);
 
@@ -189,6 +207,14 @@ export default function CardapioPage() {
             </header>
             <div className="flex-grow p-4 md:p-6 lg:p-8">
                 {renderContent()}
+                <DebugPanel data={{
+                    quizLoading,
+                    pageState,
+                    "goal_exists": !!answers.goal,
+                    "diet_exists": !!answers.diet,
+                    "allergies_exists": !!answers.allergies,
+                    answers,
+                }} />
             </div>
         </div>
     );
