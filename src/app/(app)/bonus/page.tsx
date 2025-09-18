@@ -1,32 +1,78 @@
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Award, BookOpen, Download } from "lucide-react";
-import Image from "next/image";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Award, BookOpen, Download, Sparkles } from "lucide-react";
+import Link from 'next/link';
+import { cn } from "@/lib/utils";
 
 const bonuses = [
     {
         title: "E-book de Receitas Fit",
         description: "Um guia completo com mais de 50 receitas saudáveis e deliciosas.",
         icon: BookOpen,
-        image: "https://placehold.co/600x400.png",
-        imageHint: "cookbook recipe"
+        link: "#", // Placeholder link
+        disabled: false,
     },
     {
         title: "Guia de Meditação",
         description: "Aprenda a meditar e reduza o estresse com nosso guia para iniciantes.",
         icon: Award,
-        image: "https://placehold.co/600x400.png",
-        imageHint: "meditation yoga"
+        link: "#", // Placeholder link
+        disabled: false,
     },
     {
         title: "Playlists para Treino",
-        description: "Mantenha a motivação em alta com playlists selecionadas para cada tipo de treino.",
+        description: "Mantenha a motivação em alta com playlists selecionadas.",
         icon: Download,
-        image: "https://placehold.co/600x400.png",
-        imageHint: "music playlist",
-        link: "https://open.spotify.com/playlist/4ZqjhPyrWT9oqKRMafvDE0?si=f7RQpejvSPy-jMWLDEEX6g&pi=SGpxE8JWQxqVg"
+        link: "https://open.spotify.com/playlist/4ZqjhPyrWT9oqKRMafvDE0?si=f7RQpejvSPy-jMWLDEEX6g&pi=SGpxE8JWQxqVg",
+        disabled: false,
+    },
+    {
+        title: "Novos Bônus em Breve...",
+        description: "Estamos sempre preparando novidades incríveis para potencializar sua jornada.",
+        icon: Sparkles,
+        link: "#",
+        disabled: true,
     }
-]
+];
+
+const BonusCard = ({ bonus }: { bonus: typeof bonuses[0] }) => {
+    const cardContent = (
+         <Card className={cn(
+                "w-full h-full flex flex-col text-center transition-all duration-300 ease-in-out transform hover:-translate-y-1",
+                bonus.disabled 
+                    ? "border-dashed border-muted-foreground/50 bg-transparent shadow-none" 
+                    : "bg-gradient-to-br from-card to-muted/30 hover:shadow-primary/20 hover:shadow-lg cursor-pointer"
+            )}>
+            <CardHeader className="flex-grow flex flex-col items-center justify-center p-6">
+                <div className={cn("mb-4 rounded-full p-4", bonus.disabled ? "bg-muted/50" : "bg-primary/10")}>
+                    <bonus.icon className={cn("w-12 h-12", bonus.disabled ? "text-muted-foreground/80" : "text-primary")} />
+                </div>
+                <CardTitle className="text-xl font-bold">{bonus.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="px-6 pb-4">
+                <CardDescription className="min-h-[40px]">{bonus.description}</CardDescription>
+            </CardContent>
+            <CardFooter className="p-6 pt-0">
+                <button 
+                    disabled={bonus.disabled}
+                    className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed">
+                    {bonus.disabled ? "Em Breve" : "Acessar Agora"}
+                </button>
+            </CardFooter>
+        </Card>
+    );
+
+    if (bonus.disabled || !bonus.link) {
+        return cardContent;
+    }
+
+    return (
+        <Link href={bonus.link} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+           {cardContent}
+        </Link>
+    );
+};
+
 
 export default function BonusPage() {
   return (
@@ -37,43 +83,13 @@ export default function BonusPage() {
             </h1>
         </header>
 
-        <div className="flex-grow p-4 md:p-6 lg:p-8">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <main className="flex-grow p-4 md:p-6 lg:p-8">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 {bonuses.map((bonus, index) => (
-                    <Card key={index} className="overflow-hidden flex flex-col">
-                         <div className="relative w-full h-48">
-                             <Image 
-                                 src={bonus.image} 
-                                 alt={bonus.title} 
-                                 layout="fill"
-                                 objectFit="cover"
-                                 data-ai-hint={bonus.imageHint}
-                              />
-                         </div>
-                        <CardHeader className="flex flex-row items-start gap-4">
-                            <bonus.icon className="w-8 h-8 text-primary mt-1" />
-                            <div>
-                                <CardTitle>{bonus.title}</CardTitle>
-                                <CardDescription className="mt-1">{bonus.description}</CardDescription>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="mt-auto">
-                           {bonus.link ? (
-                                <a href={bonus.link} target="_blank" rel="noopener noreferrer">
-                                    <button className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors">
-                                        Acessar Agora
-                                    </button>
-                                </a>
-                            ) : (
-                                <button className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors">
-                                    Acessar Agora
-                                </button>
-                            )}
-                        </CardContent>
-                    </Card>
+                   <BonusCard key={index} bonus={bonus} />
                 ))}
             </div>
-        </div>
+        </main>
     </div>
   );
 }
