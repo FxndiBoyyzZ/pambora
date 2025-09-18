@@ -31,7 +31,7 @@ export default function PamboraPage() {
             <Card className="w-full max-w-lg text-center shadow-2xl overflow-hidden animate-in fade-in-50 zoom-in-95 duration-500">
                  <div className="relative h-48 w-full">
                      <Image 
-                        src="https://picsum.photos/seed/community/600/300"
+                        src="/comunidade.png"
                         alt="Comunidade animada"
                         layout="fill"
                         objectFit="cover"
