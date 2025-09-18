@@ -119,15 +119,12 @@ export default function QuizPage() {
 
   // This effect handles redirection after the quiz is completed and user is signed up.
   useEffect(() => {
-    // If we've finished the quiz (isSubmitting) and the user is now available...
-    if (isSubmitting && user && !authLoading) {
-      // Prevent this from running multiple times
-      if (isNavigating) return;
-      
-      setIsNavigating(true);
-      router.push('/treinos');
+    if (!authLoading && user && currentStepIndex >= quizSteps.length -1) {
+        if(isNavigating) return;
+        setIsNavigating(true);
+        router.push('/treinos');
     }
-  }, [user, authLoading, router, isSubmitting, isNavigating]);
+  }, [user, authLoading, router, currentStepIndex, isNavigating]);
   
   const handleNext = useCallback(async () => {
     if (quizSteps.length === 0) return;
@@ -151,7 +148,7 @@ export default function QuizPage() {
     } else {
       setCurrentStepIndex(prevIndex => prevIndex + 1);
     }
-  }, [quizSteps, currentStepIndex, signUp, answers, router, selectedAllergies, otherAllergyText, setAnswer]);
+  }, [currentStepIndex, signUp, answers, selectedAllergies, otherAllergyText, setAnswer]);
 
   const currentStep = quizSteps[currentStepIndex];
 
