@@ -81,7 +81,7 @@ export default function CardapioPage() {
             setMealPlan(null); // Explicitly set mealPlan to null to show the empty state
             setLoading(false);
         }
-    }, [answers.goal, answers.diet, answers.allergies, quizLoading]);
+    }, [answers, quizLoading]);
 
     const handleResetQuiz = async () => {
         await resetQuiz();
