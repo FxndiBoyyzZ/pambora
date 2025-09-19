@@ -37,11 +37,10 @@ export default function LeadsPage() {
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser && currentUser.email === 'pam@admin.com') {
+      const isAdmin = currentUser && (currentUser.email === 'pam@admin.com' || currentUser.email === 'bypam@admin.com');
+      if (isAdmin) {
         setUser(currentUser);
       } else {
-        // If not the admin, redirect to admin login page.
-        // This also handles the case where the user logs out.
         router.push('/admin');
       }
     });
