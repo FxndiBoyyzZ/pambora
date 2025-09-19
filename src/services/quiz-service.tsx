@@ -163,36 +163,41 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const signUp = async (email: string, name: string, whatsapp: string) => {
-    const tempPassword = "temporaryPassword123";
-    const newUserData = { name, email, whatsapp };
+    const tempPassword = "temporaryPassword123"; // This can be a static password
+    const finalAnswers = { ...answers, name, email, whatsapp };
 
     const saveUserData = async (user: User) => {
-        const finalAnswers = { ...answers, ...newUserData };
         const userData = { 
             ...finalAnswers, 
             uid: user.uid, 
             email: user.email, // Ensure email is from the auth user object
             createdAt: serverTimestamp() 
         };
-        await setDoc(doc(db, 'users', user.uid), userData);
+        // Use setDoc with merge:true to create or update data without overwriting createdAt on subsequent logins.
+        await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
         if (typeof window !== 'undefined') {
           localStorage.removeItem('quizAnswers');
         }
     };
 
     try {
+        // Step 1: Try to create a new user.
         const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
+        // If successful, save their data.
         await saveUserData(userCredential.user);
     } catch (error: any) {
+        // Step 2: If the user already exists, sign them in instead.
         if (error.code === 'auth/email-already-in-use') {
             try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, tempPassword);
-                await saveUserData(userCredential.user); // Also save/update data on sign-in
+                // On successful login, also save/update their latest data.
+                await saveUserData(userCredential.user);
             } catch (signInError) {
                  console.error("Error signing in existing user:", signInError);
                  throw signInError;
             }
         } else {
+            // For any other signup error, log it and re-throw.
             console.error("Error signing up:", error);
             throw error;
         }
