@@ -26,7 +26,7 @@ export default function LandingPage() {
           </p>
         </div>
         <Button asChild size="lg" className="text-lg font-semibold">
-          <Link href="/quiz">INICIAR DESAFIO</Link>
+          <Link href="/start">INICIAR DESAFIO</Link>
         </Button>
       </div>
     </div>
