@@ -20,11 +20,12 @@ export const quizSteps: QuizStep[] = [
         content: {
             title: 'Quase lá!',
             description: 'Nos conte um pouco sobre você para personalizar sua experiência.',
-            fields: ['name', 'whatsapp', 'email'],
+            fields: ['name', 'whatsapp', 'email', 'password'],
             placeholders: {
                 name: 'Seu nome completo',
                 whatsapp: '(00) 00000-0000',
                 email: 'seu@email.com',
+                password: 'Crie uma senha forte',
             },
             backgroundUrl: '/fundo1.png',
         }

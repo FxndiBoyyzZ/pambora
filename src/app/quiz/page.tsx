@@ -139,7 +139,7 @@ export default function QuizPage() {
     if (currentStepIndex >= quizSteps.length - 1) {
         setIsSubmitting(true);
         try {
-            await signUp(answers.email || '', answers.name || '', answers.whatsapp || '');
+            await signUp();
             // The useEffect will handle the redirect once the user is signed in.
         } catch (error) {
             console.error("Sign up failed on the final step", error);
@@ -148,7 +148,7 @@ export default function QuizPage() {
     } else {
       setCurrentStepIndex(prevIndex => prevIndex + 1);
     }
-  }, [currentStepIndex, signUp, answers, selectedAllergies, otherAllergyText, setAnswer]);
+  }, [currentStepIndex, signUp, selectedAllergies, otherAllergyText, setAnswer]);
 
   const currentStep = quizSteps[currentStepIndex];
 
@@ -183,7 +183,7 @@ export default function QuizPage() {
                 {currentStep.content.fields.map((field: any) => (
                   <div className="space-y-2" key={field}>
                     <Label htmlFor={field}>{field.charAt(0).toUpperCase() + field.slice(1)}</Label>
-                    <Input id={field} placeholder={currentStep.content.placeholders[field]} value={(answers as any)[field] || ''} onChange={(e) => setAnswer(field as any, e.target.value)} type={field === 'email' ? 'email' : 'text'} />
+                    <Input id={field} placeholder={currentStep.content.placeholders[field]} value={(answers as any)[field] || ''} onChange={(e) => setAnswer(field as any, e.target.value)} type={field === 'email' ? 'email' : field === 'password' ? 'password' : 'text'} />
                   </div>
                 ))}
               </CardContent>

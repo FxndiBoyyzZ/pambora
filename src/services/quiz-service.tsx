@@ -10,6 +10,7 @@ interface QuizAnswers {
   name?: string;
   whatsapp?: string;
   email?: string;
+  password?: string;
   goal?: string;
   diet?: string;
   allergies?: string;
@@ -30,7 +31,7 @@ interface QuizContextType {
   resetQuiz: () => void;
   toggleWorkoutCompleted: (workoutId: number) => void;
   isWorkoutCompleted: (workoutId: number) => boolean;
-  signUp: (email: string, name: string, whatsapp: string) => Promise<void>;
+  signUp: () => Promise<void>;
 }
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined);
@@ -162,42 +163,39 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     });
   };
   
-  const signUp = async (email: string, name: string, whatsapp: string) => {
-    const tempPassword = "temporaryPassword123"; // This can be a static password
-    const finalAnswers = { ...answers, name, email, whatsapp };
+  const signUp = async () => {
+    const { email, password, ...finalAnswers } = answers;
+
+    if (!email || !password) {
+        throw new Error("Email e senha são obrigatórios.");
+    }
 
     const saveUserData = async (user: User) => {
-        const userData = { 
+        const { password: _password, ...userDataToSave } = { 
             ...finalAnswers, 
             uid: user.uid, 
-            email: user.email, // Ensure email is from the auth user object
+            email: user.email, 
             createdAt: serverTimestamp() 
         };
-        // Use setDoc with merge:true to create or update data without overwriting createdAt on subsequent logins.
-        await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
+        await setDoc(doc(db, 'users', user.uid), userDataToSave, { merge: true });
         if (typeof window !== 'undefined') {
           localStorage.removeItem('quizAnswers');
         }
     };
 
     try {
-        // Step 1: Try to create a new user.
-        const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
-        // If successful, save their data.
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await saveUserData(userCredential.user);
     } catch (error: any) {
-        // Step 2: If the user already exists, sign them in instead.
         if (error.code === 'auth/email-already-in-use') {
             try {
-                const userCredential = await signInWithEmailAndPassword(auth, email, tempPassword);
-                // On successful login, also save/update their latest data.
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 await saveUserData(userCredential.user);
             } catch (signInError) {
                  console.error("Error signing in existing user:", signInError);
                  throw signInError;
             }
         } else {
-            // For any other signup error, log it and re-throw.
             console.error("Error signing up:", error);
             throw error;
         }
