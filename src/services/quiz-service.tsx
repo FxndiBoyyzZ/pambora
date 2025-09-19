@@ -184,18 +184,22 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     };
 
     try {
+        // Attempt to create the user first.
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await saveUserData(userCredential.user);
     } catch (error: any) {
+        // If the user already exists, sign them in instead.
         if (error.code === 'auth/email-already-in-use') {
             try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                // Even on sign-in, we save/update the latest quiz data.
                 await saveUserData(userCredential.user);
             } catch (signInError) {
                  console.error("Error signing in existing user:", signInError);
                  throw signInError;
             }
         } else {
+            // For any other signup error, re-throw it.
             console.error("Error signing up:", error);
             throw error;
         }

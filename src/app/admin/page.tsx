@@ -267,8 +267,14 @@ export default function AdminPage() {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             setUser(currentUser);
             if (currentUser) {
-                const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid));
-                setIsAdmin(adminDoc.exists());
+                // Hard-coded admin emails
+                const isAdminEmail = currentUser.email === 'pam@admin.com' || currentUser.email === 'bypam@admin.com';
+                if(isAdminEmail) {
+                    setIsAdmin(true);
+                } else {
+                    const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid));
+                    setIsAdmin(adminDoc.exists());
+                }
             } else {
                 setIsAdmin(false);
             }
@@ -296,10 +302,15 @@ export default function AdminPage() {
     if (!user) {
         return <AdminLoginPage onLoginSuccess={(loggedInUser) => {
              setUser(loggedInUser);
-             // Re-check admin status on login
-             getDoc(doc(db, 'admins', loggedInUser.uid)).then(adminDoc => {
-                setIsAdmin(adminDoc.exists());
-             });
+             const isAdminEmail = loggedInUser.email === 'pam@admin.com' || loggedInUser.email === 'bypam@admin.com';
+             if(isAdminEmail){
+                 setIsAdmin(true);
+             } else {
+                // Re-check admin status on login
+                getDoc(doc(db, 'admins', loggedInUser.uid)).then(adminDoc => {
+                    setIsAdmin(adminDoc.exists());
+                });
+             }
         }} />;
     }
 
