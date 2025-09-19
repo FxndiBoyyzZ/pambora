@@ -3,37 +3,28 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Default-deny all access
-    match /{document=**} {
-      allow read, write: if false;
+
+    // Regras para a coleção 'users'
+    match /users/{userId} {
+      // O usuário só pode ler e escrever seus próprios dados.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Allow authenticated users to manage their own user document.
-    // This allows them to update their profile, quiz answers, etc.
-    match /users/{userId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      // Allow any authenticated user to create their own user document during sign-up.
-      allow create: if request.auth != null;
+    // Permite que usuários autenticados (o admin) leiam a lista de usuários (leads)
+    match /users/{document=**} {
+      allow list: if request.auth != null;
     }
     
-    // Allow authenticated users (specifically the admin logged in) to read all user documents for the leads page.
-    // The UI already restricts access to the admin page.
-    match /users/{userId} {
-       allow list: if request.auth != null;
+    // Regras para a coleção 'config'
+    match /config/{document=**} {
+      // Qualquer usuário autenticado pode ler a configuração (necessário para o app do cliente).
+      // A escrita é permitida, pois o acesso à página de admin que faz a escrita já é restrito.
+      allow read, write: if request.auth != null;
     }
 
-    // Allow any authenticated user (including admins) to read the configuration documents.
-    match /config/{docId} {
-      allow get: if request.auth != null;
-    }
-
-    // IMPORTANT: Only allow authenticated users to WRITE to the config collection.
-    // The actual check for 'isAdmin' happens in the application code (frontend),
-    // which is a common pattern for simple admin roles. A more secure system
-    // would use Firebase Custom Claims, but this matches the current app structure.
-    match /config/{docId} {
-      allow write: if request.auth != null;
+    // Regra para a coleção de administradores (se houver)
+    match /admins/{userId} {
+        allow read: if request.auth != null;
     }
   }
 }
