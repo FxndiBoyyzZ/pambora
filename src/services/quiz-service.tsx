@@ -1,4 +1,3 @@
-
 // src/services/quiz-service.tsx
 'use client';
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -36,29 +35,27 @@ interface QuizContextType {
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined);
 
-// Helper function to detect Instagram/Facebook in-app browsers
-const isInstagramOrFacebookBrowser = () => {
-  if (typeof window === 'undefined') return false;
-  const userAgent = window.navigator.userAgent || window.navigator.vendor || (window as any).opera;
-  return /FBAN|FBAV|Instagram/i.test(userAgent);
-};
-
+// Default state moved outside to be pure
+const defaultQuizState = { completedWorkouts: [], weight: 60, height: 160 };
 
 export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [answers, setAnswers] = useState<QuizAnswers>(() => {
-    if (typeof window !== 'undefined') {
-      const savedAnswers = localStorage.getItem('quizAnswers');
-      return savedAnswers ? JSON.parse(savedAnswers) : { completedWorkouts: [], weight: 60, height: 160 };
-    }
-    return { completedWorkouts: [], weight: 60, height: 160 };
-  });
+  const [answers, setAnswers] = useState<QuizAnswers>(defaultQuizState);
   const [loading, setLoading] = useState(true);
 
+  // This effect runs once on mount to safely load initial state from localStorage
+  useEffect(() => {
+    const savedAnswers = localStorage.getItem('quizAnswers');
+    if (savedAnswers) {
+      setAnswers(JSON.parse(savedAnswers));
+    }
+  }, []);
+
+
   const fetchUserData = useCallback(async (user: User) => {
-    // Admins are anonymous and don't have user data in firestore
+    // Admins don't have user data in firestore
     if (user.email === 'pam@admin.com' || user.email === 'bypam@admin.com') {
-      setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
+      setAnswers(defaultQuizState);
       return;
     }
     try {
@@ -66,6 +63,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         const data = userDoc.data() as QuizAnswers;
+        // Merge with existing state, preserving local answers if they are newer
         setAnswers(prev => ({ ...prev, ...data }));
       }
     } catch (error) {
@@ -74,11 +72,15 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    // Choose persistence based on browser environment.
-    // In-app browsers (like Instagram's) often have issues with browserLocalPersistence.
+    // Helper function to detect Instagram/Facebook in-app browsers, runs only on client
+    const isInstagramOrFacebookBrowser = () => {
+        const userAgent = window.navigator.userAgent || window.navigator.vendor || (window as any).opera;
+        return /FBAN|FBAV|Instagram/i.test(userAgent);
+    };
+
     const persistence = isInstagramOrFacebookBrowser() 
-        ? browserSessionPersistence // Works better in restricted environments, but logs out on session end.
-        : browserLocalPersistence;   // Keeps user logged in across sessions.
+        ? browserSessionPersistence 
+        : browserLocalPersistence;
 
     setPersistence(auth, persistence)
       .then(() => {
@@ -89,8 +91,9 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
             await fetchUserData(currentUser);
           } else {
             setUser(null);
-            // Reset answers to default when no user is logged in.
-            setAnswers({ completedWorkouts: [], weight: 60, height: 160 });
+            // When user logs out, reset answers but keep localStorage for next login attempt
+            const saved = localStorage.getItem('quizAnswers');
+            setAnswers(saved ? JSON.parse(saved) : defaultQuizState);
           }
           setLoading(false);
         });
@@ -98,7 +101,6 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       })
       .catch((error) => {
         console.error("Firebase persistence error:", error);
-        // Fallback to in-memory persistence if the chosen one fails
         setPersistence(auth, inMemoryPersistence).finally(() => {
             setLoading(false);
         });
@@ -118,9 +120,9 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const setAnswer = (step: keyof QuizAnswers, answer: any) => {
     setAnswers((prevAnswers) => {
       const newAnswers = { ...prevAnswers, [step]: answer };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
-      }
+      // This is safe because setAnswer is only called via user interaction (client-side)
+      localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
+      
       if (user && user.email !== 'pam@admin.com' && user.email !== 'bypam@admin.com') {
         updateFirestore(user.uid, { [step]: answer });
       }
@@ -129,11 +131,8 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetQuiz = async () => {
-    const defaultState = { completedWorkouts: [], weight: 60, height: 160 };
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('quizAnswers');
-    }
-    setAnswers(defaultState);
+    localStorage.removeItem('quizAnswers');
+    setAnswers(defaultQuizState);
     if (user && user.email !== 'pam@admin.com' && user.email !== 'bypam@admin.com') {
       const initialData = {
           uid: user.uid, // Ensure UID is preserved
@@ -142,7 +141,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
           whatsapp: answers.whatsapp || '',
           profilePictureUrl: answers.profilePictureUrl || '',
           createdAt: answers.createdAt || serverTimestamp(),
-          ...defaultState
+          ...defaultQuizState
       };
       await setDoc(doc(db, 'users', user.uid), initialData);
     }
@@ -178,28 +177,22 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
             createdAt: serverTimestamp() 
         };
         await setDoc(doc(db, 'users', user.uid), userDataToSave, { merge: true });
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('quizAnswers');
-        }
+        localStorage.removeItem('quizAnswers');
     };
 
     try {
-        // Attempt to create the user first.
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await saveUserData(userCredential.user);
     } catch (error: any) {
-        // If the user already exists, sign them in instead.
         if (error.code === 'auth/email-already-in-use') {
             try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                // Even on sign-in, we save/update the latest quiz data.
                 await saveUserData(userCredential.user);
             } catch (signInError) {
                  console.error("Error signing in existing user:", signInError);
                  throw signInError;
             }
         } else {
-            // For any other signup error, re-throw it.
             console.error("Error signing up:", error);
             throw error;
         }
