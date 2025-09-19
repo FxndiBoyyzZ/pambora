@@ -1,30 +1,27 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Regras para a coleção 'users'
+    // Permite que usuários autenticados leiam e escrevam em seus próprios documentos.
     match /users/{userId} {
-      // O usuário só pode ler e escrever seus próprios dados.
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Permite que usuários autenticados (o admin) leiam a lista de usuários (leads)
-    match /users/{document=**} {
+    // Permite que administradores (autenticados) leiam a lista de usuários.
+    // A segurança para garantir que apenas admins façam isso é tratada no app.
+    match /users/{userId} {
       allow list: if request.auth != null;
     }
-    
-    // Regras para a coleção 'config'
-    match /config/{document=**} {
-      // Qualquer usuário autenticado pode ler a configuração (necessário para o app do cliente).
-      // A escrita é permitida, pois o acesso à página de admin que faz a escrita já é restrito.
+
+    // Permite que usuários autenticados leiam a configuração.
+    // A escrita é permitida para usuários autenticados, pois a página de admin
+    // já restringe o acesso apenas a administradores.
+    match /config/{docId} {
       allow read, write: if request.auth != null;
     }
 
-    // Regra para a coleção de administradores (se houver)
+    // Permite que um usuário autenticado verifique se é um administrador.
     match /admins/{userId} {
-        allow read: if request.auth != null;
+      allow get: if request.auth != null;
     }
   }
 }
