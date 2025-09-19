@@ -1,4 +1,3 @@
-
 // src/app/admin/page.tsx
 'use client';
 import * as React from 'react';
@@ -261,25 +260,18 @@ export default function AdminPage() {
     const [user, setUser] = React.useState<FirebaseUser | null>(null);
     const [loading, setLoading] = React.useState(true);
     const [isAdmin, setIsAdmin] = React.useState(false);
-    const [authChecked, setAuthChecked] = React.useState(false);
 
     React.useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            setUser(currentUser);
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
-                // Hard-coded admin emails
+                setUser(currentUser);
                 const isAdminEmail = currentUser.email === 'pam@admin.com' || currentUser.email === 'bypam@admin.com';
-                if(isAdminEmail) {
-                    setIsAdmin(true);
-                } else {
-                    const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid));
-                    setIsAdmin(adminDoc.exists());
-                }
+                setIsAdmin(isAdminEmail);
             } else {
+                setUser(null);
                 setIsAdmin(false);
             }
             setLoading(false);
-            setAuthChecked(true);
         });
 
         return () => unsubscribe();
@@ -287,11 +279,9 @@ export default function AdminPage() {
 
     const handleLogout = async () => {
         await firebaseSignOut(auth);
-        setUser(null);
-        setIsAdmin(false);
     };
 
-    if (loading || !authChecked) {
+    if (loading) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -300,18 +290,7 @@ export default function AdminPage() {
     }
     
     if (!user) {
-        return <AdminLoginPage onLoginSuccess={(loggedInUser) => {
-             setUser(loggedInUser);
-             const isAdminEmail = loggedInUser.email === 'pam@admin.com' || loggedInUser.email === 'bypam@admin.com';
-             if(isAdminEmail){
-                 setIsAdmin(true);
-             } else {
-                // Re-check admin status on login
-                getDoc(doc(db, 'admins', loggedInUser.uid)).then(adminDoc => {
-                    setIsAdmin(adminDoc.exists());
-                });
-             }
-        }} />;
+        return <AdminLoginPage onLoginSuccess={setUser} />;
     }
 
     if (!isAdmin) {
@@ -352,3 +331,5 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
