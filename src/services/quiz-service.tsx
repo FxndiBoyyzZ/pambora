@@ -3,7 +3,7 @@
 'use client';
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { auth, db } from '@/services/firebase';
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, setPersistence, browserLocalPersistence, inMemoryPersistence, browserSessionPersistence } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, getFirestore } from 'firebase/firestore';
 
 interface QuizAnswers {
@@ -35,6 +35,14 @@ interface QuizContextType {
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined);
 
+// Helper function to detect Instagram/Facebook in-app browsers
+const isInstagramOrFacebookBrowser = () => {
+  if (typeof window === 'undefined') return false;
+  const userAgent = window.navigator.userAgent || window.navigator.vendor || (window as any).opera;
+  return /FBAN|FBAV|Instagram/i.test(userAgent);
+};
+
+
 export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [answers, setAnswers] = useState<QuizAnswers>(() => {
@@ -65,8 +73,13 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    // Set persistence to local to keep user logged in
-    setPersistence(auth, browserLocalPersistence)
+    // Choose persistence based on browser environment.
+    // In-app browsers (like Instagram's) often have issues with browserLocalPersistence.
+    const persistence = isInstagramOrFacebookBrowser() 
+        ? browserSessionPersistence // Works better in restricted environments, but logs out on session end.
+        : browserLocalPersistence;   // Keeps user logged in across sessions.
+
+    setPersistence(auth, persistence)
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
           setLoading(true);
@@ -84,7 +97,10 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       })
       .catch((error) => {
         console.error("Firebase persistence error:", error);
-        setLoading(false);
+        // Fallback to in-memory persistence if the chosen one fails
+        setPersistence(auth, inMemoryPersistence).finally(() => {
+            setLoading(false);
+        });
       });
   }, [fetchUserData]);
 
