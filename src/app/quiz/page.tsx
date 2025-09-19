@@ -85,6 +85,11 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
             });
         }
     };
+    
+    const handleSkip = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Impede que o clique ative o handleVideoClick
+        onNext();
+    };
 
 
     return (
@@ -103,6 +108,11 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
                     </motion.div>
                 )}
             </AnimatePresence>
+            {/* Easter Egg: Skip button */}
+            <div 
+                className="absolute bottom-0 left-0 w-20 h-20 z-20"
+                onClick={handleSkip}
+            />
         </div>
     );
 }
