@@ -2,54 +2,81 @@
 'use client';
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Loader2, Dumbbell, Download, LogOut, Settings, EyeOff, Eye } from 'lucide-react';
+import { Loader2, Dumbbell, Download, LogOut, Settings, EyeOff, Eye, Users, UserPlus, LineChart } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser, createUserWithEmailAndPassword } from 'firebase/auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { format, subDays, startOfDay, isToday, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export const dynamic = 'force-dynamic';
 
+const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: string, icon: React.ElementType, description?: string }) => (
+    <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            <Icon className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+            <div className="text-2xl font-bold">{value}</div>
+            {description && <p className="text-xs text-muted-foreground">{description}</p>}
+        </CardContent>
+    </Card>
+);
+
 function AdminDashboard() {
     const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 0, baseWorkoutForToday: 1 });
+    const [leads, setLeads] = React.useState<any[]>([]);
     const [isLoadingData, setIsLoadingData] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const { toast } = useToast();
 
-     React.useEffect(() => {
-        const fetchConfig = async () => {
+    React.useEffect(() => {
+        const fetchAllData = async () => {
             setIsLoadingData(true);
             try {
+                // Fetch workout config
                 const workoutConfigDocRef = doc(db, 'config', 'workoutControls');
                 const workoutConfigDoc = await getDoc(workoutConfigDocRef);
                 if (workoutConfigDoc.exists()) {
                     const data = workoutConfigDoc.data();
-                     setWorkoutControls({
+                    setWorkoutControls({
                         unlockedDays: data.unlockedDays || 0,
                         baseWorkoutForToday: data.baseWorkoutForToday || 1,
                     });
                 } else {
-                     await setDoc(workoutConfigDocRef, { unlockedDays: 0, baseWorkoutForToday: 1 });
+                    await setDoc(workoutConfigDocRef, { unlockedDays: 0, baseWorkoutForToday: 1 });
                 }
 
+                // Fetch leads
+                const usersCollection = collection(db, 'users');
+                const querySnapshot = await getDocs(usersCollection);
+                const leadsData = querySnapshot.docs.map(doc => ({
+                    uid: doc.id,
+                    ...doc.data()
+                }));
+                setLeads(leadsData);
+
             } catch (error) {
-                console.error("Erro ao buscar configuração:", error);
+                console.error("Erro ao buscar dados:", error);
                 toast({
                     variant: 'destructive',
                     title: 'Erro ao Carregar Dados!',
-                    description: 'Não foi possível carregar a configuração. Verifique as regras de segurança do Firestore.'
+                    description: 'Não foi possível carregar a configuração ou os leads.'
                 });
             } finally {
                 setIsLoadingData(false);
             }
         };
 
-        fetchConfig();
+        fetchAllData();
     }, [toast]);
 
     const handleSaveChanges = async () => {
@@ -73,6 +100,26 @@ function AdminDashboard() {
             setIsSaving(false);
         }
     };
+
+    const metrics = React.useMemo(() => {
+        const totalSignups = leads.length;
+        const todaySignups = leads.filter(lead => 
+            lead.createdAt && isToday(new Date(lead.createdAt.seconds * 1000))
+        ).length;
+
+        const signupsByDay = Array.from({ length: 7 }).map((_, i) => {
+            const date = subDays(new Date(), i);
+            const count = leads.filter(lead => 
+                lead.createdAt && format(new Date(lead.createdAt.seconds * 1000), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+            ).length;
+            return {
+                name: format(date, 'dd/MM'),
+                Cadastros: count,
+            };
+        }).reverse();
+
+        return { totalSignups, todaySignups, signupsByDay };
+    }, [leads]);
   
     if (isLoadingData) {
         return (
@@ -93,6 +140,62 @@ function AdminDashboard() {
                     Salvar Alterações
                 </Button>
             </div>
+
+            {/* Metrics Section */}
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <StatCard 
+                    title="Cadastros Totais"
+                    value={metrics.totalSignups.toString()}
+                    icon={Users}
+                    description="Total de usuários na plataforma."
+                />
+                 <StatCard 
+                    title="Cadastros Hoje"
+                    value={metrics.todaySignups.toString()}
+                    icon={UserPlus}
+                    description="Novos usuários registrados hoje."
+                />
+                 <StatCard 
+                    title="Engajamento (Exemplo)"
+                    value="75%"
+                    icon={LineChart}
+                    description="Média de treinos concluídos."
+                />
+            </div>
+
+            {/* Chart Section */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Cadastros nos Últimos 7 Dias</CardTitle>
+                </CardHeader>
+                <CardContent className="pl-2">
+                    <ResponsiveContainer width="100%" height={350}>
+                       <BarChart data={metrics.signupsByDay}>
+                           <XAxis 
+                                dataKey="name" 
+                                stroke="#888888"
+                                fontSize={12}
+                                tickLine={false}
+                                axisLine={false}
+                            />
+                           <YAxis
+                                stroke="#888888"
+                                fontSize={12}
+                                tickLine={false}
+                                axisLine={false}
+                                tickFormatter={(value) => `${value}`}
+                                allowDecimals={false}
+                           />
+                           <Tooltip 
+                            cursor={{fill: 'hsl(var(--muted))'}}
+                            contentStyle={{backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))'}}
+                           />
+                           <Bar dataKey="Cadastros" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                       </BarChart>
+                    </ResponsiveContainer>
+                </CardContent>
+            </Card>
+
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {/* Workout Controls Card */}
                 <Card className="md:col-span-2">
@@ -147,7 +250,7 @@ function AdminDashboard() {
                         <Settings className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                            <p className="text-xs text-muted-foreground">Edite os detalhes de cada treino base, como vídeos, exercícios e durações.</p>
+                            <p className="text-xs text-muted-foreground mt-4">Edite os detalhes de cada treino base, como vídeos, exercícios e durações.</p>
                     </CardContent>
                         <CardFooter>
                         <Button variant="outline" size="sm" className="w-full" asChild>
@@ -162,7 +265,7 @@ function AdminDashboard() {
                         <Download className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                            <p className="text-xs text-muted-foreground">Visualize e exporte a lista de todos os usuários que se inscreveram.</p>
+                            <p className="text-xs text-muted-foreground mt-4">Visualize e exporte a lista de todos os usuários que se inscreveram.</p>
                     </CardContent>
                         <CardFooter>
                         <Link href="/admin/leads" className="w-full">
@@ -331,5 +434,3 @@ export default function AdminPage() {
         </div>
     );
 }
-
-    
