@@ -22,7 +22,7 @@ export default function StartPage() {
         <Card className="w-full bg-background/80 backdrop-blur-sm text-center">
             <CardHeader>
                 <CardTitle className="text-3xl font-headline tracking-wide">
-                    Bem-vindo(a) de volta!
+                    Bem-vindo(a)!
                 </CardTitle>
                 <CardDescription className="text-md text-foreground/80 pt-2">
                     Vamos começar? Nos diga se você é novo por aqui ou se já faz parte do time.
