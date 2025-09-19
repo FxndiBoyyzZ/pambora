@@ -53,21 +53,21 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
 
 
   const fetchUserData = useCallback(async (user: User) => {
-    // Admins don't have user data in firestore
-    if (user.email === 'pam@admin.com' || user.email === 'bypam@admin.com') {
-      setAnswers(defaultQuizState);
-      return;
-    }
+    const isAdmin = user.email === 'pam@admin.com' || user.email === 'bypam@admin.com';
+    const userDocRef = doc(db, 'users', user.uid);
+    
     try {
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-      if (userDoc.exists()) {
-        const data = userDoc.data() as QuizAnswers;
-        // Merge with existing state, preserving local answers if they are newer
-        setAnswers(prev => ({ ...prev, ...data }));
-      }
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+            const data = userDoc.data() as QuizAnswers;
+            setAnswers(prev => ({ ...prev, ...data }));
+        } else if (isAdmin) {
+            // If admin doc doesn't exist, create it.
+            await setDoc(userDocRef, { email: user.email, uid: user.uid, createdAt: serverTimestamp() });
+            setAnswers({ email: user.email });
+        }
     } catch (error) {
-      console.error("Failed to fetch user data from Firestore", error);
+        console.error("Failed to fetch or create user data from Firestore", error);
     }
   }, []);
 
@@ -189,15 +189,9 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         await signInWithEmailAndPassword(auth, email, password);
 
     } catch (error: any) {
-        // If user already exists, just sign them in and update their data
+        // If user already exists, don't try to sign them in, just throw an error to be handled by the UI
         if (error.code === 'auth/email-already-in-use') {
-            try {
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                await saveUserData(userCredential.user);
-            } catch (signInError) {
-                 console.error("Error signing in existing user:", signInError);
-                 throw signInError; // Rethrow the sign-in error to be handled by the UI
-            }
+           throw new Error("Este e-mail já está em uso. Por favor, vá para a página de login.");
         } else {
             // For any other signup errors, rethrow them
             console.error("Error signing up:", error);
