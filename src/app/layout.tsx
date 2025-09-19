@@ -4,6 +4,7 @@ import { Inter, Bebas_Neue } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
+import { InAppBrowserBlocker } from '@/components/in-app-browser-blocker';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const bebasNeue = Bebas_Neue({ 
@@ -28,9 +29,10 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://www.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn('font-body antialiased', inter.variable, bebasNeue.variable)}>
+        <InAppBrowserBlocker />
         {children}
         <Toaster />
       </body>
