@@ -156,10 +156,10 @@ function AdminDashboard() {
                     description="Novos usuários registrados hoje."
                 />
                  <StatCard 
-                    title="Engajamento (Exemplo)"
-                    value="75%"
+                    title="Visitantes Únicos (Exemplo)"
+                    value="--"
                     icon={LineChart}
-                    description="Média de treinos concluídos."
+                    description="A integrar com ferramenta de análise."
                 />
             </div>
 
