@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useQuiz } from "@/services/quiz-service";
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
-import { isBefore, startOfDay, intervalToDuration } from 'date-fns';
+import { isBefore, startOfDay, intervalToDuration, type Duration } from 'date-fns';
 
 const totalDays = 21;
 // Data de início do desafio (importante: o mês é baseado em zero, então 8 = Setembro)
@@ -29,7 +29,7 @@ const StatCard = ({ icon: Icon, title, value, description }: { icon: React.Eleme
 );
 
 const Countdown = () => {
-    const [duration, setDuration] = React.useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+    const [duration, setDuration] = React.useState<Duration>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
     React.useEffect(() => {
         const calculateDuration = () => {
@@ -48,14 +48,13 @@ const Countdown = () => {
     }, []);
 
     const timeUnits = [
-        { label: 'Dias', value: duration.days },
-        { label: 'Horas', value: duration.hours },
-        { label: 'Min', value: duration.minutes },
-        { label: 'Seg', value: duration.seconds },
+        { label: 'Horas', value: duration.hours ?? 0 },
+        { label: 'Min', value: duration.minutes ?? 0 },
+        { label: 'Seg', value: duration.seconds ?? 0 },
     ];
 
     return (
-        <div className="grid grid-cols-4 gap-2 sm:gap-4 text-center">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
             {timeUnits.map(unit => (
                 <div key={unit.label} className="bg-muted/50 p-3 rounded-lg">
                     <div className="text-3xl font-bold text-primary">{String(unit.value).padStart(2, '0')}</div>
