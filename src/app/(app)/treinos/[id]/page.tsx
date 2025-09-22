@@ -30,6 +30,26 @@ interface Workout {
     exercises: Exercise[];
 }
 
+function getEmbedUrl(url: string): string {
+    if (!url) return '';
+    // YouTube: youtu.be/VIDEO_ID or youtube.com/watch?v=VIDEO_ID or youtube.com/embed/VIDEO_ID
+    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})(?:\S+)?/;
+    const youtubeMatch = url.match(youtubeRegex);
+    if (youtubeMatch) {
+        return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+    }
+
+    // Vimeo: vimeo.com/VIDEO_ID or player.vimeo.com/video/VIDEO_ID
+    const vimeoRegex = /(?:https?:\/\/)?(?:www\.)?(?:player\.)?vimeo.com\/(?:video\/)?(\d+)/;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch) {
+        return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    }
+
+    // Return original url if no match
+    return url;
+}
+
 export default function TreinoDetailPage() {
   const params = useParams();
   const { toast } = useToast();
@@ -98,6 +118,8 @@ export default function TreinoDetailPage() {
         description: isCompleted ? "O treino não está mais marcado como concluído." : `Você concluiu o Treino do Dia ${day}!`,
     })
   }
+  
+  const embedUrl = workout ? getEmbedUrl(workout.videoUrl) : '';
 
   if (loading || quizLoading) {
      return (
@@ -134,9 +156,9 @@ export default function TreinoDetailPage() {
                     <div className="aspect-video rounded-lg overflow-hidden border">
                          <iframe
                             className="w-full h-full"
-                            src={workout.videoUrl}
-                            title="YouTube video player"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            src={embedUrl}
+                            title="Workout video player"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                             allowFullScreen
                         ></iframe>
                     </div>
