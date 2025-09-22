@@ -2,7 +2,7 @@
 'use client';
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Loader2, Dumbbell, Download, LogOut, Settings, EyeOff, Eye, Users, UserPlus, LineChart } from 'lucide-react';
+import { Loader2, Dumbbell, Download, LogOut, Settings, EyeOff, Eye, Users, UserPlus, LineChart, CheckCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -107,6 +107,10 @@ function AdminDashboard() {
             lead.createdAt && isToday(new Date(lead.createdAt.seconds * 1000))
         ).length;
 
+        const todayCompletedWorkouts = workoutControls.unlockedDays > 0 ? leads.filter(lead =>
+            lead.completedWorkouts && lead.completedWorkouts.includes(workoutControls.unlockedDays)
+        ).length : 0;
+
         const signupsByDay = Array.from({ length: 7 }).map((_, i) => {
             const date = subDays(new Date(), i);
             const count = leads.filter(lead => 
@@ -118,8 +122,8 @@ function AdminDashboard() {
             };
         }).reverse();
 
-        return { totalSignups, todaySignups, signupsByDay };
-    }, [leads]);
+        return { totalSignups, todaySignups, signupsByDay, todayCompletedWorkouts };
+    }, [leads, workoutControls.unlockedDays]);
   
     if (isLoadingData) {
         return (
@@ -156,10 +160,10 @@ function AdminDashboard() {
                     description="Novos usuários registrados hoje."
                 />
                  <StatCard 
-                    title="Visitantes Únicos (Exemplo)"
-                    value="--"
-                    icon={LineChart}
-                    description="A integrar com ferramenta de análise."
+                    title="Treinos Concluídos Hoje"
+                    value={metrics.todayCompletedWorkouts.toString()}
+                    icon={CheckCircle}
+                    description={`Usuários que concluíram o treino do dia ${workoutControls.unlockedDays || ''}`}
                 />
             </div>
 
