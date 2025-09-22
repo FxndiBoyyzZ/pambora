@@ -2,7 +2,7 @@
 'use client';
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Loader2, Dumbbell, Download, LogOut, Settings, EyeOff, Eye, Users, UserPlus, LineChart, CheckCircle } from 'lucide-react';
+import { Loader2, Dumbbell, Download, LogOut, Settings, EyeOff, Eye, Users, UserPlus, LineChart, CheckCircle, UserSearch } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -200,12 +200,12 @@ function AdminDashboard() {
                 </CardContent>
             </Card>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
                 {/* Workout Controls Card */}
-                <Card className="md:col-span-2">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Card className="md:col-span-1 xl:col-span-2">
+                    <CardHeader>
                         <CardTitle className="text-sm font-medium">Controle de Treinos</CardTitle>
-                        <Dumbbell className="h-4 w-4 text-muted-foreground" />
+                        <CardDescription>Defina qual dia do desafio está ativo e qual o treino base.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid sm:grid-cols-2 gap-4 pt-4">
                         <div className="space-y-2">
@@ -226,7 +226,6 @@ function AdminDashboard() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground">Defina qual dia do desafio está ativo.</p>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="baseWorkout">Treino base de hoje</Label>
@@ -243,41 +242,39 @@ function AdminDashboard() {
                                     <SelectItem value="3">Treino Base 3</SelectItem>
                                 </SelectContent>
                             </Select>
-                             <p className="text-xs text-muted-foreground">Escolha o treino para o dia liberado.</p>
                         </div>
                     </CardContent>
-                </Card>
-
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Gerenciar Treinos</CardTitle>
-                        <Settings className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                            <p className="text-xs text-muted-foreground mt-4">Edite os detalhes de cada treino base, como vídeos, exercícios e durações.</p>
-                    </CardContent>
-                        <CardFooter>
+                     <CardFooter>
                         <Button variant="outline" size="sm" className="w-full" asChild>
-                           <Link href="/admin/workouts">Editar Treinos</Link>
+                           <Link href="/admin/workouts">Editar Detalhes dos Treinos</Link>
                         </Button>
-                        </CardFooter>
+                    </CardFooter>
                 </Card>
                 
                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Gerenciar Leads</CardTitle>
-                        <Download className="h-4 w-4 text-muted-foreground" />
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium">Gerenciar Usuários</CardTitle>
+                        <CardDescription>Busque usuários e veja suas estatísticas individuais.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                            <p className="text-xs text-muted-foreground mt-4">Visualize e exporte a lista de todos os usuários que se inscreveram.</p>
-                    </CardContent>
-                        <CardFooter>
+                    <CardFooter>
+                        <Button variant="outline" size="sm" className="w-full" asChild>
+                           <Link href="/admin/users"><UserSearch className="mr-2 h-4 w-4" />Ver Usuários</Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
+                
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium">Exportar Leads</CardTitle>
+                        <CardDescription>Baixe a lista completa de usuários inscritos em formato CSV.</CardDescription>
+                    </CardHeader>
+                    <CardFooter>
                         <Link href="/admin/leads" className="w-full">
                             <Button variant="outline" size="sm" className="w-full">
-                                Visualizar Leads
+                                <Download className="mr-2 h-4 w-4" />Exportar Leads
                             </Button>
                         </Link>
-                        </CardFooter>
+                    </CardFooter>
                 </Card>
             </div>
         </div>
