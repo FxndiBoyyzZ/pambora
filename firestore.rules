@@ -1,20 +1,35 @@
-
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permite que usuários autenticados leiam e escrevam em seus próprios documentos
+
+    // Helper function to check ownership
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Regras para a coleção 'users'
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // READ: Um usuário só pode ler (get) seu próprio documento.
+      // Ninguém pode listar (list) todos os usuários.
+      allow get: if isOwner(userId);
+      allow list: if false;
+
+      // WRITE (Create, Update, Delete):
+      // CREATE: Um usuário pode criar seu próprio documento.
+      allow create: if isOwner(userId);
+      // UPDATE: Um usuário só pode atualizar seu próprio documento.
+      allow update: if isOwner(userId);
+      // DELETE: Desabilitado para evitar exclusão acidental de conta por parte do usuário.
+      allow delete: if false;
     }
 
-    // Permite que usuários autenticados (como o admin) listem todos os documentos da coleção 'users'
-    match /users/{document=**} {
-        allow list: if request.auth != null;
-    }
-
-    // Permite que usuários autenticados leiam e escrevam na coleção de configuração
-    match /config/{docId=**} {
-      allow read, write: if request.auth != null;
+    // Regras para a coleção de configuração
+    match /config/{docId} {
+      // READ: Todos os usuários autenticados podem ler as configurações (ex: treinos, dias liberados).
+      allow get: if request.auth != null;
+      // WRITE: Ninguém pode escrever nas configurações pelo lado do cliente (apenas pelo painel de admin, que usa credenciais de admin).
+      allow write: if false;
     }
   }
 }
