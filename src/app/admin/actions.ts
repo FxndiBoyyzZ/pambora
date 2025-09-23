@@ -11,6 +11,7 @@ export async function uploadVideo(formData: FormData): Promise<{ success: boolea
     return { success: false, error: 'Nenhum arquivo enviado.' };
   }
 
+  // Server-side validation for file type
   if (!file.type.startsWith('video/')) {
       return { success: false, error: 'Tipo de arquivo inválido. Por favor, envie um vídeo.' };
   }

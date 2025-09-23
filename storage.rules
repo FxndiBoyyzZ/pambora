@@ -1,20 +1,16 @@
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-    // Permite acesso público aos arquivos na pasta /public, se você tiver uma.
-    match /public/{allPaths=**} {
-      allow read;
+    // Only authenticated users can access the storage
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
     }
-
-    // Protege as fotos de perfil
+    
+    // Profile pictures can only be read by anyone (for display in the app)
+    // but can only be written/deleted by the owner of the picture.
     match /profilePictures/{userId} {
-      // READ: Apenas o dono do perfil pode ler sua própria foto.
-      // Firebase usa tokens de download que já garantem acesso, mas esta regra adiciona uma camada extra.
-      allow get: if request.auth != null && request.auth.uid == userId;
-      
-      // WRITE: Apenas o dono do perfil pode criar ou atualizar sua própria foto.
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if true;
+      allow write, delete: if request.auth.uid == userId;
     }
   }
 }

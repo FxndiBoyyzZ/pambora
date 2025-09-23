@@ -1,35 +1,28 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check ownership
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+    // Helper function to check if user is an admin
+    function isAdmin() {
+      return request.auth.token.email == 'pam@admin.com' || request.auth.token.email == 'bypam@admin.com';
     }
 
-    // Regras para a coleção 'users'
+    // Users can only read/write their own data.
+    // Admins can read all user data but cannot write to it (safety measure).
     match /users/{userId} {
-      // READ: Um usuário só pode ler (get) seu próprio documento.
-      // Ninguém pode listar (list) todos os usuários.
-      allow get: if isOwner(userId);
-      allow list: if false;
-
-      // WRITE (Create, Update, Delete):
-      // CREATE: Um usuário pode criar seu próprio documento.
-      allow create: if isOwner(userId);
-      // UPDATE: Um usuário só pode atualizar seu próprio documento.
-      allow update: if isOwner(userId);
-      // DELETE: Desabilitado para evitar exclusão acidental de conta por parte do usuário.
-      allow delete: if false;
+      allow read, update, delete: if request.auth.uid == userId;
+      allow create: if request.auth.uid == userId && request.resource.data.uid == userId;
+      allow list: if isAdmin(); // Admins can list users for the admin panel
+    }
+    
+    // Config documents are read-only for authenticated users, but writable for admins.
+    match /config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
 
-    // Regras para a coleção de configuração
-    match /config/{docId} {
-      // READ: Todos os usuários autenticados podem ler as configurações (ex: treinos, dias liberados).
-      allow get: if request.auth != null;
-      // WRITE: Ninguém pode escrever nas configurações pelo lado do cliente (apenas pelo painel de admin, que usa credenciais de admin).
-      allow write: if false;
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
