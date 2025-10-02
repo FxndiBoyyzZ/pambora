@@ -43,15 +43,6 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const [answers, setAnswers] = useState<QuizAnswers>(defaultQuizState);
   const [loading, setLoading] = useState(true);
 
-  // This effect runs once on mount to safely load initial state from localStorage
-  useEffect(() => {
-    const savedAnswers = localStorage.getItem('quizAnswers');
-    if (savedAnswers) {
-      setAnswers(JSON.parse(savedAnswers));
-    }
-  }, []);
-
-
   const fetchUserData = useCallback(async (user: User) => {
     const isAdmin = user.email === 'pam@admin.com' || user.email === 'bypam@admin.com';
     const userDocRef = doc(db, 'users', user.uid);
@@ -74,6 +65,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Helper function to detect Instagram/Facebook in-app browsers, runs only on client
     const isInstagramOrFacebookBrowser = () => {
+        if (typeof window === 'undefined') return false;
         const userAgent = window.navigator.userAgent || window.navigator.vendor || (window as any).opera;
         return /FBAN|FBAV|Instagram/i.test(userAgent);
     };
@@ -91,9 +83,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
             await fetchUserData(currentUser);
           } else {
             setUser(null);
-            // When user logs out, reset answers but keep localStorage for next login attempt
-            const saved = localStorage.getItem('quizAnswers');
-            setAnswers(saved ? JSON.parse(saved) : defaultQuizState);
+            setAnswers(defaultQuizState);
           }
           setLoading(false);
         });
@@ -120,8 +110,6 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const setAnswer = (step: keyof QuizAnswers, answer: any) => {
     setAnswers((prevAnswers) => {
       const newAnswers = { ...prevAnswers, [step]: answer };
-      // This is safe because setAnswer is only called via user interaction (client-side)
-      localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
       
       if (user && user.email !== 'pam@admin.com' && user.email !== 'bypam@admin.com') {
         updateFirestore(user.uid, { [step]: answer });
@@ -131,11 +119,10 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetQuiz = async () => {
-    localStorage.removeItem('quizAnswers');
     setAnswers(defaultQuizState);
     if (user && user.email !== 'pam@admin.com' && user.email !== 'bypam@admin.com') {
       const initialData = {
-          uid: user.uid, // Ensure UID is preserved
+          uid: user.uid,
           name: answers.name || '',
           email: answers.email || '',
           whatsapp: answers.whatsapp || '',
@@ -177,7 +164,6 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
             createdAt: serverTimestamp() 
         };
         await setDoc(doc(db, 'users', user.uid), userDataToSave, { merge: true });
-        localStorage.removeItem('quizAnswers');
     };
 
     try {
