@@ -9,11 +9,11 @@ import Link from "next/link";
 import { useQuiz } from "@/services/quiz-service";
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
-import { isBefore, startOfDay, intervalToDuration, type Duration } from 'date-fns';
+import { isBefore, startOfDay, intervalToDuration, type Duration, differenceInCalendarDays } from 'date-fns';
 
 const totalDays = 21;
 // Data de início do desafio (importante: o mês é baseado em zero, então 8 = Setembro)
-const challengeStartDate = new Date(2025, 8, 22, 0, 0, 0);
+const challengeStartDate = startOfDay(new Date(2025, 8, 22));
 
 const StatCard = ({ icon: Icon, title, value, description }: { icon: React.ElementType, title: string, value: string, description: string }) => (
     <Card>
@@ -46,12 +46,20 @@ const Countdown = () => {
 
         return () => clearInterval(intervalId);
     }, []);
+    
+    const days = duration.days ?? 0;
 
     const timeUnits = [
+        { label: 'Dias', value: days },
         { label: 'Horas', value: duration.hours ?? 0 },
         { label: 'Min', value: duration.minutes ?? 0 },
-        { label: 'Seg', value: duration.seconds ?? 0 },
     ];
+
+    if (days === 0) {
+         timeUnits.shift(); // Remove dias
+         timeUnits.push({label: 'Seg', value: duration.seconds ?? 0})
+    }
+
 
     return (
         <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
@@ -68,34 +76,43 @@ const Countdown = () => {
 export default function TreinosPage() {
     // Hooks sempre no topo
     const { answers, loading: isQuizLoading } = useQuiz();
-    const [unlockedDays, setUnlockedDays] = React.useState(0);
     const [workoutsConfig, setWorkoutsConfig] = React.useState<any[]>([]);
     const [configLoading, setConfigLoading] = React.useState(true);
     
-    // Carrega a configuração do admin
+    // --- Lógica de Automação do Dia ---
+    const [unlockedDays, setUnlockedDays] = React.useState(0);
+    const [isChallengeStarted, setIsChallengeStarted] = React.useState(false);
+
+     React.useEffect(() => {
+        const today = startOfDay(new Date());
+        const challengeHasStarted = !isBefore(today, challengeStartDate);
+        setIsChallengeStarted(challengeHasStarted);
+
+        if (challengeHasStarted) {
+            const dayOfChallenge = differenceInCalendarDays(today, challengeStartDate) + 1;
+            setUnlockedDays(dayOfChallenge > totalDays ? totalDays : dayOfChallenge);
+        } else {
+            setUnlockedDays(0);
+        }
+    }, []);
+
+    // Carrega a configuração dos treinos do Firestore
     React.useEffect(() => {
         const fetchConfig = async () => {
             setConfigLoading(true);
             try {
-                const controlsDoc = await getDoc(doc(db, 'config', 'workoutControls'));
-                if (controlsDoc.exists()) {
-                    setUnlockedDays(controlsDoc.data().unlockedDays || 0);
-                }
                 const workoutsDoc = await getDoc(doc(db, 'config', 'workouts'));
                 if (workoutsDoc.exists()) {
                     setWorkoutsConfig(workoutsDoc.data().workouts);
                 }
             } catch (error) {
-                console.error("Error fetching config:", error);
+                console.error("Error fetching workouts config:", error);
             } finally {
                 setConfigLoading(false);
             }
         };
         fetchConfig();
     }, []);
-
-    // Determina se o desafio começou com base na configuração do admin
-    const isChallengeStarted = unlockedDays > 0;
 
     // Lógica de cálculo dos dados do usuário
     const completedWorkouts = isChallengeStarted ? (answers.completedWorkouts || []) : [];
@@ -106,19 +123,21 @@ export default function TreinosPage() {
         if (!isChallengeStarted || !workoutsConfig.length || !completedWorkouts.length) return 0;
         
         return completedWorkouts.reduce((acc, day) => {
-            const workout = workoutsConfig[(day - 1) % workoutsConfig.length];
+             // O treino base roda de 1 a 3. A fórmula (day - 1) % 3 garante isso.
+            const workoutIndex = (day - 1) % workoutsConfig.length;
+            const workout = workoutsConfig[workoutIndex];
             return acc + (workout?.calories || 0);
         }, 0);
     }, [completedWorkouts, workoutsConfig, isChallengeStarted]);
     
     // Dados para o card de "Treino de Hoje"
-    const currentDayForDisplay = unlockedDays > totalDays ? totalDays : unlockedDays;
+    const workoutIndexForToday = unlockedDays > 0 ? (unlockedDays - 1) % (workoutsConfig.length || 1) : 0;
     const currentWorkoutDetails = isChallengeStarted && workoutsConfig.length > 0
-        ? workoutsConfig[(currentDayForDisplay - 1) % workoutsConfig.length]
+        ? workoutsConfig[workoutIndexForToday]
         : null;
 
     // Estado de carregamento principal
-    if (isQuizLoading) {
+    if (isQuizLoading || configLoading) {
         return (
             <div className="flex h-full items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -146,12 +165,8 @@ export default function TreinosPage() {
             </header>
 
             <div className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto space-y-8">
-                {configLoading ? (
-                     <div className="flex justify-center items-center h-64">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    </div>
-                ) : !isChallengeStarted ? (
-                    // Tela de PRÉ-DESAFIO (Estática)
+                {!isChallengeStarted ? (
+                    // Tela de PRÉ-DESAFIO
                     <>
                         <Card className="bg-gradient-to-br from-muted/50 to-card text-center">
                             <CardHeader>
@@ -190,13 +205,13 @@ export default function TreinosPage() {
                     <>
                         <Card className="bg-gradient-to-br from-primary/20 to-card">
                             <CardHeader>
-                                <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {currentDayForDisplay}</CardDescription>
-                                <CardTitle className="text-3xl font-headline tracking-wide">{currentWorkoutDetails?.title || 'Treino não encontrado'}</CardTitle>
+                                <CardDescription className="font-semibold text-primary">TREINO DE HOJE: DIA {unlockedDays}</CardDescription>
+                                <CardTitle className="text-3xl font-headline tracking-wide">{currentWorkoutDetails?.title || 'Carregando treino...'}</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <p className="text-muted-foreground mb-4">{currentWorkoutDetails?.description || '...'}</p>
-                                <Link href={`/treinos/${currentDayForDisplay}`} passHref>
-                                    <Button size="lg" className="w-full sm:w-auto" disabled={!currentWorkoutDetails}>
+                                <Link href={`/treinos/${unlockedDays}`} passHref>
+                                    <Button size="lg" className="w-full sm:w-auto" disabled={!currentWorkoutDetails || unlockedDays === 0}>
                                         Começar Agora <ArrowRight className="ml-2" />
                                     </Button>
                                 </Link>

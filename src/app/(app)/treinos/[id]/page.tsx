@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/tooltip"
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
+import { differenceInCalendarDays, isBefore, startOfDay } from 'date-fns';
 
 interface Exercise {
     name: string;
@@ -29,6 +30,9 @@ interface Workout {
     videoUrl: string;
     exercises: Exercise[];
 }
+
+// Data de início do desafio (importante: o mês é baseado em zero, então 8 = Setembro)
+const challengeStartDate = startOfDay(new Date(2025, 8, 22));
 
 function getEmbedUrl(url: string): string {
     if (!url) return '';
@@ -53,14 +57,19 @@ function getEmbedUrl(url: string): string {
 export default function TreinoDetailPage() {
   const params = useParams();
   const { toast } = useToast();
-  const { answers, toggleWorkoutCompleted, isWorkoutCompleted, loading: quizLoading } = useQuiz();
+  const { toggleWorkoutCompleted, isWorkoutCompleted, loading: quizLoading } = useQuiz();
 
   const [workout, setWorkout] = React.useState<Workout | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [unlockedDays, setUnlockedDays] = React.useState(1);
   
   const day = parseInt(params.id as string, 10);
   const isCompleted = isWorkoutCompleted(day);
+
+  // Calcula qual o dia liberado atualmente
+  const today = startOfDay(new Date());
+  const unlockedDays = isBefore(today, challengeStartDate)
+    ? 0
+    : differenceInCalendarDays(today, challengeStartDate) + 1;
 
   React.useEffect(() => {
     const fetchWorkoutConfig = async () => {
@@ -69,18 +78,11 @@ export default function TreinoDetailPage() {
             const configDocRef = doc(db, 'config', 'workouts');
             const configDoc = await getDoc(configDocRef);
 
-            const controlsDocRef = doc(db, 'config', 'workoutControls');
-            const controlsDoc = await getDoc(controlsDocRef);
-
             if (configDoc.exists()) {
                 const allWorkouts = configDoc.data().workouts as Workout[];
-                // Determine which workout to show based on the day
+                // O treino base roda de 1 a 3. A fórmula (day - 1) % 3 garante isso.
                 const workoutToShow = allWorkouts[(day - 1) % allWorkouts.length];
                 setWorkout(workoutToShow);
-            }
-
-             if (controlsDoc.exists()) {
-                setUnlockedDays(controlsDoc.data().unlockedDays);
             }
         } catch (error) {
             console.error("Failed to fetch workout config:", error);
@@ -94,20 +96,21 @@ export default function TreinoDetailPage() {
         }
     };
 
-    fetchWorkoutConfig();
+    if (day > 0) {
+        fetchWorkoutConfig();
+    }
   }, [day, toast]);
   
 
   const isTodayWorkout = day === unlockedDays;
-  const canToggleComplete = isTodayWorkout || isCompleted;
-
+  const canToggleComplete = day <= unlockedDays && day > 0;
 
   const handleToggleComplete = () => {
     if (!canToggleComplete) {
        toast({
         variant: "destructive",
         title: "Ação não permitida!",
-        description: `Você só pode marcar/desmarcar o treino do dia atual (${unlockedDays}).`,
+        description: `Você só pode marcar treinos até o dia de hoje (${unlockedDays}).`,
       });
       return;
     }
@@ -131,8 +134,8 @@ export default function TreinoDetailPage() {
 
   if (!workout) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <p>Treino não encontrado.</p>
+      <div className="flex items-center justify-center h-full text-center p-4">
+        <p>Treino não encontrado ou ainda não liberado.</p>
       </div>
     )
   }
@@ -190,7 +193,7 @@ export default function TreinoDetailPage() {
                         <CardTitle className="flex items-center gap-2">
                            <Clock className="h-6 w-6 text-primary" />
                            Informações
-                        </CardTitle>
+                        </Title>
                      </CardHeader>
                      <CardContent className="space-y-4">
                         <div className="flex items-center justify-between">
@@ -222,7 +225,7 @@ export default function TreinoDetailPage() {
                             </TooltipTrigger>
                             {!canToggleComplete && (
                                 <TooltipContent>
-                                    <p>Você só pode concluir o treino do dia atual.</p>
+                                    <p>Você só pode marcar treinos de dias anteriores ou do dia atual.</p>
                                 </TooltipContent>
                             )}
                           </Tooltip>

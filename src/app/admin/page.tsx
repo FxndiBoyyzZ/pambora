@@ -2,21 +2,22 @@
 'use client';
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Loader2, Dumbbell, Download, LogOut, Settings, EyeOff, Eye, Users, UserPlus, LineChart, CheckCircle, UserSearch } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Loader2, Download, LogOut, Users, UserPlus, LineChart, CheckCircle, UserSearch, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDocs, collection } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
-import { format, subDays, startOfDay, isToday, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, subDays, isToday, startOfDay, differenceInCalendarDays, isBefore } from 'date-fns';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Eye, EyeOff } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
+
+const challengeStartDate = startOfDay(new Date(2025, 8, 22));
 
 const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: string, icon: React.ElementType, description?: string }) => (
     <Card>
@@ -32,29 +33,20 @@ const StatCard = ({ title, value, icon: Icon, description }: { title: string, va
 );
 
 function AdminDashboard() {
-    const [workoutControls, setWorkoutControls] = React.useState({ unlockedDays: 0, baseWorkoutForToday: 1 });
     const [leads, setLeads] = React.useState<any[]>([]);
     const [isLoadingData, setIsLoadingData] = React.useState(true);
-    const [isSaving, setIsSaving] = React.useState(false);
     const { toast } = useToast();
+
+    // Calcula qual o dia liberado atualmente
+    const today = startOfDay(new Date());
+    const unlockedDays = isBefore(today, challengeStartDate)
+        ? 0
+        : differenceInCalendarDays(today, challengeStartDate) + 1;
 
     React.useEffect(() => {
         const fetchAllData = async () => {
             setIsLoadingData(true);
             try {
-                // Fetch workout config
-                const workoutConfigDocRef = doc(db, 'config', 'workoutControls');
-                const workoutConfigDoc = await getDoc(workoutConfigDocRef);
-                if (workoutConfigDoc.exists()) {
-                    const data = workoutConfigDoc.data();
-                    setWorkoutControls({
-                        unlockedDays: data.unlockedDays || 0,
-                        baseWorkoutForToday: data.baseWorkoutForToday || 1,
-                    });
-                } else {
-                    await setDoc(workoutConfigDocRef, { unlockedDays: 0, baseWorkoutForToday: 1 });
-                }
-
                 // Fetch leads
                 const usersCollection = collection(db, 'users');
                 const querySnapshot = await getDocs(usersCollection);
@@ -69,7 +61,7 @@ function AdminDashboard() {
                 toast({
                     variant: 'destructive',
                     title: 'Erro ao Carregar Dados!',
-                    description: 'Não foi possível carregar a configuração ou os leads.'
+                    description: 'Não foi possível carregar os leads.'
                 });
             } finally {
                 setIsLoadingData(false);
@@ -79,36 +71,14 @@ function AdminDashboard() {
         fetchAllData();
     }, [toast]);
 
-    const handleSaveChanges = async () => {
-        setIsSaving(true);
-        try {
-            const workoutConfigDocRef = doc(db, 'config', 'workoutControls');
-            await setDoc(workoutConfigDocRef, workoutControls);
-
-            toast({
-                title: 'Sucesso!',
-                description: 'Configurações salvas com sucesso.'
-            });
-        } catch (error) {
-            console.error("Erro ao salvar configuração:", error);
-            toast({
-                variant: 'destructive',
-                title: 'Erro ao Salvar!',
-                description: 'Não foi possível salvar. Verifique as permissões do Firestore.'
-            });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
     const metrics = React.useMemo(() => {
         const totalSignups = leads.length;
         const todaySignups = leads.filter(lead => 
             lead.createdAt && isToday(new Date(lead.createdAt.seconds * 1000))
         ).length;
 
-        const todayCompletedWorkouts = workoutControls.unlockedDays > 0 ? leads.filter(lead =>
-            lead.completedWorkouts && lead.completedWorkouts.includes(workoutControls.unlockedDays)
+        const todayCompletedWorkouts = unlockedDays > 0 ? leads.filter(lead =>
+            lead.completedWorkouts && lead.completedWorkouts.includes(unlockedDays)
         ).length : 0;
 
         const signupsByDay = Array.from({ length: 7 }).map((_, i) => {
@@ -123,7 +93,7 @@ function AdminDashboard() {
         }).reverse();
 
         return { totalSignups, todaySignups, signupsByDay, todayCompletedWorkouts };
-    }, [leads, workoutControls.unlockedDays]);
+    }, [leads, unlockedDays]);
   
     if (isLoadingData) {
         return (
@@ -139,10 +109,10 @@ function AdminDashboard() {
                 <h2 className="text-xl font-bold font-headline text-foreground tracking-wide">
                     Painel de Controle Geral
                 </h2>
-                <Button onClick={handleSaveChanges} disabled={isSaving || isLoadingData}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Salvar Alterações
-                </Button>
+                <div className="text-right">
+                    <p className="font-bold text-lg">Desafio Dia: <span className="text-primary">{unlockedDays > 0 ? unlockedDays : "Em breve"}</span></p>
+                    <p className="text-xs text-muted-foreground">O dia do desafio é calculado automaticamente.</p>
+                </div>
             </div>
 
             {/* Metrics Section */}
@@ -163,7 +133,7 @@ function AdminDashboard() {
                     title="Treinos Concluídos Hoje"
                     value={metrics.todayCompletedWorkouts.toString()}
                     icon={CheckCircle}
-                    description={`Usuários que concluíram o treino do dia ${workoutControls.unlockedDays || ''}`}
+                    description={`Usuários que concluíram o treino do dia ${unlockedDays || ''}`}
                 />
             </div>
 
@@ -200,53 +170,16 @@ function AdminDashboard() {
                 </CardContent>
             </Card>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {/* Workout Controls Card */}
-                <Card className="md:col-span-1 xl:col-span-2">
+                <Card>
                     <CardHeader>
-                        <CardTitle className="text-sm font-medium">Controle de Treinos</CardTitle>
-                        <CardDescription>Defina qual dia do desafio está ativo e qual o treino base.</CardDescription>
+                        <CardTitle className="text-sm font-medium">Editar Treinos</CardTitle>
+                        <CardDescription>Edite os detalhes dos 3 treinos base do desafio.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid sm:grid-cols-2 gap-4 pt-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="unlockedDays">Dia liberado hoje</Label>
-                            <Select
-                                value={String(workoutControls.unlockedDays)}
-                                onValueChange={(value) => setWorkoutControls(prev => ({ ...prev, unlockedDays: parseInt(value) }))}
-                            >
-                                <SelectTrigger id="unlockedDays">
-                                    <SelectValue placeholder="Selecione o dia" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="0">Em Breve</SelectItem>
-                                    {Array.from({ length: 21 }, (_, i) => i + 1).map(day => (
-                                        <SelectItem key={day} value={String(day)}>
-                                            Dia {day}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="baseWorkout">Treino base de hoje</Label>
-                            <Select
-                                value={String(workoutControls.baseWorkoutForToday)}
-                                onValueChange={(value) => setWorkoutControls(prev => ({...prev, baseWorkoutForToday: parseInt(value)}))}
-                            >
-                                <SelectTrigger id="baseWorkout">
-                                    <SelectValue placeholder="Selecione o treino" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="1">Treino Base 1</SelectItem>
-                                    <SelectItem value="2">Treino Base 2</SelectItem>
-                                    <SelectItem value="3">Treino Base 3</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </CardContent>
                      <CardFooter>
                         <Button variant="outline" size="sm" className="w-full" asChild>
-                           <Link href="/admin/workouts">Editar Detalhes dos Treinos</Link>
+                           <Link href="/admin/workouts"><Settings className="mr-2 h-4 w-4" />Editar Treinos Base</Link>
                         </Button>
                     </CardFooter>
                 </Card>
@@ -384,6 +317,8 @@ export default function AdminPage() {
     const handleLogout = async () => {
         await firebaseSignOut(auth);
     };
+
+
 
     if (loading) {
         return (
