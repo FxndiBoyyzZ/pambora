@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Bell, Shield, LogOut, ChevronRight, Camera, Trash2 } from "lucide-react";
+import { Bell, Shield, LogOut, ChevronRight, Camera, Trash2, MessageCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -113,6 +113,8 @@ export default function PerfilPage() {
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
   };
+  
+  const whatsappSupportLink = "https://wa.me/5519991777094?text=Oii%2C%20estou%20com%20um%20problema%20no%20desafio%20Pambora%2C%20voc%C3%AA%20pode%20me%20ajudar%3F";
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -199,7 +201,7 @@ export default function PerfilPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Configurações</CardTitle>
+            <CardTitle>Configurações e Suporte</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
@@ -214,19 +216,31 @@ export default function PerfilPage() {
                   </button>
                 </li>
               ))}
+               <li>
+                  <a href={whatsappSupportLink} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-between p-4 rounded-lg hover:bg-muted transition-colors">
+                    <div className="flex items-center gap-3">
+                      <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-base">Ajuda e Suporte</span>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </a>
+                </li>
             </ul>
           </CardContent>
         </Card>
 
-        <div className="flex flex-col items-center gap-4 w-full max-w-sm mx-auto">
-            <Button variant="outline" className="w-full" onClick={handleResetData}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Resetar Dados
-            </Button>
-            <Button variant="destructive" className="w-full" onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-            </Button>
+        <div className="space-y-4">
+             <Separator />
+             <div className="flex flex-col items-center gap-4 w-full max-w-sm mx-auto">
+                <Button variant="outline" className="w-full" onClick={handleResetData}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Resetar Dados do Quiz
+                </Button>
+                <Button variant="destructive" className="w-full" onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                </Button>
+            </div>
         </div>
       </div>
     </div>

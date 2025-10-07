@@ -2,7 +2,7 @@
 'use client';
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Loader2, EyeOff, Eye, ArrowLeft } from 'lucide-react';
+import { Loader2, EyeOff, Eye, ArrowLeft, MessageCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,8 @@ export default function LoginPage() {
             setIsLoading(false);
         }
     };
+    
+    const whatsappSupportLink = "https://wa.me/5519991777094?text=Oii%2C%20estou%20com%20um%20problema%20no%20desafio%20Pambora%2C%20voc%C3%AA%20pode%20me%20ajudar%3F";
 
     return (
         <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background p-4">
@@ -113,6 +115,14 @@ export default function LoginPage() {
                             </Button>
                         </CardFooter>
                     </form>
+                    <div className="px-6 pb-6 text-center">
+                         <Button variant="ghost" size="sm" asChild>
+                            <a href={whatsappSupportLink} target="_blank" rel="noopener noreferrer">
+                                <MessageCircle className="mr-2 h-4 w-4" />
+                                Problemas para acessar? Fale conosco
+                            </a>
+                        </Button>
+                    </div>
                 </Card>
             </div>
         </div>
