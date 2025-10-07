@@ -53,19 +53,31 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
             const data = userDoc.data() as QuizAnswers;
-            setAnswers(prev => ({ ...prev, ...data }));
+            // Lazy migration: if user exists but has no meal plan, generate and save it.
+            if (!data.mealPlan && !isAdmin && data.goal) {
+                 console.log(`User ${user.uid} is missing a meal plan. Generating one now.`);
+                 const mealPlanResult = await generateMealPlan({
+                    goal: data.goal || 'Perder Peso',
+                    diet: data.diet || '',
+                    allergies: data.allergies || 'Não possuo restrições'
+                });
+                const updatedData = { ...data, mealPlan: mealPlanResult.mealPlan };
+                await setDoc(userDocRef, { mealPlan: mealPlanResult.mealPlan }, { merge: true });
+                setAnswers(prev => ({ ...prev, ...updatedData }));
+                console.log(`Meal plan for user ${user.uid} has been generated and saved.`);
+            } else {
+              setAnswers(prev => ({ ...prev, ...data }));
+            }
         } else if (isAdmin) {
-            // If admin doc doesn't exist, create it.
             await setDoc(userDocRef, { email: user.email, uid: user.uid, createdAt: serverTimestamp() });
             setAnswers({ email: user.email });
         }
     } catch (error) {
-        console.error("Failed to fetch or create user data from Firestore", error);
+        console.error("Failed to fetch or migrate user data from Firestore", error);
     }
   }, []);
 
   useEffect(() => {
-    // Helper function to detect Instagram/Facebook in-app browsers, runs only on client
     const isInstagramOrFacebookBrowser = () => {
         if (typeof window === 'undefined') return false;
         const userAgent = window.navigator.userAgent || window.navigator.vendor || (window as any).opera;
@@ -121,46 +133,31 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetQuiz = async () => {
-    const oldAnswers = {...answers}; // Keep a copy to generate new meal plan
-    const newAnswers = { ...defaultQuizState, mealPlan: undefined };
-    setAnswers(newAnswers);
-
     if (user && user.email !== 'pam@admin.com' && user.email !== 'bypam@admin.com') {
-        // Generate a new meal plan based on the existing answers before resetting them
         try {
             console.log("Generating new meal plan during reset...");
             const mealPlanResult = await generateMealPlan({
-                goal: oldAnswers.goal || 'Perder Peso',
-                diet: oldAnswers.diet || '',
-                allergies: oldAnswers.allergies || 'Não possuo restrições'
+                goal: answers.goal || 'Perder Peso',
+                diet: answers.diet || '',
+                allergies: answers.allergies || 'Não possuo restrições'
             });
             console.log("New meal plan generated.");
 
-            const initialData = {
-                uid: user.uid,
-                name: answers.name || '',
-                email: answers.email || '',
-                whatsapp: answers.whatsapp || '',
-                profilePictureUrl: answers.profilePictureUrl || '',
-                createdAt: answers.createdAt || serverTimestamp(),
+            const resetData = {
                 ...defaultQuizState,
-                mealPlan: mealPlanResult.mealPlan, // Add the newly generated meal plan
+                // Preserve essential info
+                name: answers.name,
+                email: answers.email,
+                whatsapp: answers.whatsapp,
+                profilePictureUrl: answers.profilePictureUrl,
+                createdAt: answers.createdAt,
+                // Add new meal plan
+                mealPlan: mealPlanResult.mealPlan,
             };
-            await setDoc(doc(db, 'users', user.uid), initialData);
-            setAnswers(initialData); // Update local state with the full new data
+            await setDoc(doc(db, 'users', user.uid), resetData, { merge: true }); // Merge to be safe
+            setAnswers(resetData);
         } catch (error) {
             console.error("Failed to generate meal plan during reset, saving without it.", error);
-             const initialData = {
-                uid: user.uid,
-                name: answers.name || '',
-                email: answers.email || '',
-                whatsapp: answers.whatsapp || '',
-                profilePictureUrl: answers.profilePictureUrl || '',
-                createdAt: answers.createdAt || serverTimestamp(),
-                ...defaultQuizState,
-            };
-            await setDoc(doc(db, 'users', user.uid), initialData);
-            setAnswers(initialData);
         }
     }
 };
@@ -188,6 +185,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const saveUserData = async (user: User) => {
+        let mealPlanData = {};
         try {
             console.log("Generating meal plan during signup...");
             const mealPlanResult = await generateMealPlan({
@@ -195,33 +193,27 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
                 diet: finalAnswers.diet || '',
                 allergies: finalAnswers.allergies || 'Não possuo restrições'
             });
+            mealPlanData = { mealPlan: mealPlanResult.mealPlan };
             console.log("Meal plan generated.");
-
-            const { password: _password, ...userDataToSave } = { 
-                ...finalAnswers, 
-                uid: user.uid, 
-                email: user.email, 
-                createdAt: serverTimestamp(),
-                mealPlan: mealPlanResult.mealPlan,
-            };
-            await setDoc(doc(db, 'users', user.uid), userDataToSave, { merge: true });
         } catch (error) {
             console.error("Failed to generate meal plan during signup. Saving user data without it.", error);
-            const { password: _password, ...userDataToSave } = { 
-                ...finalAnswers, 
-                uid: user.uid, 
-                email: user.email, 
-                createdAt: serverTimestamp()
-            };
-            await setDoc(doc(db, 'users', user.uid), userDataToSave, { merge: true });
         }
+
+        const { password: _password, ...userDataToSave } = { 
+            ...finalAnswers, 
+            uid: user.uid, 
+            email: user.email, 
+            createdAt: serverTimestamp(),
+            ...mealPlanData,
+        };
+        await setDoc(doc(db, 'users', user.uid), userDataToSave, { merge: true });
     };
 
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await saveUserData(userCredential.user);
         
-        await signInWithEmailAndPassword(auth, email, password);
+        // No need to sign in again, createUserWithEmailAndPassword does it.
 
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
