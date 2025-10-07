@@ -119,7 +119,7 @@ export default function TreinoDetailPage() {
     toast({
         title: isCompleted ? "Treino desmarcado!" : "Parabéns!",
         description: isCompleted ? "O treino não está mais marcado como concluído." : `Você concluiu o Treino do Dia ${day}!`,
-    })
+    });
   };
   
   const embedUrl = workout ? getEmbedUrl(workout.videoUrl) : '';
