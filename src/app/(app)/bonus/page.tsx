@@ -13,13 +13,6 @@ const bonuses = [
         disabled: false,
     },
     {
-        title: "Playlists para Treino",
-        description: "Mantenha a motivação em alta com playlists selecionadas.",
-        icon: Download,
-        link: "https://open.spotify.com/playlist/4ZqjhPyrWT9oqKRMafvDE0?si=f7RQpejvSPy-jMWLDEEX6g&pi=SGpxE8JWQxqVg",
-        disabled: false,
-    },
-    {
         title: "Bônus da Semana 2 (Em Breve)",
         description: "Uma surpresa especial será liberada para te manter no foco total!",
         icon: Lock,
@@ -91,7 +84,7 @@ export default function BonusPage() {
         </header>
 
         <main className="flex-grow p-4 md:p-6 lg:p-8">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {bonuses.map((bonus, index) => (
                    <BonusCard key={index} bonus={bonus} />
                 ))}
