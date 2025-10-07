@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 import { auth, db } from '@/services/firebase';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, setPersistence, browserLocalPersistence, inMemoryPersistence, browserSessionPersistence } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, getFirestore } from 'firebase/firestore';
+import { generateMealPlan, MealPlanOutput } from '@/ai/flows/meal-plan-generator';
 
 interface QuizAnswers {
   name?: string;
@@ -20,6 +21,7 @@ interface QuizAnswers {
   height?: number;
   gender?: 'male' | 'female';
   createdAt?: any;
+  mealPlan?: MealPlanOutput['mealPlan'];
 }
 
 interface QuizContextType {
@@ -119,20 +121,49 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetQuiz = async () => {
-    setAnswers(defaultQuizState);
+    const oldAnswers = {...answers}; // Keep a copy to generate new meal plan
+    const newAnswers = { ...defaultQuizState, mealPlan: undefined };
+    setAnswers(newAnswers);
+
     if (user && user.email !== 'pam@admin.com' && user.email !== 'bypam@admin.com') {
-      const initialData = {
-          uid: user.uid,
-          name: answers.name || '',
-          email: answers.email || '',
-          whatsapp: answers.whatsapp || '',
-          profilePictureUrl: answers.profilePictureUrl || '',
-          createdAt: answers.createdAt || serverTimestamp(),
-          ...defaultQuizState
-      };
-      await setDoc(doc(db, 'users', user.uid), initialData);
+        // Generate a new meal plan based on the existing answers before resetting them
+        try {
+            console.log("Generating new meal plan during reset...");
+            const mealPlanResult = await generateMealPlan({
+                goal: oldAnswers.goal || 'Perder Peso',
+                diet: oldAnswers.diet || '',
+                allergies: oldAnswers.allergies || 'Não possuo restrições'
+            });
+            console.log("New meal plan generated.");
+
+            const initialData = {
+                uid: user.uid,
+                name: answers.name || '',
+                email: answers.email || '',
+                whatsapp: answers.whatsapp || '',
+                profilePictureUrl: answers.profilePictureUrl || '',
+                createdAt: answers.createdAt || serverTimestamp(),
+                ...defaultQuizState,
+                mealPlan: mealPlanResult.mealPlan, // Add the newly generated meal plan
+            };
+            await setDoc(doc(db, 'users', user.uid), initialData);
+            setAnswers(initialData); // Update local state with the full new data
+        } catch (error) {
+            console.error("Failed to generate meal plan during reset, saving without it.", error);
+             const initialData = {
+                uid: user.uid,
+                name: answers.name || '',
+                email: answers.email || '',
+                whatsapp: answers.whatsapp || '',
+                profilePictureUrl: answers.profilePictureUrl || '',
+                createdAt: answers.createdAt || serverTimestamp(),
+                ...defaultQuizState,
+            };
+            await setDoc(doc(db, 'users', user.uid), initialData);
+            setAnswers(initialData);
+        }
     }
-  };
+};
 
   const toggleWorkoutCompleted = (workoutId: number) => {
     setAnswers(prev => {
@@ -157,29 +188,45 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const saveUserData = async (user: User) => {
-        const { password: _password, ...userDataToSave } = { 
-            ...finalAnswers, 
-            uid: user.uid, 
-            email: user.email, 
-            createdAt: serverTimestamp() 
-        };
-        await setDoc(doc(db, 'users', user.uid), userDataToSave, { merge: true });
+        try {
+            console.log("Generating meal plan during signup...");
+            const mealPlanResult = await generateMealPlan({
+                goal: finalAnswers.goal || 'Perder Peso',
+                diet: finalAnswers.diet || '',
+                allergies: finalAnswers.allergies || 'Não possuo restrições'
+            });
+            console.log("Meal plan generated.");
+
+            const { password: _password, ...userDataToSave } = { 
+                ...finalAnswers, 
+                uid: user.uid, 
+                email: user.email, 
+                createdAt: serverTimestamp(),
+                mealPlan: mealPlanResult.mealPlan,
+            };
+            await setDoc(doc(db, 'users', user.uid), userDataToSave, { merge: true });
+        } catch (error) {
+            console.error("Failed to generate meal plan during signup. Saving user data without it.", error);
+            const { password: _password, ...userDataToSave } = { 
+                ...finalAnswers, 
+                uid: user.uid, 
+                email: user.email, 
+                createdAt: serverTimestamp()
+            };
+            await setDoc(doc(db, 'users', user.uid), userDataToSave, { merge: true });
+        }
     };
 
     try {
-        // First, try to create a new user
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await saveUserData(userCredential.user);
         
-        // After successfully creating and saving, attempt a sign-in to ensure session persistence
         await signInWithEmailAndPassword(auth, email, password);
 
     } catch (error: any) {
-        // If user already exists, don't try to sign them in, just throw an error to be handled by the UI
         if (error.code === 'auth/email-already-in-use') {
            throw new Error("Este e-mail já está em uso. Por favor, vá para a página de login.");
         } else {
-            // For any other signup errors, rethrow them
             console.error("Error signing up:", error);
             throw error;
         }

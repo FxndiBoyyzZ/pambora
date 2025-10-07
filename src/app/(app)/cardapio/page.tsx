@@ -9,10 +9,9 @@ import { Button } from "@/components/ui/button";
 import { UtensilsCrossed, Heart, RefreshCw, Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { useQuiz } from '@/services/quiz-service';
-import { generateMealPlan, MealPlanOutput } from '@/ai/flows/meal-plan-generator';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/services/firebase';
-import { signOut } from 'firebase/auth';
+import type { MealPlanOutput } from '@/ai/flows/meal-plan-generator';
+
 
 type MealName = "Café da Manhã" | "Almoço" | "Lanche" | "Jantar";
 const mealNames: MealName[] = ["Café da Manhã", "Almoço", "Lanche", "Jantar"];
@@ -20,41 +19,37 @@ const orderedDays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
 function MealPlanSkeleton() {
     return (
-        <div className="space-y-4">
-            {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="space-y-2">
-                    <div className="w-1/3 h-6 rounded-md bg-muted animate-pulse" />
-                    <div className="w-full h-10 rounded-md bg-muted animate-pulse" />
-                </div>
-            ))}
-        </div>
-    )
-}
-
-function DebugPanel({ data }: { data: any }) {
-    return (
-        <Card className="mt-4 bg-muted/50">
+        <Card>
             <CardHeader>
-                <CardTitle>Painel de Diagnóstico (Temporário)</CardTitle>
+                <CardTitle className='flex items-center gap-2'>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Carregando seu cardápio...
+                </CardTitle>
             </CardHeader>
             <CardContent>
-                <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
+                <div className="space-y-4">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="space-y-2">
+                            <div className="w-1/3 h-6 rounded-md bg-muted animate-pulse" />
+                            <div className="w-full h-10 rounded-md bg-muted animate-pulse" />
+                        </div>
+                    ))}
+                </div>
             </CardContent>
         </Card>
-    );
+    )
 }
 
 
 export default function CardapioPage() {
     const router = useRouter();
-    const { user, answers, resetQuiz, loading: quizLoading } = useQuiz();
-    const [pageState, setPageState] = React.useState<'loading' | 'generating' | 'error' | 'success'>('loading');
-    const [mealPlan, setMealPlan] = React.useState<MealPlanOutput['mealPlan'] | null>(null);
+    const { answers, resetQuiz, loading: quizLoading } = useQuiz();
     const [favorites, setFavorites] = React.useState<Record<string, boolean>>({});
     const [currentDay, setCurrentDay] = React.useState(orderedDays[0]);
 
+    const mealPlan = answers.mealPlan;
+
     React.useEffect(() => {
-        // Set the current day to today, or Monday if today is not in the list.
         const today = new Date().toLocaleString('pt-BR', { weekday: 'short' }).replace('.', '');
         const capitalizedToday = today.charAt(0).toUpperCase() + today.slice(1);
         
@@ -65,46 +60,10 @@ export default function CardapioPage() {
         }
     }, []);
 
-    React.useEffect(() => {
-        if (quizLoading) {
-            setPageState('loading');
-            return;
-        }
-
-        const hasRequiredAnswers = !!answers.goal;
-
-        if (hasRequiredAnswers) {
-            const getPlan = async () => {
-                setPageState('generating');
-                try {
-                    const result = await generateMealPlan({
-                        goal: answers.goal || '',
-                        diet: answers.diet || '',
-                        allergies: answers.allergies || '',
-                    });
-                    if (result && result.mealPlan) {
-                        setMealPlan(result.mealPlan);
-                        setPageState('success');
-                    } else {
-                        // This case can happen if the AI returns an empty or invalid response
-                        console.error("AI returned invalid meal plan structure:", result);
-                        setPageState('error');
-                    }
-                } catch (error) {
-                    console.error("Failed to generate meal plan:", error);
-                    setPageState('error');
-                }
-            };
-            getPlan();
-        } else {
-             // If answers are missing after loading, it means the user needs to do the quiz.
-            setPageState('error');
-        }
-    }, [quizLoading, answers.goal, answers.diet, answers.allergies]);
-
     const handleResetQuiz = async () => {
-        await resetQuiz();
+        // Optimistically navigate, the resetQuiz will handle the logic
         router.push('/quiz');
+        await resetQuiz();
     };
 
     const toggleFavorite = (meal: string) => {
@@ -112,88 +71,78 @@ export default function CardapioPage() {
     }
     
     const renderContent = () => {
-        switch (pageState) {
-            case 'loading':
-            case 'generating':
-                return (
-                     <Card>
-                        <CardHeader>
-                            <CardTitle className='flex items-center gap-2'>
-                                <Loader2 className="h-5 w-5 animate-spin" />
-                                {pageState === 'loading' ? 'Carregando suas informações...' : 'Gerando seu cardápio personalizado...'}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <MealPlanSkeleton />
-                        </CardContent>
-                     </Card>
-                );
-            case 'error':
-                 return (
-                    <Card className="text-center">
-                        <CardHeader>
-                            <CardTitle>Complete seu Quiz!</CardTitle>
-                            <CardDescription>
-                                Precisamos das suas respostas do quiz para gerar um plano alimentar personalizado.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Button onClick={() => router.push('/quiz')}>
-                                Ir para o Quiz
-                            </Button>
-                        </CardContent>
-                    </Card>
-                );
-            case 'success':
-                 if (!mealPlan) return null; // Should not happen in success state, but as a safeguard.
-                 return (
-                    <Tabs value={currentDay} onValueChange={setCurrentDay} className="w-full">
-                        <TabsList className="grid w-full grid-cols-7">
-                            {orderedDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
-                        </TabsList>
-                        {orderedDays.map((day) => {
-                             const meals = mealPlan[day as keyof typeof mealPlan];
-                             return (
-                                <TabsContent key={day} value={day}>
-                                    <Card>
-                                        <CardContent className="p-4 md:p-6">
-                                            <Accordion type="single" collapsible defaultValue="Café da Manhã" className="w-full">
-                                                {mealNames.map((mealName) => (
-                                                    <AccordionItem value={mealName} key={mealName}>
-                                                        <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-                                                            <div className="flex items-center gap-3">
-                                                                <UtensilsCrossed className="h-5 w-5 text-primary" />
-                                                                {mealName}
-                                                            </div>
-                                                        </AccordionTrigger>
-                                                        <AccordionContent className="pt-2 pl-4">
-                                                            <div className="space-y-4">
-                                                                {(meals && meals[mealName] && meals[mealName].length > 0) ? meals[mealName].map((item, index) => (
-                                                                    <div key={index} className="flex items-center space-x-3">
-                                                                        <Checkbox id={`${day}-${mealName}-${index}`} />
-                                                                        <Label htmlFor={`${day}-${mealName}-${index}`} className="text-base font-normal text-foreground/80 leading-snug">
-                                                                            {item}
-                                                                        </Label>
-                                                                    </div>
-                                                                )) : <p className="text-muted-foreground">Nenhuma refeição planejada.</p>}
-                                                                <div className="flex justify-end pt-2">
-                                                                    <Button variant="ghost" size="icon" onClick={() => toggleFavorite(`${day}-${mealName}`)}>
-                                                                        <Heart className={favorites[`${day}-${mealName}`] ? 'text-red-500 fill-current' : 'text-muted-foreground'} />
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        </AccordionContent>
-                                                    </AccordionItem>
-                                                ))}
-                                            </Accordion>
-                                        </CardContent>
-                                    </Card>
-                                </TabsContent>
-                            )
-                        })}
-                    </Tabs>
-                );
+        if (quizLoading) {
+            return <MealPlanSkeleton />;
         }
+
+        if (!mealPlan) {
+            return (
+                <Card className="text-center">
+                    <CardHeader>
+                        <CardTitle>Complete seu Quiz!</CardTitle>
+                        <CardDescription>
+                            Precisamos das suas respostas do quiz para gerar e salvar seu plano alimentar.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button onClick={() => router.push('/quiz')}>
+                            Ir para o Quiz
+                        </Button>
+                    </CardContent>
+                </Card>
+            );
+        }
+
+        return (
+            <Tabs value={currentDay} onValueChange={setCurrentDay} className="w-full">
+                <TabsList className="grid w-full grid-cols-7">
+                    {orderedDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
+                </TabsList>
+                {orderedDays.map((day) => {
+                     const meals = mealPlan[day as keyof typeof mealPlan];
+                     return (
+                        <TabsContent key={day} value={day}>
+                            <Card>
+                                <CardContent className="p-4 md:p-6">
+                                    <Accordion type="single" collapsible defaultValue="Café da Manhã" className="w-full">
+                                        {mealNames.map((mealName) => {
+                                            const mealItems = meals?.[mealName as keyof typeof meals];
+                                            return (
+                                                <AccordionItem value={mealName} key={mealName}>
+                                                    <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                                                        <div className="flex items-center gap-3">
+                                                            <UtensilsCrossed className="h-5 w-5 text-primary" />
+                                                            {mealName}
+                                                        </div>
+                                                    </AccordionTrigger>
+                                                    <AccordionContent className="pt-2 pl-4">
+                                                        <div className="space-y-4">
+                                                            {(mealItems && Array.isArray(mealItems) && mealItems.length > 0) ? mealItems.map((item, index) => (
+                                                                <div key={index} className="flex items-center space-x-3">
+                                                                    <Checkbox id={`${day}-${mealName}-${index}`} />
+                                                                    <Label htmlFor={`${day}-${mealName}-${index}`} className="text-base font-normal text-foreground/80 leading-snug">
+                                                                        {item}
+                                                                    </Label>
+                                                                </div>
+                                                            )) : <p className="text-muted-foreground">Nenhuma refeição planejada.</p>}
+                                                            <div className="flex justify-end pt-2">
+                                                                <Button variant="ghost" size="icon" onClick={() => toggleFavorite(`${day}-${mealName}`)}>
+                                                                    <Heart className={favorites[`${day}-${mealName}`] ? 'text-red-500 fill-current' : 'text-muted-foreground'} />
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </AccordionContent>
+                                                </AccordionItem>
+                                            );
+                                        })}
+                                    </Accordion>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    )
+                })}
+            </Tabs>
+        );
     }
 
     return (
@@ -207,19 +156,7 @@ export default function CardapioPage() {
             </header>
             <div className="flex-grow p-4 md:p-6 lg:p-8">
                 {renderContent()}
-                {/* <DebugPanel data={{
-                    quizLoading,
-                    pageState,
-                    "goal_exists": !!answers.goal,
-                    "diet_exists": !!answers.diet,
-                    "allergies_exists": !!answers.allergies,
-                    answers,
-                }} /> */}
             </div>
         </div>
     );
-}
-
-function cn(...classes: (string | undefined | null | false)[]) {
-    return classes.filter(Boolean).join(' ');
 }

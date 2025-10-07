@@ -9,13 +9,14 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { StoryLayout } from '@/components/quiz/story-layout';
 import { useQuiz } from '@/services/quiz-service';
-import { Loader2, VolumeX } from 'lucide-react';
+import { Loader2, VolumeX, AlertCircle } from 'lucide-react';
 import { quizSteps, type QuizStep } from './quiz-config';
 import { VitalsStep } from '@/components/quiz/vitals-step';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import Player from '@vimeo/player';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '@/hooks/use-toast';
 
 function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -87,7 +88,7 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
     };
     
     const handleSkip = (e: React.MouseEvent) => {
-        e.stopPropagation(); // Impede que o clique ative o handleVideoClick
+        e.stopPropagation(); 
         onNext();
     };
 
@@ -108,7 +109,6 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
                     </motion.div>
                 )}
             </AnimatePresence>
-            {/* Easter Egg: Skip button */}
             <div 
                 className="absolute bottom-0 left-0 w-20 h-20 z-20"
                 onClick={handleSkip}
@@ -119,6 +119,7 @@ function VimeoPlayer({ step, onNext }: { step: QuizStep, onNext: () => void }) {
 
 export default function QuizPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const { answers, setAnswer, signUp, user, loading: authLoading } = useQuiz();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -127,7 +128,6 @@ export default function QuizPage() {
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>(answers.allergies?.split(', ')[0].split(',') || []);
   const [otherAllergyText, setOtherAllergyText] = useState(answers.allergies?.split('; ')[1] || '');
 
-  // This effect handles redirection after the quiz is completed and user is signed up.
   useEffect(() => {
     if (!authLoading && user && currentStepIndex >= quizSteps.length -1) {
         if(isNavigating) return;
@@ -150,15 +150,19 @@ export default function QuizPage() {
         setIsSubmitting(true);
         try {
             await signUp();
-            // The useEffect will handle the redirect once the user is signed in.
-        } catch (error) {
+        } catch (error: any) {
             console.error("Sign up failed on the final step", error);
-            setIsSubmitting(false); // Allow user to try again if sign-up fails.
+             toast({
+                variant: 'destructive',
+                title: 'Erro no Cadastro',
+                description: error.message || 'Não foi possível completar o cadastro. Tente novamente.',
+            });
+            setIsSubmitting(false);
         }
     } else {
       setCurrentStepIndex(prevIndex => prevIndex + 1);
     }
-  }, [currentStepIndex, signUp, selectedAllergies, otherAllergyText, setAnswer]);
+  }, [currentStepIndex, signUp, selectedAllergies, otherAllergyText, setAnswer, toast]);
 
   const currentStep = quizSteps[currentStepIndex];
 
@@ -199,7 +203,7 @@ export default function QuizPage() {
               </CardContent>
               <CardFooter>
                 <Button onClick={handleNext} className="w-full" disabled={!isFormValid || isSubmitting}>
-                  Continuar
+                    {isSubmitting ? <Loader2 className="animate-spin" /> : 'Continuar'}
                 </Button>
               </CardFooter>
             </Card>
@@ -276,7 +280,9 @@ export default function QuizPage() {
               </CardContent>
                {(currentStep.content.questionType === 'text' || currentStep.content.questionType === 'multiple-select-plus-text') && (
                  <CardFooter>
-                    <Button onClick={handleNext} className="w-full" disabled={isSubmitting}>Continuar</Button>
+                    <Button onClick={handleNext} className="w-full" disabled={isSubmitting}>
+                      {isSubmitting ? <Loader2 className="animate-spin" /> : 'Continuar'}
+                    </Button>
                  </CardFooter>
                )}
             </Card>
@@ -286,16 +292,23 @@ export default function QuizPage() {
         return <VitalsStep step={currentStep} onComplete={handleNext} />;
     default:
         return (
-            <div className="p-8 text-center">
-                <h2 className="text-2xl font-bold mb-4">Fim do Quiz!</h2>
-                <Button onClick={() => router.push('/treinos')}>Ver meu plano!</Button>
+             <div className="w-full h-full flex items-center justify-center p-4">
+                <Card className="w-full max-w-sm text-center">
+                    <CardHeader>
+                        <CardTitle>Finalizando Cadastro...</CardTitle>
+                        <CardDescription>Estamos preparando tudo para você. Só um instante!</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
+                    </CardContent>
+                </Card>
             </div>
         );
     }
   };
 
 
-  if (authLoading || isSubmitting) {
+  if (authLoading || (isSubmitting && currentStepIndex < quizSteps.length -1)) {
     return (
         <div className="flex justify-center items-center h-screen bg-background">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
