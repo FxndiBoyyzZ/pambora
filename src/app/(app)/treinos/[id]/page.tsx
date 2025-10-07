@@ -137,7 +137,7 @@ export default function TreinoDetailPage() {
       <div className="flex items-center justify-center h-full text-center p-4">
         <p>Treino não encontrado ou ainda não liberado.</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -174,7 +174,7 @@ export default function TreinoDetailPage() {
                         <CardTitle className="flex items-center gap-2">
                            <Dumbbell className="h-6 w-6 text-primary" />
                            Exercícios
-                        </CardTitle>
+                        </Title>
                         <CardDescription>Siga as séries e repetições para melhores resultados.</CardDescription>
                     </CardHeader>
                     <CardContent>
